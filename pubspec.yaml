@@ -1,0 +1,51 @@
+name: tahfidz_core
+description: "Platform Manajemen Ekosistem Pendidikan Al-Qur'an Modern"
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0' # Baseline modern untuk Flutter 3.x ke atas
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Database & Auth - Menggunakan versi 2.8+ untuk stabilitas integrasi Auth
+  supabase_flutter: ^2.8.1
+
+  # State Management - Menggunakan versi terbaru yang stabil
+  # Saya tambahkan riverpod_annotation untuk efisiensi kode
+  flutter_riverpod: ^2.6.1
+  riverpod_annotation: ^2.3.5
+
+  # Navigation
+  go_router: ^14.0.1
+
+  # UI Components & Utilities
+  google_fonts: ^6.2.1
+  intl: ^0.19.0
+  cupertino_icons: ^1.0.8
+
+  # Tambahan Opsional: Shimmer untuk loading state yang cantik
+  shimmer: ^3.0.0
+  file_picker: ^10.3.10
+  csv: ^6.0.0
+  path_provider: ^2.1.5
+  share_plus: ^12.0.1
+  table_calendar: ^3.1.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+  # Wajib ada untuk Riverpod Code Generation (Anti-Typo & Auto-Provider)
+  build_runner: ^2.4.8
+  riverpod_generator: ^2.4.0
+
+flutter:
+  uses-material-design: true
+  # Pastikan folder assets didefinisikan jika ada logo lembaga
+  # assets:
+  #   - assets/images/
