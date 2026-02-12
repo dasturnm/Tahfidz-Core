@@ -159,10 +159,12 @@ class SiswaList extends _$SiswaList {
   Future<void> updateKurikulum({
     required String siswaId,
     required String kurikulumId,
+    required String jenjangId,
     required String levelId,
   }) async {
     await _supabase.from('siswa').update({
       'kurikulum_id': kurikulumId,
+      'jenjang_id': jenjangId,
       'current_level_id': levelId,
     }).eq('id', siswaId);
 

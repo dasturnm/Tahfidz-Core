@@ -6,7 +6,7 @@ part of 'siswa_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$siswaListHash() => r'5adeee58422aacc3582ca99e8d9562d27101c470';
+String _$siswaListHash() => r'a9db71f8ba00b7c4e2d8475941f1b5db9c5658b6';
 
 /// See also [SiswaList].
 @ProviderFor(SiswaList)

@@ -43,29 +43,29 @@ class ManagementHubScreen extends StatelessWidget {
 
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: TabBar(
+              child: const TabBar(
                 isScrollable: true,
-                indicatorColor: const Color(0xFF10B981),
-                labelColor: const Color(0xFF10B981),
+                indicatorColor: Color(0xFF10B981),
+                labelColor: Color(0xFF10B981),
                 unselectedLabelColor: Colors.grey,
-                labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                labelStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                 indicatorWeight: 3,
                 tabs: [
-                  const Tab(child: Row(children: [Icon(Icons.business_outlined, size: 18), SizedBox(width: 8), Text("Profil")])),
-                  const Tab(child: Row(children: [Icon(Icons.location_city_outlined, size: 18), SizedBox(width: 8), Text("Cabang")])),
-                  const Tab(child: Row(children: [Icon(Icons.account_tree_outlined, size: 18), SizedBox(width: 8), Text("Divisi")])),
-                  const Tab(child: Row(children: [Icon(Icons.work_outline, size: 18), SizedBox(width: 8), Text("Jabatan")])),
+                  Tab(child: Row(children: [Icon(Icons.business_outlined, size: 18), SizedBox(width: 8), Text("Profil")])),
+                  Tab(child: Row(children: [Icon(Icons.location_city_outlined, size: 18), SizedBox(width: 8), Text("Cabang")])),
+                  Tab(child: Row(children: [Icon(Icons.account_tree_outlined, size: 18), SizedBox(width: 8), Text("Divisi")])),
+                  Tab(child: Row(children: [Icon(Icons.work_outline, size: 18), SizedBox(width: 8), Text("Jabatan")])),
                 ],
               ),
             ),
 
             Expanded(
               child: TabBarView(
-                children: [
-                  const LembagaProfileScreen(),
-                  const CabangListScreen(),
-                  const DivisiListScreen(),
-                  const JabatanListScreen(),
+                children: const [
+                  LembagaProfileScreen(),
+                  CabangListScreen(),
+                  DivisiListScreen(),
+                  JabatanListScreen(),
                 ],
               ),
             ),

@@ -94,12 +94,12 @@ class _DivisiListScreenState extends ConsumerState<DivisiListScreen> {
                   'status': 'aktif',
                 });
 
-                if (mounted) {
+                if (context.mounted) {
                   Navigator.pop(context);
                   _fetchDivisi();
                 }
               } catch (e) {
-                if (mounted) {
+                if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text("Gagal menyimpan: $e")),
                   );

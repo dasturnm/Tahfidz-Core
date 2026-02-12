@@ -111,7 +111,7 @@ class _CabangListScreenState extends ConsumerState<CabangListScreen> {
                   'status': 'aktif',
                 });
 
-                if (mounted) {
+                if (context.mounted) {
                   Navigator.pop(context);
                   _fetchBranches(); // Refresh list setelah simpan
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -119,7 +119,7 @@ class _CabangListScreenState extends ConsumerState<CabangListScreen> {
                   );
                 }
               } catch (e) {
-                if (mounted) {
+                if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text("Gagal menyimpan: $e")),
                   );

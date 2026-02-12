@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../program/providers/program_provider.dart';
-import '../../kurikulum/providers/kurikulum_provider.dart';
+import '../../akademik/kurikulum/providers/kurikulum_provider.dart';
 import '../providers/siswa_provider.dart';
 import '../models/siswa_model.dart';
 
@@ -16,6 +16,7 @@ class EnrollKurikulumDialog extends ConsumerStatefulWidget {
 class _EnrollKurikulumDialogState extends ConsumerState<EnrollKurikulumDialog> {
   String? _selectedProgramId;
   String? _selectedKurikulumId;
+  String? _selectedJenjangId;
   String? _selectedLevelId;
 
   @override
@@ -42,6 +43,7 @@ class _EnrollKurikulumDialogState extends ConsumerState<EnrollKurikulumDialog> {
                 onChanged: (val) => setState(() {
                   _selectedProgramId = val;
                   _selectedKurikulumId = null; // Reset anak-anaknya
+                  _selectedJenjangId = null;
                   _selectedLevelId = null;
                 }),
               ),
@@ -59,6 +61,7 @@ class _EnrollKurikulumDialogState extends ConsumerState<EnrollKurikulumDialog> {
                   items: kurikulums.map((k) => DropdownMenuItem(value: k.id, child: Text(k.namaKurikulum))).toList(),
                   onChanged: (val) => setState(() {
                     _selectedKurikulumId = val;
+                    _selectedJenjangId = null;
                     _selectedLevelId = null;
                   }),
                 ),
@@ -68,9 +71,26 @@ class _EnrollKurikulumDialogState extends ConsumerState<EnrollKurikulumDialog> {
 
             const SizedBox(height: 16),
 
-            // STEP 3: PILIH LEVEL AWAL (Hanya muncul jika kurikulum dipilih)
+            // STEP 3: PILIH JENJANG (Hanya muncul jika kurikulum dipilih) - LOGIKA 4 LAPIS
             if (_selectedKurikulumId != null)
-              ref.watch(levelListProvider(_selectedKurikulumId!)).when(
+              ref.watch(jenjangListProvider(_selectedKurikulumId!)).when(
+                data: (jenjangs) => DropdownButtonFormField<String>(
+                  decoration: _inputDecoration("Pilih Jenjang"),
+                  items: jenjangs.map((j) => DropdownMenuItem(value: j.id, child: Text(j.namaJenjang))).toList(),
+                  onChanged: (val) => setState(() {
+                    _selectedJenjangId = val;
+                    _selectedLevelId = null;
+                  }),
+                ),
+                loading: () => const LinearProgressIndicator(),
+                error: (_, __) => const Text("Gagal memuat jenjang"),
+              ),
+
+            const SizedBox(height: 16),
+
+            // STEP 4: PILIH LEVEL AWAL (Sekarang watch berdasarkan Jenjang)
+            if (_selectedJenjangId != null)
+              ref.watch(levelListProvider(_selectedJenjangId!)).when(
                 data: (levels) => DropdownButtonFormField<String>(
                   decoration: _inputDecoration("Mulai dari Level"),
                   items: levels.map((l) => DropdownMenuItem(value: l.id, child: Text("${l.urutan}. ${l.namaLevel}"))).toList(),
@@ -102,7 +122,7 @@ class _EnrollKurikulumDialogState extends ConsumerState<EnrollKurikulumDialog> {
   }
 
   void _handleEnroll() async {
-    if (_selectedKurikulumId == null || _selectedLevelId == null) return;
+    if (_selectedKurikulumId == null || _selectedJenjangId == null || _selectedLevelId == null) return;
 
     // Tampilkan loading overlay
     showDialog(
@@ -115,6 +135,7 @@ class _EnrollKurikulumDialogState extends ConsumerState<EnrollKurikulumDialog> {
       await ref.read(siswaListProvider.notifier).updateKurikulum(
         siswaId: widget.siswa.id!,
         kurikulumId: _selectedKurikulumId!,
+        jenjangId: _selectedJenjangId!,
         levelId: _selectedLevelId!,
       );
 

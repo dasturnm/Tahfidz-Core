@@ -73,12 +73,22 @@ class _ProgramListScreenState extends ConsumerState<ProgramListScreen> with Sing
   }
 
   Widget _buildHeader(BuildContext context) {
-    return const Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text("Manajemen Program", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-        SizedBox(height: 4),
-        Text("Kurikulum, Jadwal Efektif, & Kalender.", style: TextStyle(color: Colors.grey)),
+        const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text("Manajemen Program", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+            SizedBox(height: 4),
+            Text("Kurikulum, Jadwal Efektif, & Kalender.", style: TextStyle(color: Colors.grey)),
+          ],
+        ),
+        IconButton(
+          onPressed: () => _showConfigPeriodeDialog(context),
+          icon: const Icon(Icons.settings_suggest_outlined, color: Color(0xFF10B981)),
+          tooltip: "Konfigurasi Periode",
+        ),
       ],
     );
   }

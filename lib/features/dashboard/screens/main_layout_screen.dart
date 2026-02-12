@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../management_lembaga/screens/management_hub_screen.dart';
 import '../../program/screens/program_list_screen.dart';
+import '../../akademik/screens/akademik_hub_screen.dart'; // Import Screen Akademik Hub
 import 'dashboard_admin_screen.dart';
 
 class MainLayoutScreen extends StatefulWidget {
@@ -17,7 +18,7 @@ class _MainLayoutScreenState extends State<MainLayoutScreen> {
     const DashboardAdminScreen(),
     const ManagementHubScreen(),
     const ProgramListScreen(),
-    const Center(child: Text("Akademik Screen")),
+    const AkademikHubScreen(), // UPDATE: Menu Akademik sekarang mengarah ke Hub
     const Center(child: Text("Siswa Screen")),
     const Center(child: Text("Keuangan Screen")),
   ];

@@ -69,12 +69,12 @@ class _TahunAjaranScreenState extends ConsumerState<TahunAjaranScreen> {
       // 3. Refresh UI Lokal
       _fetchTahunAjaran();
 
-      if (!mounted) return;
+      if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Tahun ajaran aktif berhasil diperbarui!")),
       );
     } catch (e) {
-      if (!mounted) return;
+      if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Gagal memperbarui: $e")),
       );
@@ -105,7 +105,7 @@ class _TahunAjaranScreenState extends ConsumerState<TahunAjaranScreen> {
                 'label_tahun': controller.text.trim(),
                 'semester': 'Ganjil',
               });
-              if (!mounted) return;
+              if (!context.mounted) return;
               Navigator.pop(context);
               _fetchTahunAjaran();
             },

@@ -52,7 +52,7 @@ class _JabatanListScreenState extends ConsumerState<JabatanListScreen> {
         });
       }
     } catch (e) {
-      if (mounted) {
+      if (context.mounted) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("Gagal memuat data: $e")),
@@ -133,12 +133,12 @@ class _JabatanListScreenState extends ConsumerState<JabatanListScreen> {
                     'status': 'aktif',
                   });
 
-                  if (mounted) {
+                  if (context.mounted) {
                     Navigator.pop(context);
                     _fetchData();
                   }
                 } catch (e) {
-                  if (mounted) {
+                  if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text("Gagal menyimpan: $e")),
                     );
@@ -240,10 +240,10 @@ class _JabatanListScreenState extends ConsumerState<JabatanListScreen> {
   }
 
   Widget _buildEmptyState() {
-    return Center(
+    return const Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
-        children: const [
+        children: [
           Icon(Icons.work_history_outlined, size: 80, color: Colors.grey),
           SizedBox(height: 16),
           Text("Belum ada jabatan terdaftar",
