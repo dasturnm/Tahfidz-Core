@@ -4,8 +4,6 @@ import '../kurikulum/models/kurikulum_model.dart'; //
 import '../kurikulum/providers/kurikulum_provider.dart'; //
 
 // --- IMPORT NAVIGASI ---
-import '../kurikulum/screens/kurikulum_list_screen.dart';
-import '../../program/screens/program_list_screen.dart';
 import '../kurikulum/screens/level_list_screen.dart'; // Import untuk navigasi jenjang
 
 class AkademikHubScreen extends ConsumerWidget {
@@ -199,11 +197,11 @@ class AkademikHubScreen extends ConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
+              const Row(
                 children: [
-                  const Icon(Icons.account_tree_outlined, color: Color(0xFF10B981), size: 28),
-                  const SizedBox(width: 12),
-                  const Text("Tambah Jenjang", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                  Icon(Icons.account_tree_outlined, color: Color(0xFF10B981), size: 28),
+                  SizedBox(width: 12),
+                  Text("Tambah Jenjang", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
                 ],
               ),
               const SizedBox(height: 32),

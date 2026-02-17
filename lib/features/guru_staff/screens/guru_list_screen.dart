@@ -14,14 +14,14 @@ class GuruListScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text("Manajemen Guru"),
+        title: const Text("Guru & Staff"),
         backgroundColor: const Color(0xFF10B981),
         foregroundColor: Colors.white,
         elevation: 0,
       ),
       body: guruAsync.when(
         data: (listGuru) => listGuru.isEmpty
-            ? const Center(child: Text("Belum ada data guru"))
+            ? const Center(child: Text("Belum ada data Guru & Staff"))
             : RefreshIndicator(
           onRefresh: () => ref.refresh(guruListProvider.future),
           child: ListView.builder(
@@ -43,7 +43,7 @@ class GuruListScreen extends ConsumerWidget {
                   leading: CircleAvatar(
                     radius: 25,
                     backgroundColor: isAktif
-                        ? const Color(0xFF10B981).withValues(alpha: 0.1)
+                        ? const Color(0xFF10B981).withValues(alpha:0.1)
                         : Colors.grey[200],
                     child: Icon(
                         Icons.person,
@@ -61,6 +61,12 @@ class GuruListScreen extends ConsumerWidget {
                         guru.kontak ?? '-',
                         style: TextStyle(color: Colors.grey[600]),
                       ),
+                      // Tampilkan Penugasan (Jabatan & Cabang)
+                      if (guru.toJson()['namaCabang'] != null)
+                        Text(
+                          "${guru.toJson()['namaJabatan'] ?? ''} @ ${guru.toJson()['namaCabang']}",
+                          style: const TextStyle(color: Colors.blueGrey, fontSize: 12, fontWeight: FontWeight.w500),
+                        ),
                       // Tampilkan Divisi jika tersedia di model guru
                       // Ini menghubungkan Master Data Divisi yang kita buat tadi
                       if (guru.toJson()['nama_divisi'] != null)
@@ -73,7 +79,7 @@ class GuruListScreen extends ConsumerWidget {
                   trailing: Switch(
                     value: isAktif,
                     activeThumbColor: const Color(0xFF10B981),
-                    activeTrackColor: const Color(0xFF10B981).withValues(alpha: 0.3),
+                    activeTrackColor: const Color(0xFF10B981).withValues(alpha:0.3),
                     onChanged: (val) {
                       if (guru.id != null) {
                         // FIX: Menggunakan 'val' (nilai baru) bukan 'isAktif' (nilai lama)

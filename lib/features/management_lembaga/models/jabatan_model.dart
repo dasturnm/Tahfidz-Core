@@ -1,5 +1,6 @@
 class JabatanModel {
   final String id;
+  final String lembagaId; // Ditambahkan agar data tidak jadi hantu
   final String divisiId;
   final String namaJabatan;
   final String defaultRole; // ADMIN_PUSAT, ADMIN_CABANG, GURU, STAFF
@@ -9,6 +10,7 @@ class JabatanModel {
 
   JabatanModel({
     required this.id,
+    required this.lembagaId, // Wajib diisi
     required this.divisiId,
     required this.namaJabatan,
     required this.defaultRole,
@@ -19,6 +21,7 @@ class JabatanModel {
 
   JabatanModel copyWith({
     String? id,
+    String? lembagaId,
     String? divisiId,
     String? namaJabatan,
     String? defaultRole,
@@ -28,6 +31,7 @@ class JabatanModel {
   }) {
     return JabatanModel(
       id: id ?? this.id,
+      lembagaId: lembagaId ?? this.lembagaId,
       divisiId: divisiId ?? this.divisiId,
       namaJabatan: namaJabatan ?? this.namaJabatan,
       defaultRole: defaultRole ?? this.defaultRole,
@@ -39,6 +43,7 @@ class JabatanModel {
 
   factory JabatanModel.fromJson(Map<String, dynamic> json) => JabatanModel(
     id: json['id'],
+    lembagaId: json['lembaga_id'] ?? '',
     divisiId: json['divisi_id'] ?? '',
     namaJabatan: json['nama_jabatan'] ?? '',
     defaultRole: json['default_role'] ?? 'GURU',
@@ -49,6 +54,7 @@ class JabatanModel {
 
   Map<String, dynamic> toJson() => {
     'id': id,
+    'lembaga_id': lembagaId,
     'divisi_id': divisiId,
     'nama_jabatan': namaJabatan,
     'default_role': defaultRole,

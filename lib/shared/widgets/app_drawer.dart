@@ -5,10 +5,10 @@ import '../../features/management_lembaga/providers/app_context_provider.dart';
 import '../../features/management_lembaga/screens/lembaga_profile_screen.dart';
 import '../../features/management_lembaga/screens/cabang_list_screen.dart';
 import '../../features/management_lembaga/screens/tahun_ajaran_screen.dart';
-import '../../features/management_lembaga/screens/divisi_screen.dart'; // File ini berisi DivisiListScreen
+import '../../features/management_lembaga/screens/divisi_list_screen.dart';
 import '../../features/guru_staff/screens/guru_list_screen.dart';
 import '../../features/siswa/screens/siswa_list_screen.dart';
-import '../../features/kelas/screens/kelas_list_screen.dart'; // Perbaikan nama file
+import '../../features/kelas/screens/kelas_list_screen.dart';
 import '../../features/program/screens/program_list_screen.dart';
 
 class AppDrawer extends ConsumerWidget {
@@ -22,7 +22,6 @@ class AppDrawer extends ConsumerWidget {
     return Drawer(
       child: Column(
         children: [
-          // --- HEADER: Identitas Lembaga ---
           UserAccountsDrawerHeader(
             decoration: const BoxDecoration(color: Color(0xFF10B981)),
             currentAccountPicture: const CircleAvatar(
@@ -36,7 +35,6 @@ class AppDrawer extends ConsumerWidget {
             accountEmail: const Text("Administrator System"),
           ),
 
-          // --- BODY: Menu Navigation ---
           Expanded(
             child: ListView(
               padding: EdgeInsets.zero,
@@ -62,7 +60,7 @@ class AppDrawer extends ConsumerWidget {
                 _buildDrawerItem(
                   icon: Icons.account_tree_outlined,
                   label: "Divisi & Jabatan",
-                  onTap: () => _navigate(context, const DivisiListScreen()), // Perbaikan Nama Class
+                  onTap: () => _navigate(context, const DivisiListScreen()),
                 ),
 
                 const Divider(),
@@ -80,20 +78,15 @@ class AppDrawer extends ConsumerWidget {
                 _buildDrawerItem(
                   icon: Icons.assignment_outlined,
                   label: "Kurikulum & Level",
-                  onTap: () => _navigate(context, const ProgramListScreen()), // Dimulai dari pilih program
+                  onTap: () => _navigate(context, const ProgramListScreen()),
                 ),
 
                 const Divider(),
-                _buildSectionHeader("PERSONALIA"),
+                _buildSectionHeader("GURU & STAFF"),
                 _buildDrawerItem(
                   icon: Icons.people_alt_outlined,
                   label: "Guru & Staff",
                   onTap: () => _navigate(context, const GuruListScreen()),
-                ),
-                _buildDrawerItem(
-                  icon: Icons.security_outlined,
-                  label: "Hak Akses (Roles)",
-                  onTap: () {}, // Placeholder
                 ),
 
                 const Divider(),
@@ -106,7 +99,7 @@ class AppDrawer extends ConsumerWidget {
                 _buildDrawerItem(
                   icon: Icons.meeting_room_outlined,
                   label: "Manajemen Kelas",
-                  onTap: () => _navigate(context, const KelasListScreen()), // Perbaikan Nama Class
+                  onTap: () => _navigate(context, const KelasListScreen()),
                 ),
 
                 const SizedBox(height: 20),
@@ -114,7 +107,6 @@ class AppDrawer extends ConsumerWidget {
             ),
           ),
 
-          // --- FOOTER: App Version ---
           const Padding(
             padding: EdgeInsets.all(16.0),
             child: Text(
@@ -128,7 +120,7 @@ class AppDrawer extends ConsumerWidget {
   }
 
   void _navigate(BuildContext context, Widget screen) {
-    Navigator.pop(context); // Tutup drawer dulu
+    Navigator.pop(context);
     Navigator.push(context, MaterialPageRoute(builder: (context) => screen));
   }
 

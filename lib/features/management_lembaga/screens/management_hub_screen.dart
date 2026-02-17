@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'lembaga_profile_screen.dart';
 import 'cabang_list_screen.dart';
-import 'divisi_screen.dart';
+import 'divisi_list_screen.dart';
 import 'jabatan_list_screen.dart';
 
 
@@ -34,16 +34,16 @@ class ManagementHubScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    "Kelola informasi pusat, cabang, serta struktur organisasi.",
+                    "Kelola informasi pusat, cabang, serta struktur organisasi Anda.",
                     style: TextStyle(color: Colors.grey[600], fontSize: 14),
                   ),
                 ],
               ),
             ),
 
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: const TabBar(
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: TabBar(
                 isScrollable: true,
                 indicatorColor: Color(0xFF10B981),
                 labelColor: Color(0xFF10B981),
@@ -59,9 +59,9 @@ class ManagementHubScreen extends StatelessWidget {
               ),
             ),
 
-            Expanded(
+            const Expanded(
               child: TabBarView(
-                children: const [
+                children: [
                   LembagaProfileScreen(),
                   CabangListScreen(),
                   DivisiListScreen(),

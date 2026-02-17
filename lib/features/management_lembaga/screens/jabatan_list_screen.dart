@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../providers/app_context_provider.dart';
+import '../providers/lembaga_provider.dart'; // Ditambahkan: Import provider baru
 import '../models/jabatan_model.dart';
 import '../models/divisi_model.dart';
 
@@ -13,72 +13,32 @@ class JabatanListScreen extends ConsumerStatefulWidget {
 }
 
 class _JabatanListScreenState extends ConsumerState<JabatanListScreen> {
-  final _supabase = Supabase.instance.client;
-  bool _isLoading = true;
-  List<JabatanModel> _jabatanList = [];
-  List<DivisiModel> _divisiList = [];
+  // FIX: _isLoading, _jabatanList, dan _divisiList dihapus karena sudah dikelola Provider
 
-  @override
-  void initState() {
-    super.initState();
-    _fetchData();
-  }
+  void _showJabatanDialog(String lembagaId, {JabatanModel? jabatan}) {
+    // Ambil data divisi secara sinkron dari provider
+    final divisiList = ref.read(divisiListProvider(lembagaId)).value ?? [];
 
-  Future<void> _fetchData() async {
-    final lembagaId = ref.read(appContextProvider).lembaga?.id;
-    if (lembagaId == null) return;
-
-    try {
-      final divisiData = await _supabase
-          .from('divisi')
-          .select()
-          .eq('lembaga_id', lembagaId)
-          .order('nama_divisi');
-
-      final divisiIds = (divisiData as List).map((e) => e['id']).toList();
-
-      final jabatanData = await _supabase
-          .from('jabatan')
-          .select()
-      // FIX: Menggunakan filter 'in' karena in_ sering bermasalah pada linter
-          .filter('divisi_id', 'in', divisiIds)
-          .order('nama_jabatan');
-
-      if (mounted) {
-        setState(() {
-          _divisiList = divisiData.map((e) => DivisiModel.fromJson(e)).toList();
-          _jabatanList = (jabatanData as List).map((e) => JabatanModel.fromJson(e)).toList();
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      if (context.mounted) {
-        setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Gagal memuat data: $e")),
-        );
-      }
-    }
-  }
-
-  void _showAddJabatanDialog() {
-    if (_divisiList.isEmpty) {
+    if (divisiList.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Buat divisi terlebih dahulu sebelum menambah jabatan.")),
       );
       return;
     }
 
-    final nameController = TextEditingController();
-    String? selectedDivisiId = _divisiList.first.id;
-    String selectedRole = 'GURU';
+    final isEdit = jabatan != null;
+    final nameController = TextEditingController(text: jabatan?.namaJabatan ?? '');
+    final levelController = TextEditingController(text: jabatan?.levelJabatan?.toString() ?? '1');
+    final catatanController = TextEditingController(text: jabatan?.catatanJabatan ?? '');
+    String? selectedDivisiId = jabatan?.divisiId ?? divisiList.first.id;
+    String selectedRole = jabatan?.defaultRole ?? 'GURU';
     final formKey = GlobalKey<FormState>();
 
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: const Text("Tambah Jabatan Baru", style: TextStyle(fontWeight: FontWeight.bold)),
+          title: Text(isEdit ? "Edit Jabatan" : "Tambah Jabatan Baru", style: const TextStyle(fontWeight: FontWeight.bold)),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
           content: SingleChildScrollView(
             child: Form(
@@ -93,10 +53,9 @@ class _JabatanListScreenState extends ConsumerState<JabatanListScreen> {
                   ),
                   const SizedBox(height: 20),
                   DropdownButtonFormField<String>(
-                    // FIX: Menggunakan initialValue untuk Flutter 3.33+
                     initialValue: selectedDivisiId,
                     decoration: const InputDecoration(labelText: "Pilih Divisi"),
-                    items: _divisiList.map((d) => DropdownMenuItem(
+                    items: divisiList.map((d) => DropdownMenuItem(
                       value: d.id,
                       child: Text(d.namaDivisi),
                     )).toList(),
@@ -104,7 +63,6 @@ class _JabatanListScreenState extends ConsumerState<JabatanListScreen> {
                   ),
                   const SizedBox(height: 20),
                   DropdownButtonFormField<String>(
-                    // FIX: Menggunakan initialValue untuk Flutter 3.33+
                     initialValue: selectedRole,
                     decoration: const InputDecoration(labelText: "Hak Akses Default (Role)"),
                     items: const [
@@ -114,6 +72,18 @@ class _JabatanListScreenState extends ConsumerState<JabatanListScreen> {
                       DropdownMenuItem(value: 'STAFF', child: Text("Staff Administrasi")),
                     ],
                     onChanged: (val) => setDialogState(() => selectedRole = val!),
+                  ),
+                  const SizedBox(height: 20),
+                  TextFormField(
+                    controller: levelController,
+                    decoration: const InputDecoration(labelText: "Level Jabatan (Angka)", hintText: "cth: 1 untuk Guru, 2 untuk Koordinator"),
+                    keyboardType: TextInputType.number,
+                  ),
+                  const SizedBox(height: 20),
+                  TextFormField(
+                    controller: catatanController,
+                    decoration: const InputDecoration(labelText: "Catatan Jabatan", hintText: "Tugas utama atau wewenang..."),
+                    maxLines: 2,
                   ),
                 ],
               ),
@@ -125,28 +95,46 @@ class _JabatanListScreenState extends ConsumerState<JabatanListScreen> {
               onPressed: () async {
                 if (!formKey.currentState!.validate()) return;
 
-                try {
-                  await _supabase.from('jabatan').insert({
-                    'divisi_id': selectedDivisiId,
-                    'nama_jabatan': nameController.text.trim(),
-                    'default_role': selectedRole,
-                    'status': 'aktif',
-                  });
+                final messenger = ScaffoldMessenger.of(context);
+                final navigator = Navigator.of(context);
 
-                  if (context.mounted) {
-                    Navigator.pop(context);
-                    _fetchData();
-                  }
+                try {
+                  // FIX: Menambahkan lembagaId, namaJabatan dan defaultRole ke constructor JabatanModel
+                  final updatedJabatan = (jabatan ?? JabatanModel(
+                    id: '',
+                    lembagaId: lembagaId, // Ditambahkan: Sesuai perubahan model terbaru
+                    divisiId: selectedDivisiId!,
+                    namaJabatan: nameController.text.trim(),
+                    defaultRole: selectedRole,
+                  )).copyWith(
+                    divisiId: selectedDivisiId!,
+                    namaJabatan: nameController.text.trim(),
+                    defaultRole: selectedRole,
+                    levelJabatan: int.tryParse(levelController.text),
+                    catatanJabatan: catatanController.text.trim(),
+                    status: jabatan?.status ?? 'aktif',
+                  );
+
+                  await ref.read(jabatanListProvider(lembagaId).notifier).saveJabatan(updatedJabatan);
+
+                  // Refresh data agar list jabatan langsung muncul
+                  ref.invalidate(jabatanListProvider(lembagaId));
+
+                  if (!mounted) return; // FIX: use_build_context_synchronously
+                  navigator.pop();
+
+                  messenger.showSnackBar(
+                    SnackBar(content: Text(isEdit ? "Jabatan berhasil diupdate!" : "Jabatan berhasil ditambahkan!")),
+                  );
                 } catch (e) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text("Gagal menyimpan: $e")),
-                    );
-                  }
+                  if (!mounted) return;
+                  messenger.showSnackBar(
+                    SnackBar(content: Text("Gagal menyimpan: $e")),
+                  );
                 }
               },
               style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10B981)),
-              child: const Text("Simpan", style: TextStyle(color: Colors.white)),
+              child: Text(isEdit ? "Update" : "Simpan", style: const TextStyle(color: Colors.white)),
             ),
           ],
         ),
@@ -156,30 +144,46 @@ class _JabatanListScreenState extends ConsumerState<JabatanListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final lembaga = ref.watch(appContextProvider).lembaga;
+    if (lembaga == null) return const Center(child: CircularProgressIndicator());
+
+    // Memantau data secara reaktif dari Provider
+    final jabatanAsync = ref.watch(jabatanListProvider(lembaga.id));
+    final divisiAsync = ref.watch(divisiListProvider(lembaga.id));
+
     return Scaffold(
       backgroundColor: Colors.white,
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _jabatanList.isEmpty
-          ? _buildEmptyState()
-          : ListView.builder(
-        padding: const EdgeInsets.all(24),
-        itemCount: _jabatanList.length,
-        itemBuilder: (context, index) {
-          final j = _jabatanList[index];
-          final namaDivisi = _divisiList.firstWhere(
-                  (d) => d.id == j.divisiId,
-              orElse: () => DivisiModel(id: '', lembagaId: '', namaDivisi: 'N/A')
-          ).namaDivisi;
+      body: jabatanAsync.when(
+        data: (jabatanList) => divisiAsync.when(
+          data: (divisiList) => jabatanList.isEmpty
+              ? _buildEmptyState()
+              : ListView.builder(
+            padding: const EdgeInsets.all(24),
+            itemCount: jabatanList.length,
+            itemBuilder: (context, index) {
+              final j = jabatanList[index];
+              final namaDivisi = divisiList.firstWhere(
+                      (d) => d.id == j.divisiId,
+                  orElse: () => DivisiModel(id: '', lembagaId: '', namaDivisi: 'N/A')
+              ).namaDivisi;
 
-          return _buildJabatanCard(j, namaDivisi);
-        },
+              return _buildJabatanCard(j, namaDivisi);
+            },
+          ),
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (err, _) => Center(child: Text("Error Divisi: $err")),
+        ),
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (err, _) => Center(child: Text("Error Jabatan: $err")),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _showAddJabatanDialog,
-        backgroundColor: const Color(0xFF10B981),
-        icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text("Tambah Jabatan", style: TextStyle(color: Colors.white)),
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 30.0),
+        child: FloatingActionButton.extended(
+          onPressed: () => _showJabatanDialog(lembaga.id),
+          backgroundColor: const Color(0xFF10B981),
+          icon: const Icon(Icons.add, color: Colors.white),
+          label: const Text("Tambah Jabatan", style: TextStyle(color: Colors.white)),
+        ),
       ),
     );
   }
@@ -199,7 +203,7 @@ class _JabatanListScreenState extends ConsumerState<JabatanListScreen> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.blue.withValues(alpha: 0.1),
+                color: Colors.blue.withValues(alpha:0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Icon(Icons.work_outline, color: Colors.blue),
@@ -232,7 +236,13 @@ class _JabatanListScreenState extends ConsumerState<JabatanListScreen> {
                 ],
               ),
             ),
-            const Icon(Icons.more_vert, color: Colors.grey),
+            IconButton(
+              icon: const Icon(Icons.edit_outlined, color: Colors.grey),
+              onPressed: () {
+                final lembagaId = ref.read(appContextProvider).lembaga!.id;
+                _showJabatanDialog(lembagaId, jabatan: j);
+              },
+            ),
           ],
         ),
       ),

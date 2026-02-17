@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 // Perbaiki path import: naik satu tingkat ke folder management_lembaga, lalu masuk ke models
@@ -39,7 +40,7 @@ class AppContextState {
   }
 }
 
-@riverpod
+@Riverpod(keepAlive: true)
 class AppContext extends _$AppContext {
   final _supabase = Supabase.instance.client;
 
@@ -49,7 +50,7 @@ class AppContext extends _$AppContext {
     return AppContextState();
   }
 
-  // Tambahkan metode ini di dalam class AppContext (notifier)
+  // --- FUNGSI UPDATE PROFIL LEMBAGA ---
   Future<void> updateLembaga({
     required String nama,
     String? alamat,
@@ -59,25 +60,110 @@ class AppContext extends _$AppContext {
     String? visi,
     String? misi,
   }) async {
-    if (state.lembaga == null) return;
+    final user = _supabase.auth.currentUser;
+    if (user == null) throw Exception("Sesi login tidak valid.");
 
-    final updatedLembaga = state.lembaga!.copyWith(
-      namaLembaga: nama,
-      alamat: alamat,
-      kontak: kontak,
-      logoUrl: logoUrl,
-      emailOfficial: emailOfficial,
-      visi: visi,
-      misi: misi,
+    if (state.lembaga == null) {
+      // --- SKENARIO 1: DATA BARU (INSERT) ---
+      final response = await _supabase
+          .from('lembaga')
+          .insert({
+        'nama_lembaga': nama,
+        'alamat_pusat': alamat,
+        'wa_official': kontak,
+        'logo_url': logoUrl,
+        'email_official': emailOfficial,
+        'visi': visi,
+        'misi': misi,
+      })
+          .select()
+          .single();
+
+      final newLembaga = LembagaModel.fromJson(response);
+
+      // Tautkan profil dengan lembaga baru
+      await _supabase
+          .from('profiles')
+          .update({'lembaga_id': newLembaga.id})
+          .eq('id', user.id);
+
+      // --- OTOMATISASI AKSES ---
+      await _supabase
+          .from('profile_access')
+          .insert({
+        'profile_id': user.id,
+        'cabang_id': null, // Belum ada cabang saat pertama buat
+        'role': 'OWNER',
+      });
+
+      state = state.copyWith(lembaga: newLembaga);
+    } else {
+      // --- SKENARIO 2: SUDAH ADA DATA (UPDATE) ---
+      final updatedLembaga = state.lembaga!.copyWith(
+        namaLembaga: nama,
+        alamat: alamat,
+        kontak: kontak,
+        logoUrl: logoUrl,
+        emailOfficial: emailOfficial,
+        visi: visi,
+        misi: misi,
+      );
+
+      // FIX: Gunakan Map spesifik untuk update guna menghindari konflik RLS/ID di Supabase
+      await _supabase
+          .from('lembaga')
+          .update({
+        'nama_lembaga': nama,
+        'alamat_pusat': alamat,
+        'wa_official': kontak,
+        'logo_url': logoUrl,
+        'email_official': emailOfficial,
+        'visi': visi,
+        'misi': misi,
+      })
+          .eq('id', updatedLembaga.id);
+
+      // Update state global agar Dashboard & UI lainnya langsung berubah
+      state = state.copyWith(lembaga: updatedLembaga);
+    }
+  }
+
+  // --- FUNGSI UPLOAD LOGO ---
+  Future<void> uploadLembagaLogo(String filePath) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) throw Exception("Silakan login kembali.");
+
+    // FIX: Coba ambil data dari database jika memori kosong
+    if (state.lembaga == null) {
+      await initContext();
+      if (state.lembaga == null) throw Exception("Profil lembaga belum dibuat.");
+    }
+
+    // Ambil ekstensi asli (jpg/png) agar sesuai dengan SQL Policy
+    final String extension = filePath.split('.').last.toLowerCase();
+    final fileName = 'logo_${state.lembaga!.id}.$extension';
+    final file = File(filePath);
+
+    // 1. Upload ke Storage Bucket 'logos'
+    await _supabase.storage.from('logos').upload(
+      fileName,
+      file,
+      fileOptions: const FileOptions(upsert: true),
     );
 
-    await _supabase
-        .from('lembaga')
-        .update(updatedLembaga.toJson())
-        .eq('id', updatedLembaga.id);
+    // 2. Ambil Public URL
+    final String publicUrl = _supabase.storage.from('logos').getPublicUrl(fileName);
 
-    // Update state global agar Dashboard & UI lainnya langsung berubah
-    state = state.copyWith(lembaga: updatedLembaga);
+    // 3. Update URL di tabel lembaga
+    await updateLembaga(
+      nama: state.lembaga!.namaLembaga,
+      alamat: state.lembaga!.alamat,
+      kontak: state.lembaga!.kontak,
+      logoUrl: publicUrl,
+      emailOfficial: state.lembaga!.emailOfficial,
+      visi: state.lembaga!.visi,
+      misi: state.lembaga!.misi,
+    );
   }
 
   // --- FUNGSI INISIALISASI SAAT LOGIN ---
@@ -85,7 +171,10 @@ class AppContext extends _$AppContext {
     state = state.copyWith(isLoading: true);
     try {
       final user = _supabase.auth.currentUser;
-      if (user == null) return;
+      if (user == null) {
+        state = state.copyWith(isLoading: false);
+        return;
+      }
 
       // 1. Ambil Profil & Lembaga
       final profileData = await _supabase
@@ -93,6 +182,18 @@ class AppContext extends _$AppContext {
           .select('*, lembaga:lembaga_id(*)')
           .eq('id', user.id)
           .single();
+
+      if (profileData['lembaga'] == null) {
+        // FIX: Jangan throw Exception. Biarkan state kosong agar user bisa membuat profil.
+        state = state.copyWith(
+          lembaga: null,
+          availableCabang: [],
+          currentCabang: null,
+          currentTahunAjaran: null,
+          isLoading: false,
+        );
+        return;
+      }
 
       final lembaga = LembagaModel.fromJson(profileData['lembaga']);
 
@@ -109,15 +210,20 @@ class AppContext extends _$AppContext {
       // 3. Ambil Tahun Ajaran Aktif
       TahunAjaranModel? tahunAktif;
       if (lembaga.tahunAjaranAktifId != null) {
-        final taData = await _supabase
-            .from('tahun_ajaran')
-            .select()
-            .eq('id', lembaga.tahunAjaranAktifId!)
-            .single();
-        tahunAktif = TahunAjaranModel.fromJson(taData);
+        try {
+          final taData = await _supabase
+              .from('tahun_ajaran')
+              .select()
+              .eq('id', lembaga.tahunAjaranAktifId!)
+              .single();
+          tahunAktif = TahunAjaranModel.fromJson(taData);
+        } catch (taErr) {
+          // Abaikan jika tahun ajaran aktif tidak ditemukan
+          tahunAktif = null;
+        }
       }
 
-      // 4. Update State
+      // 4. Update State Akhir
       state = state.copyWith(
         lembaga: lembaga,
         availableCabang: branches,
@@ -134,6 +240,6 @@ class AppContext extends _$AppContext {
   // --- FUNGSI PINDAH CABANG (CONTEXT SWITCHER) ---
   void switchCabang(CabangModel cabang) {
     state = state.copyWith(currentCabang: cabang);
-    // Di sini kamu bisa menambahkan refresh data provider lain jika perlu
+    // Refresh context dilakukan secara implisit oleh provider yang menonton currentCabang
   }
 }

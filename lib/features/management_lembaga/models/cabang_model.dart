@@ -7,6 +7,7 @@ class CabangModel {
   final String? waCabang;
   final String? emailCabang;
   final String? kepalaCabangId;
+  final String? kepalaCabang; // Ditambahkan untuk nama display
   final String? status;
   final String? jamOperasional;
   final String? catatan;
@@ -15,12 +16,13 @@ class CabangModel {
   CabangModel({
     required this.id,
     required this.lembagaId,
-    required this.namaCabang,
-    required this.kodeCabang,
+    this.namaCabang = '', // Dibuat optional dengan default untuk inisialisasi baru
+    this.kodeCabang = '', // Dibuat optional dengan default untuk inisialisasi baru
     this.alamat,
     this.waCabang,
     this.emailCabang,
     this.kepalaCabangId,
+    this.kepalaCabang, // Ditambahkan ke constructor
     this.status,
     this.jamOperasional,
     this.catatan,
@@ -36,6 +38,7 @@ class CabangModel {
     String? waCabang,
     String? emailCabang,
     String? kepalaCabangId,
+    String? kepalaCabang, // Ditambahkan ke copyWith
     String? status,
     String? jamOperasional,
     String? catatan,
@@ -50,6 +53,7 @@ class CabangModel {
       waCabang: waCabang ?? this.waCabang,
       emailCabang: emailCabang ?? this.emailCabang,
       kepalaCabangId: kepalaCabangId ?? this.kepalaCabangId,
+      kepalaCabang: kepalaCabang ?? this.kepalaCabang, // Mapping copyWith
       status: status ?? this.status,
       jamOperasional: jamOperasional ?? this.jamOperasional,
       catatan: catatan ?? this.catatan,
@@ -66,6 +70,7 @@ class CabangModel {
     waCabang: json['wa_cabang'],
     emailCabang: json['email_cabang'],
     kepalaCabangId: json['kepala_cabang_id'],
+    kepalaCabang: json['kepala_cabang'], // Mapping dari JSON (biasanya hasil join)
     status: json['status'],
     jamOperasional: json['jam_operasional'],
     catatan: json['catatan'],

@@ -18,7 +18,7 @@ class AuthService {
   // --- 1. REGISTER GURU (Oleh Admin) ---
   // Catatan: Fungsi ini akan membuat Admin ter-logout otomatis
   // karena Supabase Client beralih sesi ke user baru yang dibuat.
-  Future<void> registerGuru({
+  Future<String?> registerGuru({
     required String nama,
     required String email,
     required String noHp,
@@ -56,13 +56,16 @@ class AuthService {
         'is_new_user': true, // Penanda untuk ganti password nanti
       });
 
-      // 3. Logout sesi guru agar Admin bisa login kembali di layar login
-      await _supabase.auth.signOut();
-
+      // 3. Logout dipindahkan ke UI agar tidak memutus Future di tengah jalan
+      return newUserId;
     } catch (e) {
       // Jika gagal di tengah jalan, pastikan kita tidak meninggalkan sesi nyangkut
-      if (_supabase.auth.currentUser != null) {
-        await _supabase.auth.signOut();
+      try {
+        if (_supabase.auth.currentUser != null) {
+          await _supabase.auth.signOut();
+        }
+      } catch (_) {
+        // Abaikan error signOut agar tidak menutupi error registrasi asli
       }
       rethrow; // Lempar error ke UI agar muncul di SnackBar
     }
@@ -142,8 +145,11 @@ class AuthService {
       });
 
     } catch (e) {
-      // Opsional: Hapus user auth jika insert data gagal agar bisa daftar ulang
-      // await _supabase.rpc('delete_user_by_id', params: {'user_id': userId});
+      try {
+        if (_supabase.auth.currentUser != null) {
+          await _supabase.auth.signOut();
+        }
+      } catch (_) {}
       rethrow;
     }
   }

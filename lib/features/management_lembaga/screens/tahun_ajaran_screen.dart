@@ -56,6 +56,7 @@ class _TahunAjaranScreenState extends ConsumerState<TahunAjaranScreen> {
 
   Future<void> _setActiveYear(String taId) async {
     final lembagaId = ref.read(appContextProvider).lembaga?.id;
+    final messenger = ScaffoldMessenger.of(context); // Capture messenger sebelum async gap
     try {
       // 1. Update di Database
       await _supabase
@@ -69,13 +70,13 @@ class _TahunAjaranScreenState extends ConsumerState<TahunAjaranScreen> {
       // 3. Refresh UI Lokal
       _fetchTahunAjaran();
 
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      if (!mounted) return; // FIX: use_build_context_synchronously
+      messenger.showSnackBar(
         const SnackBar(content: Text("Tahun ajaran aktif berhasil diperbarui!")),
       );
     } catch (e) {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      if (!mounted) return; // FIX: use_build_context_synchronously
+      messenger.showSnackBar(
         SnackBar(content: Text("Gagal memperbarui: $e")),
       );
     }
@@ -100,13 +101,16 @@ class _TahunAjaranScreenState extends ConsumerState<TahunAjaranScreen> {
             onPressed: () async {
               if (controller.text.isEmpty) return;
               final lembagaId = ref.read(appContextProvider).lembaga?.id;
+              final navigator = Navigator.of(context); // Capture navigator
+
               await _supabase.from('tahun_ajaran').insert({
                 'lembaga_id': lembagaId,
                 'label_tahun': controller.text.trim(),
                 'semester': 'Ganjil',
               });
-              if (!context.mounted) return;
-              Navigator.pop(context);
+
+              if (!mounted) return;
+              navigator.pop();
               _fetchTahunAjaran();
             },
             child: const Text("Simpan"),

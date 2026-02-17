@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/kurikulum_model.dart';
 import '../providers/kurikulum_provider.dart';
-import 'modul_form_screen.dart';
 import 'modul_detail_screen.dart'; // Ditambahkan: Import navigasi detail
-import '../widgets/target_metrik_dialog.dart'; // Pastikan path widget benar
 
 class LevelDetailScreen extends ConsumerWidget {
   final LevelModel level;

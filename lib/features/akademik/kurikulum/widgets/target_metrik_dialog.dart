@@ -20,11 +20,11 @@ class _TargetMetrikDialogState extends ConsumerState<TargetMetrikDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Row(
+      title: const Row(
         children: [
-          const Icon(Icons.track_changes, color: Color(0xFF10B981)),
-          const SizedBox(width: 12),
-          const Text("Konfigurasi Target", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          Icon(Icons.track_changes, color: Color(0xFF10B981)),
+          SizedBox(width: 12),
+          Text("Konfigurasi Target", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
         ],
       ),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
@@ -39,7 +39,7 @@ class _TargetMetrikDialogState extends ConsumerState<TargetMetrikDialog> {
               const Text("JENIS METRIK", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1.2)),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
-                value: _selectedMetrik, // Diperbaiki dari initialValue ke value
+                initialValue: _selectedMetrik, // Diperbarui untuk mendukung standar Flutter 2026
                 decoration: _inputStyle(""),
                 items: ['JUZ', 'HALAMAN', 'AYAT', 'SURAH', 'POIN', 'BARIS'].map((m) => DropdownMenuItem(value: m, child: Text(m))).toList(),
                 onChanged: (v) => setState(() => _selectedMetrik = v!),

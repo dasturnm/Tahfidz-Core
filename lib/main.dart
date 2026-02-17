@@ -4,6 +4,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:tahfidz_core/features/auth/screens/login_screen.dart';
 import 'package:tahfidz_core/features/dashboard/screens/main_layout_screen.dart';
 import 'package:tahfidz_core/providers/auth_provider.dart';
+import 'package:tahfidz_core/features/management_lembaga/providers/app_context_provider.dart'; // Ditambahkan
+import 'package:tahfidz_core/features/management_lembaga/screens/lembaga_profile_screen.dart'; // Ditambahkan: Layar Setup
 
 // Import halaman update password
 import 'package:tahfidz_core/features/auth/screens/update_password_screen.dart';
@@ -66,12 +68,20 @@ class _MyAppState extends ConsumerState<MyApp> {
   }
 }
 
-class AuthGate extends ConsumerWidget {
+class AuthGate extends ConsumerStatefulWidget {
   const AuthGate({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AuthGate> createState() => _AuthGateState();
+}
+
+class _AuthGateState extends ConsumerState<AuthGate> {
+  bool _hasInitialized = false;
+
+  @override
+  Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
+    final appContext = ref.watch(appContextProvider);
 
     // Menampilkan loading saat mengecek status auth
     if (authState.isLoading) {
@@ -80,10 +90,37 @@ class AuthGate extends ConsumerWidget {
       );
     }
 
-    // Jika sudah login, masuk ke Dashboard (Melalui MainLayout untuk Sidebar)
+    // Jika sudah login, cek status lembaga
     if (authState.isAuthenticated) {
+      if (!_hasInitialized) {
+        _hasInitialized = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          ref.read(appContextProvider.notifier).initContext();
+        });
+      }
+
+      if (appContext.isLoading) {
+        return const Scaffold(
+          body: Center(child: CircularProgressIndicator()),
+        );
+      }
+
+      // OTOMATISASI REDIRECT: Jika belum punya lembaga, arahkan ke Setup Profil
+      if (appContext.lembaga == null) {
+        return const Scaffold(
+          backgroundColor: Colors.white,
+          body: SafeArea(
+            child: LembagaProfileScreen(),
+          ),
+        );
+      }
+
+      // Jika sudah punya lembaga, masuk ke Dashboard
       return const MainLayoutScreen();
     }
+
+    // Reset status inisialisasi jika user logout
+    _hasInitialized = false;
 
     // Jika belum login, tampilkan layar Login
     return const LoginScreen();

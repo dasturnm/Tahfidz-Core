@@ -6,12 +6,12 @@ part of 'app_context_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$appContextHash() => r'92195100db7919763b7d9eabe9c1cab559a5c4c0';
+String _$appContextHash() => r'c92f5f7c0568e6fe82179cbc72d4863a0e9fa38c';
 
 /// See also [AppContext].
 @ProviderFor(AppContext)
 final appContextProvider =
-    AutoDisposeNotifierProvider<AppContext, AppContextState>.internal(
+    NotifierProvider<AppContext, AppContextState>.internal(
   AppContext.new,
   name: r'appContextProvider',
   debugGetCreateSourceHash:
@@ -20,6 +20,6 @@ final appContextProvider =
   allTransitiveDependencies: null,
 );
 
-typedef _$AppContext = AutoDisposeNotifier<AppContextState>;
+typedef _$AppContext = Notifier<AppContextState>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

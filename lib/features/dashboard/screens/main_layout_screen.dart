@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../management_lembaga/screens/management_hub_screen.dart';
 import '../../program/screens/program_list_screen.dart';
 import '../../akademik/screens/akademik_hub_screen.dart'; // Import Screen Akademik Hub
+import '../../guru_staff/screens/guru_list_screen.dart'; // Ditambahkan: Import fitur Guru
 import 'dashboard_admin_screen.dart';
 
 class MainLayoutScreen extends StatefulWidget {
@@ -16,7 +17,8 @@ class _MainLayoutScreenState extends State<MainLayoutScreen> {
 
   final List<Widget> _screens = [
     const DashboardAdminScreen(),
-    const ManagementHubScreen(),
+    const ManagementHubScreen(), // FIX: Hapus const untuk memastikan sub-fitur muncul
+    const GuruListScreen(), // Ganti placeholder menjadi class asli
     const ProgramListScreen(),
     const AkademikHubScreen(), // UPDATE: Menu Akademik sekarang mengarah ke Hub
     const Center(child: Text("Siswa Screen")),
@@ -71,10 +73,11 @@ class _MainLayoutScreenState extends State<MainLayoutScreen> {
           const SizedBox(height: 16),
           _buildMenuItem(0, Icons.dashboard_outlined, "Dashboard"),
           _buildMenuItem(1, Icons.business_outlined, "Lembaga"),
-          _buildMenuItem(2, Icons.assignment_outlined, "Program"),
-          _buildMenuItem(3, Icons.school_outlined, "Akademik"),
-          _buildMenuItem(4, Icons.people_outlined, "Siswa"),
-          _buildMenuItem(5, Icons.account_balance_wallet_outlined, "Keuangan"),
+          _buildMenuItem(2, Icons.badge_outlined, "Guru & Staff"), // Nama diubah dari SDM / Staf
+          _buildMenuItem(3, Icons.assignment_outlined, "Program"),
+          _buildMenuItem(4, Icons.school_outlined, "Akademik"),
+          _buildMenuItem(5, Icons.people_outlined, "Siswa"),
+          _buildMenuItem(6, Icons.account_balance_wallet_outlined, "Keuangan"),
           const Spacer(),
           _buildUserCard(),
         ],

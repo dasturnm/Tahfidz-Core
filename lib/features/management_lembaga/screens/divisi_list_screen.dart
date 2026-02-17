@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../providers/app_context_provider.dart';
+import '../providers/lembaga_provider.dart'; // Ditambahkan: Import provider baru
 import '../models/divisi_model.dart';
 
 class DivisiListScreen extends ConsumerStatefulWidget {
@@ -12,47 +12,18 @@ class DivisiListScreen extends ConsumerStatefulWidget {
 }
 
 class _DivisiListScreenState extends ConsumerState<DivisiListScreen> {
-  final _supabase = Supabase.instance.client;
-  bool _isLoading = true;
-  List<DivisiModel> _divisiList = [];
+  // FIX: _isLoading dan _divisiList dihapus karena sudah dikelola oleh DivisiListProvider
 
-  @override
-  void initState() {
-    super.initState();
-    _fetchDivisi();
-  }
-
-  Future<void> _fetchDivisi() async {
-    final lembagaId = ref.read(appContextProvider).lembaga?.id;
-    if (lembagaId == null) return;
-
-    try {
-      final data = await _supabase
-          .from('divisi')
-          .select()
-          .eq('lembaga_id', lembagaId)
-          .order('nama_divisi');
-
-      if (mounted) {
-        setState(() {
-          _divisiList = (data as List).map((e) => DivisiModel.fromJson(e)).toList();
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  void _showAddDivisiDialog() {
-    final nameController = TextEditingController();
-    final descController = TextEditingController();
+  void _showDivisiDialog(String lembagaId, {DivisiModel? divisi}) {
+    final isEdit = divisi != null;
+    final nameController = TextEditingController(text: divisi?.namaDivisi ?? '');
+    final descController = TextEditingController(text: divisi?.deskripsi ?? '');
     final formKey = GlobalKey<FormState>();
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text("Tambah Divisi Baru", style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(isEdit ? "Edit Divisi" : "Tambah Divisi Baru", style: const TextStyle(fontWeight: FontWeight.bold)),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
         content: Form(
           key: formKey,
@@ -85,29 +56,38 @@ class _DivisiListScreenState extends ConsumerState<DivisiListScreen> {
             onPressed: () async {
               if (!formKey.currentState!.validate()) return;
 
-              final lembagaId = ref.read(appContextProvider).lembaga?.id;
-              try {
-                await _supabase.from('divisi').insert({
-                  'lembaga_id': lembagaId,
-                  'nama_divisi': nameController.text.trim(),
-                  'deskripsi': descController.text.trim(),
-                  'status': 'aktif',
-                });
+              final messenger = ScaffoldMessenger.of(context);
+              final navigator = Navigator.of(context);
 
-                if (context.mounted) {
-                  Navigator.pop(context);
-                  _fetchDivisi();
-                }
+              try {
+                // UPDATE: Menggunakan DivisiModel dan Provider Notifier
+                final updatedDivisi = (divisi ?? DivisiModel(
+                  id: '',
+                  lembagaId: lembagaId,
+                  namaDivisi: nameController.text.trim(),
+                )).copyWith(
+                  namaDivisi: nameController.text.trim(),
+                  deskripsi: descController.text.trim(),
+                  status: divisi?.status ?? 'aktif',
+                );
+
+                await ref.read(divisiListProvider(lembagaId).notifier).saveDivisi(updatedDivisi);
+
+                if (!mounted) return; // FIX: use_build_context_synchronously
+                navigator.pop();
+
+                messenger.showSnackBar(
+                  SnackBar(content: Text(isEdit ? "Divisi berhasil diupdate!" : "Divisi berhasil ditambahkan!")),
+                );
               } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text("Gagal menyimpan: $e")),
-                  );
-                }
+                if (!mounted) return;
+                messenger.showSnackBar(
+                  SnackBar(content: Text("Gagal menyimpan: $e")),
+                );
               }
             },
             style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10B981)),
-            child: const Text("Simpan", style: TextStyle(color: Colors.white)),
+            child: Text(isEdit ? "Update" : "Simpan", style: const TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -116,25 +96,36 @@ class _DivisiListScreenState extends ConsumerState<DivisiListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final lembaga = ref.watch(appContextProvider).lembaga;
+    if (lembaga == null) return const Center(child: CircularProgressIndicator());
+
+    // Memantau data divisi secara reaktif
+    final divisiAsync = ref.watch(divisiListProvider(lembaga.id));
+
     return Scaffold(
       backgroundColor: Colors.white,
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _divisiList.isEmpty
-          ? _buildEmptyState()
-          : ListView.builder(
-        padding: const EdgeInsets.all(24),
-        itemCount: _divisiList.length,
-        itemBuilder: (context, index) {
-          final d = _divisiList[index];
-          return _buildDivisiCard(d);
-        },
+      body: divisiAsync.when(
+        data: (divisiList) => divisiList.isEmpty
+            ? _buildEmptyState()
+            : ListView.builder(
+          padding: const EdgeInsets.all(24),
+          itemCount: divisiList.length,
+          itemBuilder: (context, index) {
+            final d = divisiList[index];
+            return _buildDivisiCard(d);
+          },
+        ),
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (err, _) => Center(child: Text("Error: $err")),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _showAddDivisiDialog,
-        backgroundColor: const Color(0xFF10B981),
-        icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text("Tambah Divisi", style: TextStyle(color: Colors.white)),
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 30.0),
+        child: FloatingActionButton.extended(
+          onPressed: () => _showDivisiDialog(lembaga.id),
+          backgroundColor: const Color(0xFF10B981),
+          icon: const Icon(Icons.add, color: Colors.white),
+          label: const Text("Tambah Divisi", style: TextStyle(color: Colors.white)),
+        ),
       ),
     );
   }
@@ -175,9 +166,10 @@ class _DivisiListScreenState extends ConsumerState<DivisiListScreen> {
             style: TextStyle(color: Colors.grey[600], fontSize: 13),
           ),
         ),
-        trailing: const Icon(Icons.more_vert, color: Colors.grey),
+        trailing: const Icon(Icons.edit_outlined, color: Colors.grey),
         onTap: () {
-          // Aksi untuk mengelola staff di divisi ini nanti
+          final lembagaId = ref.read(appContextProvider).lembaga!.id;
+          _showDivisiDialog(lembagaId, divisi: d);
         },
       ),
     );

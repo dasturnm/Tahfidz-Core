@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tahfidz_core/services/auth_service.dart';
-import 'package:tahfidz_core/providers/auth_provider.dart';
+import 'package:tahfidz_core/features/management_lembaga/providers/app_context_provider.dart'; // Tambahkan ini
+import 'package:tahfidz_core/features/management_lembaga/providers/lembaga_provider.dart';
+import 'package:tahfidz_core/features/guru_staff/providers/penugasan_staf_provider.dart';
+import 'package:tahfidz_core/features/guru_staff/providers/guru_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class GuruFormScreen extends ConsumerStatefulWidget {
@@ -20,6 +23,10 @@ class _GuruFormScreenState extends ConsumerState<GuruFormScreen> {
   final _emailController = TextEditingController();
   final _noHpController = TextEditingController();
   final _passwordController = TextEditingController(); // Controller Password Utama
+
+  // State untuk Dropdown
+  String? _selectedCabangId;
+  String? _selectedJabatanId;
 
   bool _isLoading = false;
 
@@ -45,38 +52,46 @@ class _GuruFormScreenState extends ConsumerState<GuruFormScreen> {
   }
 
   void _simpanGuru() async {
+    if (_isLoading) return; // FIX: Mencegah error 'Future already completed'
     if (!_formKey.currentState!.validate()) return;
 
-    // 1. Ambil Data Admin & Validasi Lembaga ID
-    final adminProfile = ref.read(authProvider).profile;
+    // 1. Ambil ID Lembaga dari App Context (yang sudah terbukti muncul di profil)
+    final lembagaId = ref.read(appContextProvider).lembaga?.id;
 
-    // Debugging: Cek data admin di console
-    // print("DEBUG ADMIN PROFILE: $adminProfile");
-
-    if (adminProfile == null || adminProfile['lembaga_id'] == null) {
+    if (lembagaId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Error Fatal: Akun Admin tidak memiliki ID Lembaga. Hubungi Super Admin.'),
+          content: Text('Error: ID Lembaga tidak ditemukan. Pastikan profil lembaga sudah dimuat.'),
           backgroundColor: Colors.red,
         ),
       );
-      return; // Stop proses agar tidak crash
+      return;
     }
-
-    final String lembagaId = adminProfile['lembaga_id']; // Aman di-cast ke String
 
     setState(() => _isLoading = true);
 
     try {
       if (widget.guru == null) {
         // --- PROSES TAMBAH GURU (Create User Auth) ---
-        await ref.read(authServiceProvider).registerGuru(
+        final String? newUserId = await ref.read(authServiceProvider).registerGuru(
           nama: _namaController.text,
           email: _emailController.text,
           noHp: _noHpController.text,
           password: _passwordController.text,
-          lembagaId: lembagaId, // Kirim ID yang sudah divalidasi
+          lembagaId: lembagaId,
         );
+
+        // --- PROSES PENUGASAN (Link ke Cabang & Jabatan) ---
+        if (newUserId != null) {
+          await ref.read(penugasanStafProvider.notifier).tambahPenugasan(
+            stafId: newUserId,
+            cabangId: _selectedCabangId ?? '', // Menangani jika tidak ada cabang
+            jabatanId: _selectedJabatanId!,
+          );
+
+          // Refresh list agar guru baru muncul
+          ref.invalidate(guruListProvider);
+        }
 
         if (!mounted) return;
         _showSuccessDialog();
@@ -85,8 +100,10 @@ class _GuruFormScreenState extends ConsumerState<GuruFormScreen> {
         await Supabase.instance.client.from('profiles').update({
           'nama_lengkap': _namaController.text,
           'no_hp': _noHpController.text,
-          // Email tidak diupdate di sini karena terkait Auth
         }).eq('id', widget.guru!['id']);
+
+        // Refresh list agar perubahan muncul
+        ref.invalidate(guruListProvider);
 
         if (!mounted) return;
         Navigator.pop(context);
@@ -142,7 +159,6 @@ class _GuruFormScreenState extends ConsumerState<GuruFormScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Cek Mode: Edit atau Tambah?
     final isEditMode = widget.guru != null;
 
     return Scaffold(
@@ -160,21 +176,18 @@ class _GuruFormScreenState extends ConsumerState<GuruFormScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 1. Nama Lengkap
               _buildField(_namaController, "Nama Lengkap", Icons.person),
               const SizedBox(height: 16),
 
-              // 2. Email (Read Only jika Edit)
               _buildField(
                 _emailController,
                 "Email Guru",
                 Icons.email,
-                enabled: !isEditMode, // Matikan jika edit
+                enabled: !isEditMode,
                 keyboardType: TextInputType.emailAddress,
               ),
               const SizedBox(height: 16),
 
-              // 3. No HP
               _buildField(
                 _noHpController,
                 "Nomor HP",
@@ -183,7 +196,13 @@ class _GuruFormScreenState extends ConsumerState<GuruFormScreen> {
               ),
               const SizedBox(height: 16),
 
-              // 4. Password (HANYA MUNCUL JIKA TAMBAH BARU)
+              if (!isEditMode) ...[
+                _buildDropdownCabang(),
+                const SizedBox(height: 16),
+                _buildDropdownJabatan(),
+                const SizedBox(height: 16),
+              ],
+
               if (!isEditMode) ...[
                 _buildField(
                   _passwordController,
@@ -200,7 +219,6 @@ class _GuruFormScreenState extends ConsumerState<GuruFormScreen> {
 
               const SizedBox(height: 40),
 
-              // Tombol Simpan
               SizedBox(
                 width: double.infinity,
                 height: 55,
@@ -261,7 +279,6 @@ class _GuruFormScreenState extends ConsumerState<GuruFormScreen> {
           borderSide: const BorderSide(color: Color(0xFF10B981), width: 2),
         ),
       ),
-      // Validasi Aman (Cek Null)
       validator: (v) {
         if (v == null || v.isEmpty) {
           return "$label wajib diisi";
@@ -271,6 +288,70 @@ class _GuruFormScreenState extends ConsumerState<GuruFormScreen> {
         }
         return null;
       },
+    );
+  }
+
+  Widget _buildDropdownCabang() {
+    final lembagaId = ref.watch(appContextProvider).lembaga?.id;
+
+    if (lembagaId == null || lembagaId.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.only(top: 8),
+        child: Text("Memuat data lembaga...", style: TextStyle(color: Colors.grey, fontSize: 12)),
+      );
+    }
+
+    final cabangs = ref.watch(cabangListProvider(lembagaId)).value ?? [];
+
+    // Auto-select jika hanya ada 1 cabang (Pusat)
+    if (cabangs.length == 1 && _selectedCabangId == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() => _selectedCabangId = cabangs.first.id);
+      });
+    }
+
+    return DropdownButtonFormField<String>(
+      decoration: _inputDecoration(
+          cabangs.isEmpty ? "Pusat (Tanpa Cabang)" : "Pilih Cabang",
+          Icons.business
+      ),
+      initialValue: _selectedCabangId,
+      items: cabangs.map((c) {
+        return DropdownMenuItem(value: c.id.toString(), child: Text(c.namaCabang));
+      }).toList(),
+      onChanged: cabangs.isEmpty ? null : (val) => setState(() => _selectedCabangId = val),
+      validator: (v) => (cabangs.isNotEmpty && v == null) ? "Cabang wajib dipilih" : null,
+    );
+  }
+
+  Widget _buildDropdownJabatan() {
+    final lembagaId = ref.watch(appContextProvider).lembaga?.id;
+
+    if (lembagaId == null || lembagaId.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final jabatans = ref.watch(jabatanListProvider(lembagaId)).value ?? [];
+    return DropdownButtonFormField<String>(
+      decoration: _inputDecoration("Pilih Jabatan", Icons.work),
+      initialValue: _selectedJabatanId,
+      items: jabatans.map((j) {
+        return DropdownMenuItem(value: j.id.toString(), child: Text(j.namaJabatan));
+      }).toList(),
+      onChanged: (val) => setState(() => _selectedJabatanId = val),
+      validator: (v) => v == null ? "Jabatan wajib dipilih" : null,
+    );
+  }
+
+  InputDecoration _inputDecoration(String label, IconData icon) {
+    return InputDecoration(
+      labelText: label,
+      prefixIcon: Icon(icon, color: const Color(0xFF10B981)),
+      filled: true,
+      fillColor: Colors.grey[50],
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade200)),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade200)),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF10B981), width: 2)),
     );
   }
 }

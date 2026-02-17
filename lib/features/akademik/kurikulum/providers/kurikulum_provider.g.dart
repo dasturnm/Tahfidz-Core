@@ -6,7 +6,7 @@ part of 'kurikulum_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$kurikulumListHash() => r'12ba8b0b7cca77308d2b68abedf4a58ebe699c2d';
+String _$kurikulumListHash() => r'c8ce67544014dccfb04ce3e849ab748fda5a2325';
 
 /// Copied from Dart SDK
 class _SystemHash {

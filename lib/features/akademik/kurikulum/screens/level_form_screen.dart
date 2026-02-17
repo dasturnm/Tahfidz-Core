@@ -147,6 +147,8 @@ class _LevelFormScreenState extends ConsumerState<LevelFormScreen> {
   void _handleSave() async {
     if (!_formKey.currentState!.validate()) return;
 
+    final navigator = Navigator.of(context); // Capture navigator sebelum async
+
     final newLevel = LevelModel(
       id: widget.level?.id,
       jenjangId: widget.jenjang.id!,
@@ -157,8 +159,8 @@ class _LevelFormScreenState extends ConsumerState<LevelFormScreen> {
 
     await ref.read(levelListProvider(widget.jenjang.id!).notifier).saveLevel(newLevel);
 
-    if (context.mounted) {
-      Navigator.pop(context);
+    if (mounted) {
+      navigator.pop();
     }
   }
 
@@ -174,12 +176,13 @@ class _LevelFormScreenState extends ConsumerState<LevelFormScreen> {
             onPressed: () async {
               // Simpan referensi navigator sebelum async
               final navigator = Navigator.of(context);
+              final dialogNavigator = Navigator.of(ctx); // Capture navigator dialog
 
               await ref.read(levelListProvider(widget.jenjang.id!).notifier).deleteLevel(widget.level!.id!);
 
-              if (context.mounted) {
-                Navigator.pop(ctx); // Tutup dialog
-                navigator.pop(); // Balik ke list (menggunakan referensi navigator yang aman)
+              if (mounted) {
+                dialogNavigator.pop(); // Tutup dialog menggunakan referensi aman
+                navigator.pop(); // Balik ke list
               }
             },
             child: const Text("Hapus", style: TextStyle(color: Colors.red)),

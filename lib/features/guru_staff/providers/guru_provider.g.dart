@@ -6,7 +6,7 @@ part of 'guru_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$guruListHash() => r'ec9a7f1ed4d6c1fcb917b7b521d6396b406e8222';
+String _$guruListHash() => r'509fd3e418b72a9d3827a33a35f0b7700aa1c1ac';
 
 /// See also [GuruList].
 @ProviderFor(GuruList)

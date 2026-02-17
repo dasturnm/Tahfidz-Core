@@ -28,7 +28,7 @@ void main() async {
 
           String text = line['text'].replaceAll("'", "''");
 
-          print(
+          stdout.writeln(
               "INSERT INTO quran_lines (page, line_number, surah, ayah, juz, text) VALUES ($page, ${line['line']}, $surah, $ayah, $juz, '$text');");
         }
       }
