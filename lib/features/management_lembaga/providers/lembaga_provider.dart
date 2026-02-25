@@ -28,6 +28,10 @@ class CabangList extends _$CabangList {
     final data = Map<String, dynamic>.from(cabang.toJson());
     if (cabang.id.isEmpty) data.remove('id'); // Pastikan ID tidak kosong saat insert baru
     data['lembaga_id'] = lembagaId; // Suntikkan lembagaId agar data muncul di list
+
+    // FIX: Cegah error "invalid input syntax for type date: """ jika tanggal kosong
+    if (data['tanggal_berdiri'] == '') data['tanggal_berdiri'] = null;
+
     await _supabase.from('cabang').upsert(data);
     ref.invalidateSelf();
   }

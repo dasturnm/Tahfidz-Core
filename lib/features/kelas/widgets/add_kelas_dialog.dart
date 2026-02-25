@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../guru_staff/providers/guru_provider.dart';
+import '../../guru_staff/providers/staff_provider.dart';
 import '../providers/kelas_provider.dart';
 
 class AddKelasDialog extends ConsumerStatefulWidget {
@@ -26,7 +26,7 @@ class _AddKelasDialogState extends ConsumerState<AddKelasDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final gurusAsync = ref.watch(guruListProvider);
+    final gurusAsync = ref.watch(staffListProvider);
 
     return AlertDialog(
       title: const Text("Tambah Kelas Baru", style: TextStyle(fontWeight: FontWeight.bold)),

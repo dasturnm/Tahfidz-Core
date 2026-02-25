@@ -6,7 +6,7 @@ part of 'lembaga_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$cabangListHash() => r'a71c86856c914628901b42fc139d9ec556340cf3';
+String _$cabangListHash() => r'b62815f1f5aa6e3f0710f750b60b4c4d8ca18842';
 
 /// Copied from Dart SDK
 class _SystemHash {

@@ -6,7 +6,7 @@ import '../../features/management_lembaga/screens/lembaga_profile_screen.dart';
 import '../../features/management_lembaga/screens/cabang_list_screen.dart';
 import '../../features/management_lembaga/screens/tahun_ajaran_screen.dart';
 import '../../features/management_lembaga/screens/divisi_list_screen.dart';
-import '../../features/guru_staff/screens/guru_list_screen.dart';
+import '../../features/guru_staff/screens/staff_list_screen.dart';
 import '../../features/siswa/screens/siswa_list_screen.dart';
 import '../../features/kelas/screens/kelas_list_screen.dart';
 import '../../features/program/screens/program_list_screen.dart';
@@ -86,7 +86,7 @@ class AppDrawer extends ConsumerWidget {
                 _buildDrawerItem(
                   icon: Icons.people_alt_outlined,
                   label: "Guru & Staff",
-                  onTap: () => _navigate(context, const GuruListScreen()),
+                  onTap: () => _navigate(context, const StaffListScreen()),
                 ),
 
                 const Divider(),

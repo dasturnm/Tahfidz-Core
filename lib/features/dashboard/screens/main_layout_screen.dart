@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../management_lembaga/screens/management_hub_screen.dart';
 import '../../program/screens/program_list_screen.dart';
 import '../../akademik/screens/akademik_hub_screen.dart'; // Import Screen Akademik Hub
-import '../../guru_staff/screens/guru_list_screen.dart'; // Ditambahkan: Import fitur Guru
+import '../../guru_staff/screens/staff_hub_screen.dart'; // UPDATE: Menggunakan Hub untuk Guru & Staff
 import 'dashboard_admin_screen.dart';
 
 class MainLayoutScreen extends StatefulWidget {
@@ -18,7 +18,7 @@ class _MainLayoutScreenState extends State<MainLayoutScreen> {
   final List<Widget> _screens = [
     const DashboardAdminScreen(),
     const ManagementHubScreen(), // FIX: Hapus const untuk memastikan sub-fitur muncul
-    const GuruListScreen(), // Ganti placeholder menjadi class asli
+    const StaffHubScreen(), // UPDATE: Mengarah ke Hub agar muncul Tab Guru/Staff/Riwayat
     const ProgramListScreen(),
     const AkademikHubScreen(), // UPDATE: Menu Akademik sekarang mengarah ke Hub
     const Center(child: Text("Siswa Screen")),

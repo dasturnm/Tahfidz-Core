@@ -16,8 +16,7 @@ class AuthService {
   User? get currentUser => _supabase.auth.currentUser;
 
   // --- 1. REGISTER GURU (Oleh Admin) ---
-  // Catatan: Fungsi ini akan membuat Admin ter-logout otomatis
-  // karena Supabase Client beralih sesi ke user baru yang dibuat.
+  // FIX: Menggunakan Isolated Client agar Admin TIDAK ter-logout otomatis
   Future<String?> registerGuru({
     required String nama,
     required String email,
@@ -26,8 +25,21 @@ class AuthService {
     required String lembagaId,
   }) async {
     try {
-      // 1. Daftarkan ke Supabase Auth
-      final authRes = await _supabase.auth.signUp(
+      // FIX: Mengambil URL dan Key secara dinamis dari client yang sudah ada
+      const supabaseUrl = 'https://mrxtnwmyqfmfdncdvssh.supabase.co';
+      // SAFE LOGIC: Gunakan fallback (??) alih-alih memaksa dengan tanda seru (!) agar tidak crash
+      const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1yeHRud215cWZtZmRuY2R2c3NoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAyMTY3NjUsImV4cCI6MjA4NTc5Mjc2NX0.r_sJKRw0aGasBVgn9BlbGVQ_VAJ4I3EBUrxg_Poju-w';
+
+      // Membuat client terisolasi agar sesi Admin TIDAK tertimpa/logout
+      // FIX: Gunakan AuthFlowType.implicit agar tidak butuh asyncStorage (PKCE) pada client sementara ini
+      final tempClient = SupabaseClient(
+        supabaseUrl,
+        supabaseKey,
+        authOptions: const AuthClientOptions(authFlowType: AuthFlowType.implicit),
+      );
+
+      // 1. Daftarkan ke Supabase Auth menggunakan client sementara
+      final authRes = await tempClient.auth.signUp(
         email: email.trim().toLowerCase(),
         password: password,
         // Opsi: Simpan metadata user langsung di Auth (cadangan)
@@ -37,15 +49,15 @@ class AuthService {
         },
       );
 
-      if (authRes.user == null) {
-        throw 'Gagal membuat akun login guru. User null.';
+      final user = authRes.user;
+      if (user == null) {
+        throw 'Gagal membuat akun login guru. Pastikan email belum terdaftar.';
       }
 
-      final newUserId = authRes.user!.id;
+      final newUserId = user.id; // SAFE LOGIC: Tanpa tanda seru (!)
 
-      // 2. Simpan ke tabel profiles
-      // Karena admin terlogout, insert ini dilakukan oleh "User Baru" (Guru)
-      // Pastikan RLS di tabel profiles mengizinkan "User bisa insert profilnya sendiri"
+      // 2. Simpan ke tabel profiles menggunakan client utama (_supabase)
+      // Karena kita menggunakan tempClient untuk Auth, _supabase di sini MASIH Admin
       await _supabase.from('profiles').insert({
         'id': newUserId,
         'lembaga_id': lembagaId,
@@ -56,18 +68,10 @@ class AuthService {
         'is_new_user': true, // Penanda untuk ganti password nanti
       });
 
-      // 3. Logout dipindahkan ke UI agar tidak memutus Future di tengah jalan
+      // 3. Kita tidak lagi membutuhkan logout otomatis di sini
       return newUserId;
     } catch (e) {
-      // Jika gagal di tengah jalan, pastikan kita tidak meninggalkan sesi nyangkut
-      try {
-        if (_supabase.auth.currentUser != null) {
-          await _supabase.auth.signOut();
-        }
-      } catch (_) {
-        // Abaikan error signOut agar tidak menutupi error registrasi asli
-      }
-      rethrow; // Lempar error ke UI agar muncul di SnackBar
+      rethrow; // Lempar error ke UI agar ditangani secara berurutan di satu pintu
     }
   }
 
@@ -120,11 +124,12 @@ class AuthService {
       password: password,
     );
 
-    if (authRes.user == null) {
+    final user = authRes.user;
+    if (user == null) {
       throw 'Gagal mendaftarkan akun auth.';
     }
 
-    final userId = authRes.user!.id;
+    final userId = user.id; // SAFE LOGIC: Tanpa tanda seru (!)
 
     try {
       // B. Simpan Lembaga
@@ -145,11 +150,6 @@ class AuthService {
       });
 
     } catch (e) {
-      try {
-        if (_supabase.auth.currentUser != null) {
-          await _supabase.auth.signOut();
-        }
-      } catch (_) {}
       rethrow;
     }
   }

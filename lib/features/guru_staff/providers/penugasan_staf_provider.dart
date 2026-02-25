@@ -14,29 +14,48 @@ class PenugasanStaf extends _$PenugasanStaf {
   /// Menambahkan data penugasan staf/guru baru ke database
   Future<void> tambahPenugasan({
     required String stafId,
-    required String cabangId,
+    String? cabangId,
     required String jabatanId,
+    bool isUtama = false, // Tambahan: Mendukung Rangkap Jabatan
+    bool deactivatePrevious = false, // Tambahan: Opsi Mutasi (Ganti) atau Rangkap (Tambah)
   }) async {
-    // Set state ke loading agar UI bisa merespon jika perlu
-    state = const AsyncLoading();
-
-    // Menggunakan guard untuk menangani perubahan state secara aman
-    state = await AsyncValue.guard(() async {
+    try {
       final supabase = Supabase.instance.client;
+      final today = DateTime.now().toIso8601String().split('T')[0];
 
-      // Proses insert ke tabel penugasan_staf
+      // 1. Jika diminta mutasi (bukan rangkap), nonaktifkan penugasan lama
+      if (deactivatePrevious) {
+        await supabase
+            .from('penugasan_staf')
+            .update({
+          'status': 'selesai',
+          'tanggal_selesai': today,
+          'is_utama': false,
+        })
+            .eq('profile_id', stafId)
+            .eq('status', 'aktif');
+      }
+
+      // 2. Jika ini jabatan utama, set jabatan lain milik staf ini menjadi false dulu
+      if (isUtama) {
+        await supabase
+            .from('penugasan_staf')
+            .update({'is_utama': false})
+            .eq('profile_id', stafId);
+      }
+
+      // 3. Proses insert ke tabel penugasan_staf
       await supabase.from('penugasan_staf').insert({
-        'staf_id': stafId,
+        'profile_id': stafId,
         'cabang_id': cabangId,
         'jabatan_id': jabatanId,
-        'tanggal_mulai': DateTime.now().toIso8601String(),
+        'tanggal_mulai': today,
+        'is_utama': isUtama,
         'status': 'aktif',
       });
-    });
-
-    // Lempar error ke UI jika proses gagal, tapi state sudah aman dikelola guard.
-    if (state.hasError) {
-      throw state.error!;
+    } catch (e) {
+      // Lempar error ke UI jika proses gagal agar bisa ditangkap oleh blok catch di form
+      rethrow;
     }
   }
 }

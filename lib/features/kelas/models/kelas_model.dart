@@ -1,4 +1,4 @@
-import '../../guru_staff/models/guru_model.dart';
+import '../../guru_staff/models/staff_model.dart';
 
 class KelasModel {
   final String? id;
@@ -8,7 +8,7 @@ class KelasModel {
   final DateTime? createdAt;
 
   // Opsional: Jika ingin langsung menyertakan data Guru saat fetching (join query)
-  final GuruModel? waliKelas;
+  final StaffModel? waliKelas;
 
   KelasModel({
     this.id,
@@ -30,7 +30,7 @@ class KelasModel {
           : null,
       // Mapping jika data guru disertakan dalam query select ('*, gurus(*)')
       waliKelas: json['gurus'] != null
-          ? GuruModel.fromJson(json['gurus'])
+          ? StaffModel.fromJson(json['gurus'])
           : null,
     );
   }

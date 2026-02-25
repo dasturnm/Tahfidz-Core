@@ -22,7 +22,7 @@ class _CabangListScreenState extends ConsumerState<CabangListScreen> {
     final addressController = TextEditingController(text: cabang?.alamat ?? '');
     final waController = TextEditingController(text: cabang?.waCabang ?? '');
     final emailController = TextEditingController(text: cabang?.emailCabang ?? '');
-    final jamOperasionalController = TextEditingController(text: cabang?.jamOperasional ?? '');
+    // jamOperasionalController dihapus sesuai permintaan
     final catatanController = TextEditingController(text: cabang?.catatan ?? '');
     final tanggalBerdiriController = TextEditingController(text: cabang?.tanggalBerdiri ?? '');
     final formKey = GlobalKey<FormState>();
@@ -69,14 +69,18 @@ class _CabangListScreenState extends ConsumerState<CabangListScreen> {
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
-                  controller: jamOperasionalController,
-                  decoration: const InputDecoration(labelText: "Jam Operasional", hintText: "Misal: 08:00 - 16:00"),
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
                   controller: tanggalBerdiriController,
-                  decoration: const InputDecoration(labelText: "Tanggal Berdiri", hintText: "YYYY-MM-DD"),
-                  keyboardType: TextInputType.datetime,
+                  readOnly: true, // FIX: Tidak ketik manual
+                  decoration: const InputDecoration(labelText: "Tanggal Berdiri", hintText: "Klik untuk pilih tanggal"),
+                  onTap: () async {
+                    DateTime? picked = await showDatePicker(
+                      context: context,
+                      initialDate: DateTime.now(),
+                      firstDate: DateTime(1945),
+                      lastDate: DateTime(2100),
+                    );
+                    if (picked != null) tanggalBerdiriController.text = picked.toIso8601String().split('T')[0];
+                  },
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
@@ -117,7 +121,7 @@ class _CabangListScreenState extends ConsumerState<CabangListScreen> {
                   alamat: addressController.text.trim(),
                   waCabang: waController.text.trim(),
                   emailCabang: emailController.text.trim(),
-                  jamOperasional: jamOperasionalController.text.trim(),
+                  // jamOperasional dihapus sesuai permintaan
                   catatan: catatanController.text.trim(),
                   tanggalBerdiri: tanggalBerdiriController.text.trim(),
                   status: cabang?.status ?? 'aktif',

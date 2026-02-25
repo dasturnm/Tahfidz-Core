@@ -9,7 +9,7 @@ class CabangModel {
   final String? kepalaCabangId;
   final String? kepalaCabang; // Ditambahkan untuk nama display
   final String? status;
-  final String? jamOperasional;
+  // jamOperasional dihapus
   final String? catatan;
   final String? tanggalBerdiri;
 
@@ -24,7 +24,7 @@ class CabangModel {
     this.kepalaCabangId,
     this.kepalaCabang, // Ditambahkan ke constructor
     this.status,
-    this.jamOperasional,
+    // jamOperasional dihapus
     this.catatan,
     this.tanggalBerdiri,
   });
@@ -40,7 +40,7 @@ class CabangModel {
     String? kepalaCabangId,
     String? kepalaCabang, // Ditambahkan ke copyWith
     String? status,
-    String? jamOperasional,
+    // jamOperasional dihapus
     String? catatan,
     String? tanggalBerdiri,
   }) {
@@ -55,7 +55,7 @@ class CabangModel {
       kepalaCabangId: kepalaCabangId ?? this.kepalaCabangId,
       kepalaCabang: kepalaCabang ?? this.kepalaCabang, // Mapping copyWith
       status: status ?? this.status,
-      jamOperasional: jamOperasional ?? this.jamOperasional,
+      // jamOperasional dihapus
       catatan: catatan ?? this.catatan,
       tanggalBerdiri: tanggalBerdiri ?? this.tanggalBerdiri,
     );
@@ -72,7 +72,7 @@ class CabangModel {
     kepalaCabangId: json['kepala_cabang_id'],
     kepalaCabang: json['kepala_cabang'], // Mapping dari JSON (biasanya hasil join)
     status: json['status'],
-    jamOperasional: json['jam_operasional'],
+    // jamOperasional dihapus
     catatan: json['catatan'],
     tanggalBerdiri: json['tanggal_berdiri']?.toString(),
   );
@@ -86,7 +86,7 @@ class CabangModel {
     'email_cabang': emailCabang,
     'kepala_cabang_id': kepalaCabangId,
     'status': status,
-    'jam_operasional': jamOperasional,
+    // jamOperasional dihapus
     'catatan': catatan,
     'tanggal_berdiri': tanggalBerdiri,
   };

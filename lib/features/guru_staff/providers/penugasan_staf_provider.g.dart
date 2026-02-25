@@ -6,7 +6,7 @@ part of 'penugasan_staf_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$penugasanStafHash() => r'2d6d9227ff9ad37a6cfb850d48df8d0b38dc7edf';
+String _$penugasanStafHash() => r'ed92a9bfe56a9fded079715f754112bd4769ecd0';
 
 /// See also [PenugasanStaf].
 @ProviderFor(PenugasanStaf)

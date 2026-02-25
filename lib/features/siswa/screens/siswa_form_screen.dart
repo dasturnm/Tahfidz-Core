@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:tahfidz_core/features/guru_staff/providers/guru_provider.dart';
+import 'package:tahfidz_core/features/guru_staff/providers/staff_provider.dart';
 import 'package:tahfidz_core/features/siswa/providers/siswa_provider.dart';
 // [BARU] Import provider kelas
 import 'package:tahfidz_core/features/kelas/providers/kelas_provider.dart';
@@ -102,7 +102,7 @@ class _SiswaFormScreenState extends ConsumerState<SiswaFormScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final guruListAsync = ref.watch(guruListProvider);
+    final guruListAsync = ref.watch(staffListProvider);
     final kelasAsync = ref.watch(kelasNotifierProvider); // [BARU] Monitor data kelas
 
     return Scaffold(

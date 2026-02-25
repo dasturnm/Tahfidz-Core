@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 // ignore: deprecated_member_use
 import 'package:csv/csv.dart';
@@ -43,11 +42,10 @@ class SiswaList extends _$SiswaList {
       if (result == null) return "Batal memilih file";
 
       final file = File(result.files.single.path!);
-      final input = file.openRead();
-      final fields = await input
-          .transform(utf8.decoder)
-          .transform(const CsvToListConverter())
-          .toList();
+
+      // Menggunakan API baru dari csv v7.0.0+
+      final csvString = await file.readAsString();
+      final fields = CsvCodec().decode(csvString);
 
       if (fields.length < 2) return "File kosong atau tidak ada data";
 
@@ -113,7 +111,8 @@ class SiswaList extends _$SiswaList {
         ]);
       }
 
-      String csv = const ListToCsvConverter().convert(rows);
+      // Menggunakan API baru dari csv v7.0.0+
+      String csv = CsvCodec().encode(rows);
 
       final directory = await getTemporaryDirectory();
       final path = "${directory.path}/data_siswa_export.csv";
