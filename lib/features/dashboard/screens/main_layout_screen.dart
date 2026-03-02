@@ -4,6 +4,7 @@ import '../../program/screens/program_list_screen.dart';
 import '../../akademik/screens/akademik_hub_screen.dart'; // Import Screen Akademik Hub
 import '../../guru_staff/screens/staff_hub_screen.dart'; // UPDATE: Menggunakan Hub untuk Guru & Staff
 import 'dashboard_admin_screen.dart';
+import '../../siswa/screens/student_hub_screen.dart';
 
 class MainLayoutScreen extends StatefulWidget {
   const MainLayoutScreen({super.key});
@@ -21,7 +22,7 @@ class _MainLayoutScreenState extends State<MainLayoutScreen> {
     const StaffHubScreen(), // UPDATE: Mengarah ke Hub agar muncul Tab Guru/Staff/Riwayat
     const ProgramListScreen(),
     const AkademikHubScreen(), // UPDATE: Menu Akademik sekarang mengarah ke Hub
-    const Center(child: Text("Siswa Screen")),
+    const StudentHubScreen(),
     const Center(child: Text("Keuangan Screen")),
   ];
 
@@ -76,7 +77,7 @@ class _MainLayoutScreenState extends State<MainLayoutScreen> {
           _buildMenuItem(2, Icons.badge_outlined, "Guru & Staff"), // Nama diubah dari SDM / Staf
           _buildMenuItem(3, Icons.assignment_outlined, "Program"),
           _buildMenuItem(4, Icons.school_outlined, "Akademik"),
-          _buildMenuItem(5, Icons.people_outlined, "Siswa"),
+          _buildMenuItem(5, Icons.people_outlined, "Siswa & Kelas"),
           _buildMenuItem(6, Icons.account_balance_wallet_outlined, "Keuangan"),
           const Spacer(),
           _buildUserCard(),

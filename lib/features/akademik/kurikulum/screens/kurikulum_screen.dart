@@ -107,7 +107,6 @@ class KurikulumScreen extends ConsumerWidget {
               await ref.read(kurikulumListProvider(program.id).notifier).addKurikulum(
                 KurikulumModel(
                   programId: program.id,
-                  lembagaId: program.lembagaId,
                   namaKurikulum: controller.text.trim(),
                 ),
               );

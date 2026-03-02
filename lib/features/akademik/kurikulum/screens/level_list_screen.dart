@@ -107,72 +107,84 @@ class LevelListScreen extends ConsumerWidget {
         contentPadding: const EdgeInsets.all(32),
         content: SizedBox(
           width: 400,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  const Icon(Icons.stairs_outlined, color: Color(0xFF10B981), size: 28),
-                  const SizedBox(width: 12),
-                  Text(
-                      levelToEdit == null ? "Buat Tingkatan (Level)" : "Edit Tingkatan",
-                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)
-                  ),
-                ],
-              ),
-              const SizedBox(height: 32),
-              const Text("NAMA LEVEL", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1.2)),
-              const SizedBox(height: 8),
-              TextField(
-                controller: nameController,
-                decoration: InputDecoration(
-                  hintText: "Contoh: Level 3 (Juz 28)",
-                  filled: true,
-                  fillColor: const Color(0xFFF8FAFC),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.stairs_outlined, color: Color(0xFF10B981), size: 28),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        levelToEdit == null ? "Buat Tingkatan (Level)" : "Edit Tingkatan",
+                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 32),
-              SizedBox(
-                width: double.infinity,
-                height: 54,
-                child: ElevatedButton(
-                  onPressed: () async {
-                    if (nameController.text.isEmpty) return;
-
-                    final levelData = LevelModel(
-                      id: levelToEdit?.id,
-                      jenjangId: jenjang.id!,
-                      namaLevel: nameController.text.trim(),
-                      urutan: levelToEdit?.urutan ?? 0,
-                    );
-
-                    await ref.read(levelListProvider(jenjang.id!).notifier).saveLevel(levelData);
-
-                    if (ctx.mounted) Navigator.pop(ctx);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF10B981),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    elevation: 0,
-                  ),
-                  child: Text(
-                      levelToEdit == null ? "Simpan Level" : "Update Level",
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)
+                const SizedBox(height: 32),
+                const Text("NAMA LEVEL", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1.2)),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: nameController,
+                  decoration: InputDecoration(
+                    hintText: "Contoh: Level 3 (Juz 28)",
+                    filled: true,
+                    fillColor: const Color(0xFFF8FAFC),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                   ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: TextButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: const Text("Batal", style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 32),
+                SizedBox(
+                  width: double.infinity,
+                  height: 54,
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      try {
+                        if (nameController.text.isEmpty) return;
+
+                        final levelData = LevelModel(
+                          id: levelToEdit?.id,
+                          kurikulumId: jenjang.kurikulumId, // FIX: Sertakan Kurikulum ID
+                          jenjangId: jenjang.id!,
+                          namaLevel: nameController.text.trim(),
+                          targetTotal: levelToEdit?.targetTotal ?? 0, // FIX: Default value
+                          metrik: levelToEdit?.metrik ?? 'Juz', // FIX: Default value
+                          urutan: levelToEdit?.urutan ?? 0,
+                        );
+
+                        await ref.read(levelListProvider(jenjang.id!).notifier).saveLevel(levelData);
+
+                        if (ctx.mounted) Navigator.pop(ctx);
+                      } catch (e) {
+                        print('Error saveLevel: $e');
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF10B981),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      elevation: 0,
+                    ),
+                    child: Text(
+                        levelToEdit == null ? "Simpan Level" : "Update Level",
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)
+                    ),
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text("Batal", style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w600)),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

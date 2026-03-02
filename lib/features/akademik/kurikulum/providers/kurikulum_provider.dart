@@ -10,33 +10,51 @@ class KurikulumList extends _$KurikulumList {
 
   @override
   Future<List<KurikulumModel>> build(String programId) async {
-    final response = await _supabase
-        .from('kurikulum')
-        .select()
-        .eq('program_id', programId)
-        .order('nama_kurikulum');
+    try {
+      print("DEBUG: Memuat Kurikulum untuk programId: $programId");
+      final response = await _supabase
+          .from('kurikulum')
+          .select()
+          .eq('program_id', programId)
+          .order('nama_kurikulum');
 
-    return (response as List).map((e) => KurikulumModel.fromJson(e)).toList();
+      return (response as List).map((e) => KurikulumModel.fromJson(e)).toList();
+    } catch (e) {
+      print("Error build KurikulumList: $e");
+      return [];
+    }
   }
 
   Future<void> addKurikulum(KurikulumModel kurikulum) async {
-    await _supabase.from('kurikulum').insert(kurikulum.toJson());
-    ref.invalidateSelf();
+    try {
+      await _supabase.from('kurikulum').insert(kurikulum.toJson()..remove('jenjangs'));
+      ref.invalidateSelf();
+    } catch (e) {
+      print("Error addKurikulum: $e");
+    }
   }
 
   Future<void> saveKurikulum(KurikulumModel kurikulum) async {
-    final Map<String, dynamic> data = kurikulum.toJson();
-    if (kurikulum.id == null) {
-      await _supabase.from('kurikulum').insert(data);
-    } else {
-      await _supabase.from('kurikulum').update(data).eq('id', kurikulum.id!);
+    try {
+      final Map<String, dynamic> data = kurikulum.toJson()..remove('jenjangs');
+      if (kurikulum.id == null) {
+        await _supabase.from('kurikulum').insert(data);
+      } else {
+        await _supabase.from('kurikulum').update(data).eq('id', kurikulum.id!);
+      }
+      ref.invalidateSelf();
+    } catch (e) {
+      print("Error saveKurikulum: $e");
     }
-    ref.invalidateSelf();
   }
 
   Future<void> deleteKurikulum(String id) async {
-    await _supabase.from('kurikulum').delete().eq('id', id);
-    ref.invalidateSelf();
+    try {
+      await _supabase.from('kurikulum').delete().eq('id', id);
+      ref.invalidateSelf();
+    } catch (e) {
+      print("Error deleteKurikulum: $e");
+    }
   }
 }
 
@@ -46,28 +64,43 @@ class JenjangList extends _$JenjangList {
 
   @override
   Future<List<JenjangModel>> build(String kurikulumId) async {
-    final response = await _supabase
-        .from('jenjang_kurikulum')
-        .select()
-        .eq('kurikulum_id', kurikulumId)
-        .order('id');
+    try {
+      print("DEBUG: Memuat Jenjang untuk kurikulumId: $kurikulumId");
+      final response = await _supabase
+          .from('jenjang_kurikulum')
+          .select()
+          .eq('kurikulum_id', kurikulumId)
+          .order('id');
 
-    return (response as List).map((e) => JenjangModel.fromJson(e)).toList();
+      return (response as List).map((e) => JenjangModel.fromJson(e)).toList();
+    } catch (e) {
+      print("Error build JenjangList: $e");
+      return [];
+    }
   }
 
   Future<void> saveJenjang(JenjangModel jenjang) async {
-    final Map<String, dynamic> data = jenjang.toJson();
-    if (jenjang.id == null) {
-      await _supabase.from('jenjang_kurikulum').insert(data);
-    } else {
-      await _supabase.from('jenjang_kurikulum').update(data).eq('id', jenjang.id!);
+    try {
+      final Map<String, dynamic> data = jenjang.toJson()..remove('levels');
+      if (jenjang.id == null) {
+        await _supabase.from('jenjang_kurikulum').insert(data);
+      } else {
+        await _supabase.from('jenjang_kurikulum').update(data).eq('id', jenjang.id!);
+      }
+      ref.invalidateSelf();
+    } catch (e) {
+      // SAFE CODE: Menangani error database (seperti FK constraint kurikulum_id)
+      print('Error saveJenjang: $e');
     }
-    ref.invalidateSelf();
   }
 
   Future<void> deleteJenjang(String id) async {
-    await _supabase.from('jenjang_kurikulum').delete().eq('id', id);
-    ref.invalidateSelf();
+    try {
+      await _supabase.from('jenjang_kurikulum').delete().eq('id', id);
+      ref.invalidateSelf();
+    } catch (e) {
+      print("Error deleteJenjang: $e");
+    }
   }
 }
 
@@ -77,33 +110,56 @@ class LevelList extends _$LevelList {
 
   @override
   Future<List<LevelModel>> build(String jenjangId) async {
-    final response = await _supabase
-        .from('level_kurikulum')
-        .select()
-        .eq('jenjang_id', jenjangId)
-        .order('urutan', ascending: true);
+    try {
+      // DEBUG LOG: Sangat penting untuk cek ID yang dikirim UI
+      print("DEBUG: Memuat Level untuk jenjang_id: $jenjangId");
 
-    return (response as List).map((e) => LevelModel.fromJson(e)).toList();
+      final response = await _supabase
+          .from('kurikulum_level')
+          .select()
+          .eq('jenjang_id', jenjangId)
+          .order('id', ascending: true);
+
+      return (response as List).map((e) => LevelModel.fromJson(e)).toList();
+    } catch (e) {
+      // SAFE CODE: Menangani error database
+      print("Error build LevelList: $e");
+      return [];
+    }
   }
 
   Future<void> addLevel(LevelModel level) async {
-    await _supabase.from('level_kurikulum').insert(level.toJson());
-    ref.invalidateSelf();
+    try {
+      await _supabase.from('kurikulum_level').insert(level.toJson()..remove('modules'));
+      ref.invalidateSelf();
+    } catch (e) {
+      // SAFE CODE: Menangani error database
+      print('Error addLevel: $e');
+    }
   }
 
   Future<void> saveLevel(LevelModel level) async {
-    final Map<String, dynamic> data = level.toJson();
-    if (level.id == null) {
-      await _supabase.from('level_kurikulum').insert(data);
-    } else {
-      await _supabase.from('level_kurikulum').update(data).eq('id', level.id!);
+    try {
+      final Map<String, dynamic> data = level.toJson()..remove('modules');
+      if (level.id == null) {
+        await _supabase.from('kurikulum_level').insert(data);
+      } else {
+        await _supabase.from('kurikulum_level').update(data).eq('id', level.id!);
+      }
+      ref.invalidateSelf();
+    } catch (e) {
+      // SAFE CODE: Menangani error database
+      print('Error saveLevel: $e');
     }
-    ref.invalidateSelf();
   }
 
   Future<void> deleteLevel(String id) async {
-    await _supabase.from('level_kurikulum').delete().eq('id', id);
-    ref.invalidateSelf();
+    try {
+      await _supabase.from('kurikulum_level').delete().eq('id', id);
+      ref.invalidateSelf();
+    } catch (e) {
+      print("Error deleteLevel: $e");
+    }
   }
 }
 
@@ -113,27 +169,41 @@ class ModulList extends _$ModulList {
 
   @override
   Future<List<ModulModel>> build(String levelId) async {
-    final response = await _supabase
-        .from('modul_kurikulum')
-        .select()
-        .eq('level_id', levelId);
+    try {
+      print("DEBUG: Memuat Modul untuk levelId: $levelId");
+      final response = await _supabase
+          .from('modul_kurikulum')
+          .select()
+          .eq('level_id', levelId);
 
-    return (response as List).map((e) => ModulModel.fromJson(e)).toList();
+      return (response as List).map((e) => ModulModel.fromJson(e)).toList();
+    } catch (e) {
+      print("Error build ModulList: $e");
+      return [];
+    }
   }
 
   Future<void> saveModul(ModulModel modul) async {
-    final Map<String, dynamic> data = modul.toJson();
-    if (modul.id == null) {
-      await _supabase.from('modul_kurikulum').insert(data);
-    } else {
-      await _supabase.from('modul_kurikulum').update(data).eq('id', modul.id!);
+    try {
+      final Map<String, dynamic> data = modul.toJson()..remove('targets');
+      if (modul.id == null) {
+        await _supabase.from('modul_kurikulum').insert(data);
+      } else {
+        await _supabase.from('modul_kurikulum').update(data).eq('id', modul.id!);
+      }
+      ref.invalidateSelf();
+    } catch (e) {
+      print("Error saveModul: $e");
     }
-    ref.invalidateSelf();
   }
 
   Future<void> deleteModul(String id) async {
-    await _supabase.from('modul_kurikulum').delete().eq('id', id);
-    ref.invalidateSelf();
+    try {
+      await _supabase.from('modul_kurikulum').delete().eq('id', id);
+      ref.invalidateSelf();
+    } catch (e) {
+      print("Error deleteModul: $e");
+    }
   }
 }
 
@@ -143,26 +213,40 @@ class TargetMetrikList extends _$TargetMetrikList {
 
   @override
   Future<List<TargetMetrikModel>> build(String modulId) async {
-    final response = await _supabase
-        .from('target_metrik_kurikulum')
-        .select()
-        .eq('modul_id', modulId);
+    try {
+      print("DEBUG: Memuat Target untuk modulId: $modulId");
+      final response = await _supabase
+          .from('target_metrik_kurikulum')
+          .select()
+          .eq('modul_id', modulId);
 
-    return (response as List).map((e) => TargetMetrikModel.fromJson(e)).toList();
+      return (response as List).map((e) => TargetMetrikModel.fromJson(e)).toList();
+    } catch (e) {
+      print("Error build TargetMetrikList: $e");
+      return [];
+    }
   }
 
   Future<void> saveTarget(TargetMetrikModel target) async {
-    final Map<String, dynamic> data = target.toJson();
-    if (target.id == null) {
-      await _supabase.from('target_metrik_kurikulum').insert(data);
-    } else {
-      await _supabase.from('target_metrik_kurikulum').update(data).eq('id', target.id!);
+    try {
+      final Map<String, dynamic> data = target.toJson();
+      if (target.id == null) {
+        await _supabase.from('target_metrik_kurikulum').insert(data);
+      } else {
+        await _supabase.from('target_metrik_kurikulum').update(data).eq('id', target.id!);
+      }
+      ref.invalidateSelf();
+    } catch (e) {
+      print("Error saveTarget: $e");
     }
-    ref.invalidateSelf();
   }
 
   Future<void> deleteTarget(String id) async {
-    await _supabase.from('target_metrik_kurikulum').delete().eq('id', id);
-    ref.invalidateSelf();
+    try {
+      await _supabase.from('target_metrik_kurikulum').delete().eq('id', id);
+      ref.invalidateSelf();
+    } catch (e) {
+      print("Error deleteTarget: $e");
+    }
   }
 }

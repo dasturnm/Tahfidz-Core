@@ -277,8 +277,8 @@ class _AcademicCalendarTabState extends ConsumerState<AcademicCalendarTab> {
                       hint: const Text("Filter Program", style: TextStyle(fontSize: 12)),
                       icon: const Icon(Icons.arrow_drop_down, size: 18),
                       items: [
-                        const DropdownMenuItem(value: null, child: Text("Semua Program", style: TextStyle(fontSize: 12))),
-                        ...programs.map((p) => DropdownMenuItem(value: p.id, child: Text(p.namaProgram, style: const TextStyle(fontSize: 12)))),
+                        const DropdownMenuItem<String>(value: null, child: Text("Semua Program", style: TextStyle(fontSize: 12))),
+                        ...programs.map<DropdownMenuItem<String>>((p) => DropdownMenuItem<String>(value: p.id, child: Text(p.namaProgram, style: const TextStyle(fontSize: 12)))).toList(),
                       ],
                       onChanged: (val) => setState(() => _selectedProgramFilter = val),
                     ),

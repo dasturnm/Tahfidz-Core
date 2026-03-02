@@ -6,7 +6,7 @@ part of 'kurikulum_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$kurikulumListHash() => r'c8ce67544014dccfb04ce3e849ab748fda5a2325';
+String _$kurikulumListHash() => r'9a8a309f3e5b214bf8b9cf96af736746889d5a44';
 
 /// Copied from Dart SDK
 class _SystemHash {
@@ -174,7 +174,7 @@ class _KurikulumListProviderElement
   String get programId => (origin as KurikulumListProvider).programId;
 }
 
-String _$jenjangListHash() => r'8621e4813ea1aab39190deeb695f32c032bb067b';
+String _$jenjangListHash() => r'557870e4a6d5b8cd467c057bd47495bc1eaa32ad';
 
 abstract class _$JenjangList
     extends BuildlessAutoDisposeAsyncNotifier<List<JenjangModel>> {
@@ -321,7 +321,7 @@ class _JenjangListProviderElement
   String get kurikulumId => (origin as JenjangListProvider).kurikulumId;
 }
 
-String _$levelListHash() => r'e76be626930a82c48e67f685c6bad30d7fa73c0d';
+String _$levelListHash() => r'45f266c6eae5eb15af3e32cd3e9cc18d8bfbbc46';
 
 abstract class _$LevelList
     extends BuildlessAutoDisposeAsyncNotifier<List<LevelModel>> {
@@ -466,7 +466,7 @@ class _LevelListProviderElement
   String get jenjangId => (origin as LevelListProvider).jenjangId;
 }
 
-String _$modulListHash() => r'c9034b3a5f841e085fb8954d1cf9d62c75fa4779';
+String _$modulListHash() => r'ccb9a94668f4aca87561730b0bec246662c458ec';
 
 abstract class _$ModulList
     extends BuildlessAutoDisposeAsyncNotifier<List<ModulModel>> {

@@ -78,23 +78,32 @@ class JenjangModel {
 
 class LevelModel {
   final String? id;
+  final String kurikulumId; // Penambahan sesuai kebutuhan database
   final String jenjangId; // Berubah dari kurikulumId ke jenjangId sesuai hierarki
   final String namaLevel;
+  final double targetTotal; // Penambahan sesuai kebutuhan database
+  final String metrik; // Penambahan sesuai kebutuhan database
   final int urutan;
   final List<ModulModel> modules;
 
   LevelModel({
     this.id,
+    required this.kurikulumId,
     required this.jenjangId,
     required this.namaLevel,
+    this.targetTotal = 0.0,
+    this.metrik = 'Juz',
     required this.urutan,
     this.modules = const [],
   });
 
   factory LevelModel.fromJson(Map<String, dynamic> json) => LevelModel(
     id: json['id'],
+    kurikulumId: json['kurikulum_id'] ?? '',
     jenjangId: json['jenjang_id'] ?? '',
     namaLevel: json['nama_level'] ?? '',
+    targetTotal: (json['target_total'] ?? 0).toDouble(),
+    metrik: json['metrik'] ?? 'Juz',
     urutan: json['urutan'] ?? 0,
     modules: json['modules'] != null
         ? List<ModulModel>.from(json['modules'].map((x) => ModulModel.fromJson(x)))
@@ -102,8 +111,11 @@ class LevelModel {
   );
 
   Map<String, dynamic> toJson() => {
+    'kurikulum_id': kurikulumId,
     'jenjang_id': jenjangId,
     'nama_level': namaLevel,
+    'target_total': targetTotal,
+    'metrik': metrik,
     'urutan': urutan,
     'modules': List<dynamic>.from(modules.map((x) => x.toJson())),
   };

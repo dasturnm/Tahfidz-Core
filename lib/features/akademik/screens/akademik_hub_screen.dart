@@ -118,6 +118,8 @@ class AkademikHubScreen extends ConsumerWidget {
   }
 
   Widget _buildStrukturKurikulumTab(BuildContext context, WidgetRef ref) {
+    final jenjangsAsync = ref.watch(jenjangListProvider("tahfidz_2026"));
+
     return ListView(
       padding: const EdgeInsets.all(24),
       children: [
@@ -147,34 +149,21 @@ class AkademikHubScreen extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: 24),
-        GridView.count(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisCount: 2,
-          crossAxisSpacing: 20,
-          mainAxisSpacing: 20,
-          childAspectRatio: 0.85,
-          children: [
-            // UPDATE: Menggunakan JenjangModel agar bisa navigasi
-            _buildJenjangCard(
-              context,
-              JenjangModel(
-                  id: 'j1',
-                  kurikulumId: 'tahfidz_2026',
-                  namaJenjang: "Jenjang Tahsin",
-                  deskripsi: "Fokus pada perbaikan makhraj dan hukum tajwid dasar."
-              ),
+        jenjangsAsync.when(
+          data: (list) => GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 20,
+              mainAxisSpacing: 20,
+              childAspectRatio: 0.85,
             ),
-            _buildJenjangCard(
-              context,
-              JenjangModel(
-                  id: 'j2',
-                  kurikulumId: 'tahfidz_2026',
-                  namaJenjang: "Jenjang Tahfidz Dasar",
-                  deskripsi: "Mulai menghafal Juz Amma dan Juz 29."
-              ),
-            ),
-          ],
+            itemCount: list.length,
+            itemBuilder: (context, index) => _buildJenjangCard(context, list[index]),
+          ),
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (err, stack) => Center(child: Text("Gagal memuat data: $err")),
         ),
       ],
     );
@@ -193,86 +182,92 @@ class AkademikHubScreen extends ConsumerWidget {
         contentPadding: const EdgeInsets.all(32),
         content: SizedBox(
           width: 400,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Row(
-                children: [
-                  Icon(Icons.account_tree_outlined, color: Color(0xFF10B981), size: 28),
-                  SizedBox(width: 12),
-                  Text("Tambah Jenjang", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-                ],
-              ),
-              const SizedBox(height: 32),
-
-              const Text("NAMA JENJANG", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1.2)),
-              const SizedBox(height: 8),
-              TextField(
-                controller: nameController,
-                decoration: InputDecoration(
-                  hintText: "Contoh: Jenjang Tahfidz Lanjutan",
-                  filled: true,
-                  fillColor: const Color(0xFFF8FAFC),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Row(
+                  children: [
+                    Icon(Icons.account_tree_outlined, color: Color(0xFF10B981), size: 28),
+                    SizedBox(width: 12),
+                    Text("Tambah Jenjang", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                  ],
                 ),
-              ),
+                const SizedBox(height: 32),
 
-              const SizedBox(height: 24),
-
-              const Text("DESKRIPSI SINGKAT", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1.2)),
-              const SizedBox(height: 8),
-              TextField(
-                controller: descController,
-                maxLines: 3,
-                decoration: InputDecoration(
-                  hintText: "Tujuan atau kriteria jenjang ini...",
-                  filled: true,
-                  fillColor: const Color(0xFFF8FAFC),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                ),
-              ),
-
-              const SizedBox(height: 32),
-
-              SizedBox(
-                width: double.infinity,
-                height: 54,
-                child: ElevatedButton(
-                  onPressed: () async {
-                    if (nameController.text.isEmpty) return;
-
-                    final newJenjang = JenjangModel(
-                      kurikulumId: kurikulumId,
-                      namaJenjang: nameController.text.trim(),
-                      deskripsi: descController.text.trim(),
-                    ); //
-
-                    await ref.read(jenjangListProvider(kurikulumId).notifier).saveJenjang(newJenjang); //
-
-                    if (context.mounted) Navigator.pop(ctx);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF10B981),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    elevation: 0,
+                const Text("NAMA JENJANG", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1.2)),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: nameController,
+                  decoration: InputDecoration(
+                    hintText: "Contoh: Jenjang Tahfidz Lanjutan",
+                    filled: true,
+                    fillColor: const Color(0xFFF8FAFC),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                   ),
-                  child: const Text("Simpan Jenjang", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                 ),
-              ),
 
-              const SizedBox(height: 12),
+                const SizedBox(height: 24),
 
-              SizedBox(
-                width: double.infinity,
-                child: TextButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: const Text("Batal", style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w600)),
+                const Text("DESKRIPSI SINGKAT", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1.2)),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: descController,
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    hintText: "Tujuan atau kriteria jenjang ini...",
+                    filled: true,
+                    fillColor: const Color(0xFFF8FAFC),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  ),
                 ),
-              ),
-            ],
+
+                const SizedBox(height: 32),
+
+                SizedBox(
+                  width: double.infinity,
+                  height: 54,
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      try {
+                        if (nameController.text.isEmpty) return;
+
+                        final newJenjang = JenjangModel(
+                          kurikulumId: kurikulumId,
+                          namaJenjang: nameController.text.trim(),
+                          deskripsi: descController.text.trim(),
+                        ); //
+
+                        await ref.read(jenjangListProvider(kurikulumId).notifier).saveJenjang(newJenjang); //
+
+                        if (context.mounted) Navigator.pop(ctx);
+                      } catch (e) {
+                        print("Error: $e");
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF10B981),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      elevation: 0,
+                    ),
+                    child: const Text("Simpan Jenjang", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+
+                SizedBox(
+                  width: double.infinity,
+                  child: TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text("Batal", style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w600)),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

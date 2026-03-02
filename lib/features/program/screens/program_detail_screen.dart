@@ -17,8 +17,16 @@ class ProgramDetailScreen extends StatelessWidget {
         elevation: 0.5,
         actions: [
           IconButton(
-            onPressed: () {},
+            onPressed: () {
+              // TODO: Hubungkan navigasi ke form edit program
+            },
             icon: const Icon(Icons.edit_outlined, color: Color(0xFF10B981)),
+          ),
+          IconButton(
+            onPressed: () {
+              // TODO: Hubungkan fungsi hapus ke provider
+            },
+            icon: const Icon(Icons.delete_outline, color: Colors.red),
           ),
           const SizedBox(width: 8),
         ],
@@ -148,12 +156,14 @@ class ProgramDetailScreen extends StatelessWidget {
       children: [
         Icon(icon, color: const Color(0xFF10B981), size: 20),
         const SizedBox(width: 16),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(label, style: TextStyle(color: Colors.grey[600], fontSize: 12)),
-            Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-          ],
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label, style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+              Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            ],
+          ),
         ),
       ],
     );

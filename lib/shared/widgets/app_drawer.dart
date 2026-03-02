@@ -7,8 +7,7 @@ import '../../features/management_lembaga/screens/cabang_list_screen.dart';
 import '../../features/management_lembaga/screens/tahun_ajaran_screen.dart';
 import '../../features/management_lembaga/screens/divisi_list_screen.dart';
 import '../../features/guru_staff/screens/staff_list_screen.dart';
-import '../../features/siswa/screens/siswa_list_screen.dart';
-import '../../features/kelas/screens/kelas_list_screen.dart';
+import '../../features/siswa/screens/student_hub_screen.dart';
 import '../../features/program/screens/program_list_screen.dart';
 
 class AppDrawer extends ConsumerWidget {
@@ -94,12 +93,12 @@ class AppDrawer extends ConsumerWidget {
                 _buildDrawerItem(
                   icon: Icons.face_outlined,
                   label: "Daftar Siswa",
-                  onTap: () => _navigate(context, const SiswaListScreen()),
+                  onTap: () => _navigate(context, const StudentHubScreen()),
                 ),
                 _buildDrawerItem(
                   icon: Icons.meeting_room_outlined,
                   label: "Manajemen Kelas",
-                  onTap: () => _navigate(context, const KelasListScreen()),
+                  onTap: () => _navigate(context, const StudentHubScreen()),
                 ),
 
                 const SizedBox(height: 20),

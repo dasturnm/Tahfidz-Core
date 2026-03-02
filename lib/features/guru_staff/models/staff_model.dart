@@ -15,6 +15,9 @@ class StaffModel {
   final String? role; // Tambahan: Membedakan Guru/Admin di tabel Semua Staf
   final Map<String, dynamic>? lastAttendance; // Tambahan: Data absensi hari ini
 
+  // Getter untuk kompatibilitas UI yang mencari 'namaLengkap'
+  String get namaLengkap => nama;
+
   StaffModel({
     this.id,
     required this.nama,

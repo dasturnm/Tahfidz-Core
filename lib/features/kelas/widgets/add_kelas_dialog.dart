@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../guru_staff/providers/staff_provider.dart';
-import '../providers/kelas_provider.dart';
+import '../providers/class_provider.dart';
+import '../models/kelas_model.dart';
 
 class AddKelasDialog extends ConsumerStatefulWidget {
   const AddKelasDialog({super.key});
@@ -72,10 +73,12 @@ class _AddKelasDialogState extends ConsumerState<AddKelasDialog> {
           onPressed: () async {
             if (!_formKey.currentState!.validate()) return;
 
-            await ref.read(kelasNotifierProvider.notifier).addKelas(
-              _nameController.text,
-              _selectedLevel,
-              _selectedTeacherId,
+            await ref.read(classProvider).addClass(
+              KelasModel(
+                name: _nameController.text,
+                level: _selectedLevel,
+                teacherId: _selectedTeacherId,
+              ),
             );
 
             if (!context.mounted) return;

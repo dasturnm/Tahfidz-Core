@@ -11,7 +11,7 @@ import 'package:tahfidz_core/providers/auth_provider.dart';
 import 'package:tahfidz_core/features/auth/screens/login_screen.dart';
 import 'package:tahfidz_core/features/dashboard/screens/dashboard_admin_screen.dart';
 import 'package:tahfidz_core/features/mutabaah/screens/input_mutabaah_screen.dart';
-import 'package:tahfidz_core/features/siswa/screens/siswa_list_screen.dart';
+import 'package:tahfidz_core/features/siswa/screens/student_list_screen.dart';
 
 // Baris ini sangat penting untuk Riverpod Generator
 part 'app_routes.g.dart';

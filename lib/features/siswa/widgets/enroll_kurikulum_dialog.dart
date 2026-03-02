@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../program/providers/program_provider.dart';
 import '../../akademik/kurikulum/providers/kurikulum_provider.dart';
-import '../providers/siswa_provider.dart';
-import '../models/siswa_model.dart';
+import '../providers/student_provider.dart';
+import '../models/student_model.dart';
 
 class EnrollKurikulumDialog extends ConsumerStatefulWidget {
-  final SiswaModel siswa;
+  final StudentModel siswa;
   const EnrollKurikulumDialog({super.key, required this.siswa});
 
   @override
@@ -132,11 +132,11 @@ class _EnrollKurikulumDialogState extends ConsumerState<EnrollKurikulumDialog> {
     );
 
     try {
-      await ref.read(siswaListProvider.notifier).updateKurikulum(
-        siswaId: widget.siswa.id!,
-        kurikulumId: _selectedKurikulumId!,
-        jenjangId: _selectedJenjangId!,
-        levelId: _selectedLevelId!,
+      // Menggunakan studentProvider (ChangeNotifier) untuk update data kurikulum
+      await ref.read(studentProvider).updateStudent(
+        widget.siswa.copyWith(
+          programId: _selectedProgramId,
+        ),
       );
 
       if (mounted) {

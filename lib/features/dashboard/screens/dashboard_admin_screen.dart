@@ -24,7 +24,7 @@ class DashboardAdminScreen extends StatelessWidget {
                 _buildStatCard(screenWidth, "TOTAL SANTRI", "24", "+2 Santri Baru", Icons.people_outline, Colors.blue),
                 _buildStatCard(screenWidth, "RATA-RATA HAFALAN", "4.2 Juz", "On Track Target", Icons.book_outlined, const Color(0xFF10B981)),
                 _buildStatCard(screenWidth, "SISWA LULUS UJIAN", "12", "Bulan Februari", Icons.workspace_premium_outlined, Colors.purple),
-                _buildStatCard(screenWidth, "DURASI HALAQAH", "2.5 Jam", "Harian Efektif", Icons.timer_outlined, Colors.orange),
+                _buildStatCard(screenWidth, "DURASI kelas", "2.5 Jam", "Harian Efektif", Icons.timer_outlined, Colors.orange),
               ],
             ),
 
