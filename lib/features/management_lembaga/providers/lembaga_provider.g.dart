@@ -173,7 +173,7 @@ class _CabangListProviderElement
   String get lembagaId => (origin as CabangListProvider).lembagaId;
 }
 
-String _$divisiListHash() => r'a57325be053113c54a4c03c8d2704ef34bfcbf18';
+String _$divisiListHash() => r'd27a93e5740bdc05efaed655be4f5b8ce6eb23ce';
 
 abstract class _$DivisiList
     extends BuildlessAutoDisposeAsyncNotifier<List<DivisiModel>> {
@@ -319,7 +319,7 @@ class _DivisiListProviderElement
   String get lembagaId => (origin as DivisiListProvider).lembagaId;
 }
 
-String _$jabatanListHash() => r'0032c7bf75599a49aad11a2d448807d9f4f3c2b2';
+String _$jabatanListHash() => r'c35ba4a75da5e25524a9dda1b002940ccad0ad92';
 
 abstract class _$JabatanList
     extends BuildlessAutoDisposeAsyncNotifier<List<JabatanModel>> {

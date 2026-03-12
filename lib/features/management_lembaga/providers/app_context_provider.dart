@@ -12,6 +12,7 @@ class AppContextState {
   final LembagaModel? lembaga;
   final CabangModel? currentCabang;
   final TahunAjaranModel? currentTahunAjaran;
+  final String? programId;
   final List<CabangModel> availableCabang;
   final bool isLoading;
 
@@ -19,6 +20,7 @@ class AppContextState {
     this.lembaga,
     this.currentCabang,
     this.currentTahunAjaran,
+    this.programId,
     this.availableCabang = const [],
     this.isLoading = false,
   });
@@ -27,6 +29,7 @@ class AppContextState {
     LembagaModel? lembaga,
     CabangModel? currentCabang,
     TahunAjaranModel? currentTahunAjaran,
+    String? programId,
     List<CabangModel>? availableCabang,
     bool? isLoading,
   }) {
@@ -34,6 +37,7 @@ class AppContextState {
       lembaga: lembaga ?? this.lembaga,
       currentCabang: currentCabang ?? this.currentCabang,
       currentTahunAjaran: currentTahunAjaran ?? this.currentTahunAjaran,
+      programId: programId ?? this.programId,
       availableCabang: availableCabang ?? this.availableCabang,
       isLoading: isLoading ?? this.isLoading,
     );
@@ -241,5 +245,9 @@ class AppContext extends _$AppContext {
   void switchCabang(CabangModel cabang) {
     state = state.copyWith(currentCabang: cabang);
     // Refresh context dilakukan secara implisit oleh provider yang menonton currentCabang
+  }
+
+  void setProgramId(String id) {
+    state = state.copyWith(programId: id);
   }
 }

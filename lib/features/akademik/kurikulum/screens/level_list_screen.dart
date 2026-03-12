@@ -1,58 +1,98 @@
+// Lokasi: lib/features/akademik/kurikulum/screens/level_list_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/kurikulum_model.dart';
 import '../providers/kurikulum_provider.dart';
 import 'level_detail_screen.dart';
+// Import widget pendukung (Pastikan file ini dibuat/ada di folder widgets)
+import '../widgets/level_grid_view.dart';
+import '../widgets/level_table_view.dart';
 
-class LevelListScreen extends ConsumerWidget {
+class LevelListScreen extends ConsumerStatefulWidget {
   final JenjangModel jenjang;
+  final bool isLinear; // TAMBAHAN: Logika level tunggal
 
-  const LevelListScreen({super.key, required this.jenjang});
+  const LevelListScreen({
+    super.key,
+    required this.jenjang,
+    this.isLinear = false, // TAMBAHAN
+  });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<LevelListScreen> createState() => _LevelListScreenState();
+}
+
+class _LevelListScreenState extends ConsumerState<LevelListScreen> {
+  bool _isGridView = true; // State untuk toggle tampilan
+  final Color _emerald = const Color(0xFF10B981);
+  final Color _slate = const Color(0xFF1E293B); // TAMBAHAN: Konsistensi Slate 2026
+
+  @override
+  Widget build(BuildContext context) {
     // Watch daftar level berdasarkan jenjangId
-    final levelAsync = ref.watch(levelListProvider(jenjang.id!));
+    final levelAsync = ref.watch(levelListProvider(widget.jenjang.id!));
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF8FAFC), // Standar background modern
       appBar: AppBar(
         title: const Text("Manajemen Akademik"),
         backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF10B981),
+        foregroundColor: _slate, // PERBAIKAN: Gunakan Slate
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => Navigator.pop(context),
         ),
+        actions: [
+          // TOGGLE VIEW BUTTON
+          IconButton(
+            icon: Icon(_isGridView ? Icons.view_list_rounded : Icons.grid_view_rounded),
+            onPressed: () => setState(() => _isGridView = !_isGridView),
+            tooltip: "Ganti Tampilan",
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: Column(
         children: [
-          _buildBreadcrumbHeader(context, ref),
+          _buildBreadcrumbHeader(context),
           Expanded(
             child: levelAsync.when(
               data: (levels) => levels.isEmpty
                   ? _buildEmptyState()
-                  : ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                itemCount: levels.length,
-                itemBuilder: (context, index) {
-                  final level = levels[index];
-                  return _buildLevelCard(context, ref, level);
-                },
+                  : _isGridView
+                  ? LevelGridView(
+                levels: levels,
+                primaryColor: _emerald,
+                onAction: (level) => _showActionSheet(context, level),
+                onTap: (level) => _navigateToDetail(context, level),
+              )
+                  : LevelTableView(
+                levels: levels,
+                primaryColor: _emerald,
+                onAction: (level) => _showActionSheet(context, level),
+                onTap: (level) => _navigateToDetail(context, level),
               ),
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () => const Center(child: CircularProgressIndicator(color: Color(0xFF10B981))),
               error: (err, _) => Center(child: Text("Error: $err")),
             ),
           ),
         ],
       ),
+      // PERBAIKAN: Mengikuti standar Hub, tombol plus di pojok kanan bawah
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _showAddLevelSheet(context),
+        backgroundColor: _slate,
+        child: const Icon(Icons.add, color: Colors.white),
+      ),
     );
   }
 
-  Widget _buildBreadcrumbHeader(BuildContext context, WidgetRef ref) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+  Widget _buildBreadcrumbHeader(BuildContext context) {
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(32, 8, 32, 24), // Padding konsisten Hub
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -61,33 +101,21 @@ class LevelListScreen extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "JENJANG ${jenjang.namaJenjang.toUpperCase()}",
-                  style: const TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF10B981),
+                  "JENJANG ${widget.jenjang.namaJenjang.toUpperCase()}",
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w900,
+                    color: _emerald,
                     letterSpacing: 1.2,
                   ),
                 ),
                 const SizedBox(height: 4),
-                const Text(
-                  "2. Tingkatan (Level)",
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                Text(
+                  // PERBAIKAN: Logika Level Tunggal (Bypass naming)
+                  widget.isLinear ? "Modul Pembelajaran" : "Tingkatan (Level)",
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: _slate),
                 ),
               ],
-            ),
-          ),
-          ElevatedButton.icon(
-            onPressed: () => _showAddLevelDialog(context, ref),
-            icon: const Icon(Icons.add, size: 18, color: Colors.white),
-            label: const Text(
-              "BUAT LEVEL",
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF0F172A),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             ),
           ),
         ],
@@ -95,197 +123,183 @@ class LevelListScreen extends ConsumerWidget {
     );
   }
 
-  // --- DIALOG BUAT LEVEL ---
+  // --- MODERN ACTION MENU (BOTTOM SHEET) ---
 
-  void _showAddLevelDialog(BuildContext context, WidgetRef ref, {LevelModel? levelToEdit}) {
+  void _showActionSheet(BuildContext context, LevelModel level) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent, // Untuk rounded corner
+      builder: (context) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+        ),
+        padding: const EdgeInsets.symmetric(vertical: 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 20),
+              decoration: BoxDecoration(
+                color: Colors.grey[200],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Text(
+              level.namaLevel,
+              style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: _slate),
+            ),
+            const SizedBox(height: 24),
+            ListTile(
+              leading: const Icon(Icons.edit_outlined),
+              title: const Text("Edit Data", style: TextStyle(fontWeight: FontWeight.bold)),
+              onTap: () {
+                Navigator.pop(context);
+                _showAddLevelSheet(context, levelToEdit: level);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete_outline, color: Colors.red),
+              title: const Text("Hapus", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+              onTap: () {
+                Navigator.pop(context);
+                _showDeleteConfirm(context, level);
+              },
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // --- DIALOG BUAT LEVEL (CONVERTED TO SHEET) ---
+
+  void _showAddLevelSheet(BuildContext context, {LevelModel? levelToEdit}) {
     final nameController = TextEditingController(text: levelToEdit?.namaLevel);
 
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-        contentPadding: const EdgeInsets.all(32),
-        content: SizedBox(
-          width: 400,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+        ),
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(ctx).viewInsets.bottom + 32,
+          left: 32,
+          right: 32,
+          top: 32,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               children: [
-                Row(
-                  children: [
-                    const Icon(Icons.stairs_outlined, color: Color(0xFF10B981), size: 28),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        levelToEdit == null ? "Buat Tingkatan (Level)" : "Edit Tingkatan",
-                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 32),
-                const Text("NAMA LEVEL", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1.2)),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: nameController,
-                  decoration: InputDecoration(
-                    hintText: "Contoh: Level 3 (Juz 28)",
-                    filled: true,
-                    fillColor: const Color(0xFFF8FAFC),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                Icon(Icons.stairs_outlined, color: _emerald, size: 28),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    // PERBAIKAN: Logika Level Tunggal
+                    levelToEdit == null
+                        ? (widget.isLinear ? "Atur Konten Modul" : "Buat Tingkatan (Level)")
+                        : "Edit Konfigurasi",
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: _slate),
                   ),
                 ),
-                const SizedBox(height: 32),
-                SizedBox(
-                  width: double.infinity,
-                  height: 54,
-                  child: ElevatedButton(
-                    onPressed: () async {
-                      try {
-                        if (nameController.text.isEmpty) return;
-
-                        final levelData = LevelModel(
-                          id: levelToEdit?.id,
-                          kurikulumId: jenjang.kurikulumId, // FIX: Sertakan Kurikulum ID
-                          jenjangId: jenjang.id!,
-                          namaLevel: nameController.text.trim(),
-                          targetTotal: levelToEdit?.targetTotal ?? 0, // FIX: Default value
-                          metrik: levelToEdit?.metrik ?? 'Juz', // FIX: Default value
-                          urutan: levelToEdit?.urutan ?? 0,
-                        );
-
-                        await ref.read(levelListProvider(jenjang.id!).notifier).saveLevel(levelData);
-
-                        if (ctx.mounted) Navigator.pop(ctx);
-                      } catch (e) {
-                        print('Error saveLevel: $e');
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF10B981),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      elevation: 0,
-                    ),
-                    child: Text(
-                        levelToEdit == null ? "Simpan Level" : "Update Level",
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: TextButton(
-                    onPressed: () => Navigator.pop(ctx),
-                    child: const Text("Batal", style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w600)),
-                  ),
-                ),
+                IconButton(onPressed: () => Navigator.pop(ctx), icon: const Icon(Icons.close)),
               ],
             ),
-          ),
+            const SizedBox(height: 12),
+            Text(
+              widget.isLinear
+                  ? "Definisikan grup materi untuk jenjang linear ini."
+                  : "Tentukan cakupan materi untuk tingkatan ini.",
+              style: const TextStyle(color: Colors.grey, fontSize: 13),
+            ),
+            const SizedBox(height: 32),
+            Text(
+                widget.isLinear ? "NAMA GRUP MODUL" : "NAMA LEVEL",
+                style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.grey, letterSpacing: 1.2)
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: nameController,
+              autofocus: true,
+              decoration: InputDecoration(
+                hintText: widget.isLinear ? "Contoh: Modul Materi Utama" : "Contoh: Level 3 (Juz 28)",
+                filled: true,
+                fillColor: const Color(0xFFF8FAFC),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+              ),
+            ),
+            const SizedBox(height: 32),
+            SizedBox(
+              width: double.infinity,
+              height: 60,
+              child: ElevatedButton(
+                onPressed: () async {
+                  if (nameController.text.isEmpty) return;
+
+                  final levelData = LevelModel(
+                    id: levelToEdit?.id,
+                    kurikulumId: widget.jenjang.kurikulumId,
+                    jenjangId: widget.jenjang.id!,
+                    namaLevel: nameController.text.trim(),
+                    targetTotal: levelToEdit?.targetTotal ?? 0,
+                    metrik: levelToEdit?.metrik ?? 'Juz',
+                    urutan: levelToEdit?.urutan ?? 0,
+                  );
+
+                  await ref.read(levelListProvider(widget.jenjang.id!).notifier).saveLevel(levelData);
+                  if (ctx.mounted) Navigator.pop(ctx);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _emerald,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  elevation: 0,
+                ),
+                child: Text(
+                    levelToEdit == null ? "SIMPAN" : "UPDATE",
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, letterSpacing: 1)
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildLevelCard(BuildContext context, WidgetRef ref, LevelModel level) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade100),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.all(16),
-        leading: Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            color: const Color(0xFFF1F5F9),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          alignment: Alignment.center,
-          child: Text(
-            "${level.urutan}",
-            style: const TextStyle(
-              color: Colors.grey,
-              fontWeight: FontWeight.bold,
-              fontSize: 18,
-            ),
-          ),
-        ),
-        title: Text(
-          level.namaLevel,
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-        ),
-        subtitle: Padding(
-          padding: const EdgeInsets.only(top: 4),
-          child: Text(
-            "${level.modules.length} MODUL TERPASANG",
-            style: const TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey,
-              letterSpacing: 0.5,
-            ),
-          ),
-        ),
-        trailing: _buildTrailingMenu(context, ref, level),
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => LevelDetailScreen(level: level),
-            ),
-          );
-        },
+  void _navigateToDetail(BuildContext context, LevelModel level) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => LevelDetailScreen(level: level),
       ),
     );
   }
 
-  // --- MENU AKSI CARD ---
-  Widget _buildTrailingMenu(BuildContext context, WidgetRef ref, LevelModel level) {
-    return PopupMenuButton<String>(
-      icon: const Icon(Icons.more_vert, color: Color(0xFFE2E8F0)),
-      onSelected: (value) async {
-        if (value == 'edit') {
-          _showAddLevelDialog(context, ref, levelToEdit: level);
-        } else if (value == 'delete') {
-          _showDeleteConfirm(context, ref, level);
-        }
-      },
-      itemBuilder: (context) => [
-        const PopupMenuItem(value: 'edit', child: Row(children: [Icon(Icons.edit_outlined, size: 18), SizedBox(width: 8), Text("Edit")])),
-        const PopupMenuItem(value: 'delete', child: Row(children: [Icon(Icons.delete_outline, size: 18, color: Colors.red), SizedBox(width: 8), Text("Hapus", style: TextStyle(color: Colors.red))])),
-      ],
-    );
-  }
-
-  void _showDeleteConfirm(BuildContext context, WidgetRef ref, LevelModel level) {
+  void _showDeleteConfirm(BuildContext context, LevelModel level) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text("Hapus Tingkatan?"),
-        content: Text("Seluruh modul di dalam level '${level.namaLevel}' juga akan terhapus. Tindakan ini tidak dapat dibatalkan."),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Text("Hapus Data?", style: TextStyle(fontWeight: FontWeight.bold)),
+        content: Text("Seluruh modul di dalamnya juga akan terhapus."),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Batal")),
           TextButton(
               onPressed: () async {
-                await ref.read(levelListProvider(jenjang.id!).notifier).deleteLevel(level.id!);
+                await ref.read(levelListProvider(widget.jenjang.id!).notifier).deleteLevel(level.id!);
                 if (ctx.mounted) Navigator.pop(ctx);
               },
-              child: const Text("Hapus", style: TextStyle(color: Colors.red))
+              child: const Text("Hapus", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold))
           ),
         ],
       ),
@@ -293,16 +307,28 @@ class LevelListScreen extends ConsumerWidget {
   }
 
   Widget _buildEmptyState() {
-    return const Center(
+    return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.stairs_outlined, size: 80, color: Color(0xFFF1F5F9)),
-          SizedBox(height: 16),
+          const Icon(Icons.stairs_outlined, size: 80, color: Color(0xFFE2E8F0)),
+          const SizedBox(height: 16),
           Text(
-            "Belum ada tingkatan/level.",
-            style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w500),
+            widget.isLinear ? "Belum ada konfigurasi modul." : "Belum ada tingkatan/level.",
+            style: const TextStyle(color: Colors.grey, fontWeight: FontWeight.w500),
           ),
+          const SizedBox(height: 24),
+          ElevatedButton(
+            onPressed: () => _showAddLevelSheet(context),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _slate,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: Text(
+                widget.isLinear ? "Mulai Atur Modul" : "Buat Level Pertama",
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)
+            ),
+          )
         ],
       ),
     );

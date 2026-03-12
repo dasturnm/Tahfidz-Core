@@ -196,7 +196,7 @@ class _StudentHubScreenState extends ConsumerState<StudentHubScreen> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.grey.withOpacity(0.1)),
+              border: Border.all(color: Colors.grey.withValues(alpha: 0.1)), // PERBAIKAN: withValues
             ),
             child: TextField(
               controller: _searchController,
@@ -248,7 +248,7 @@ class _StudentHubScreenState extends ConsumerState<StudentHubScreen> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey.withOpacity(0.1)),
+          border: Border.all(color: Colors.grey.withValues(alpha: 0.1)), // PERBAIKAN: withValues
         ),
         child: Icon(icon, color: const Color(0xFF64748B), size: 20),
       ),
@@ -281,7 +281,7 @@ class _StudentHubScreenState extends ConsumerState<StudentHubScreen> {
           decoration: BoxDecoration(
             color: isActive ? Colors.white : Colors.transparent,
             borderRadius: BorderRadius.circular(16),
-            boxShadow: isActive ? [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4)] : [],
+            boxShadow: isActive ? [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 4)] : [], // PERBAIKAN: withValues
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,

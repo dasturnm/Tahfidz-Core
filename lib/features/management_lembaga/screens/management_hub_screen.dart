@@ -3,6 +3,7 @@ import 'lembaga_profile_screen.dart';
 import 'cabang_list_screen.dart';
 import 'divisi_list_screen.dart';
 import 'jabatan_list_screen.dart';
+import 'tahun_ajaran_screen.dart'; // Baru: Import Tahun Ajaran
 
 
 class ManagementHubScreen extends StatelessWidget {
@@ -19,7 +20,7 @@ class ManagementHubScreen extends StatelessWidget {
         elevation: 0,
       ),
       body: DefaultTabController(
-        length: 4,
+        length: 5, // Diubah dari 4 menjadi 5
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -53,6 +54,7 @@ class ManagementHubScreen extends StatelessWidget {
                 tabs: [
                   Tab(child: Row(children: [Icon(Icons.business_outlined, size: 18), SizedBox(width: 8), Text("Profil")])),
                   Tab(child: Row(children: [Icon(Icons.location_city_outlined, size: 18), SizedBox(width: 8), Text("Cabang")])),
+                  Tab(child: Row(children: [Icon(Icons.calendar_today_outlined, size: 18), SizedBox(width: 8), Text("Tahun Ajaran")])), // Baru
                   Tab(child: Row(children: [Icon(Icons.account_tree_outlined, size: 18), SizedBox(width: 8), Text("Divisi")])),
                   Tab(child: Row(children: [Icon(Icons.work_outline, size: 18), SizedBox(width: 8), Text("Jabatan")])),
                 ],
@@ -64,6 +66,7 @@ class ManagementHubScreen extends StatelessWidget {
                 children: [
                   LembagaProfileScreen(),
                   CabangListScreen(),
+                  TahunAjaranScreen(), // Baru
                   DivisiListScreen(),
                   JabatanListScreen(),
                 ],

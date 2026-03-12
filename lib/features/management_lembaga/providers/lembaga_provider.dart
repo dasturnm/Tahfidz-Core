@@ -63,6 +63,12 @@ class DivisiList extends _$DivisiList {
     await _supabase.from('divisi').upsert(data);
     ref.invalidateSelf();
   }
+
+  // --- TAMBAHKAN METHOD DELETE ---
+  Future<void> deleteDivisi(String id) async {
+    await _supabase.from('divisi').delete().eq('id', id);
+    ref.invalidateSelf();
+  }
 }
 
 // --- PROVIDER DAFTAR JABATAN ---
@@ -84,6 +90,12 @@ class JabatanList extends _$JabatanList {
     if (jabatan.id.isEmpty) data.remove('id'); // Pastikan ID tidak kosong saat insert baru
     data['lembaga_id'] = lembagaId; // Suntikkan lembagaId agar data muncul di list
     await _supabase.from('jabatan').upsert(data);
+    ref.invalidateSelf();
+  }
+
+  // --- TAMBAHKAN METHOD DELETE ---
+  Future<void> deleteJabatan(String id) async {
+    await _supabase.from('jabatan').delete().eq('id', id);
     ref.invalidateSelf();
   }
 }

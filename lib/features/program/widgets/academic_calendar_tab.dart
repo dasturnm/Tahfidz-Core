@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:table_calendar/table_calendar.dart';
 import '../providers/agenda_provider.dart';
 import '../providers/program_provider.dart';
+import '../providers/kalender_provider.dart'; // Baru: Import Kalender
+import '../../management_lembaga/providers/tahun_ajaran_notifier.dart'; // FIX: Jalur diperbaiki
 import '../../management_lembaga/providers/app_context_provider.dart';
 import '../models/agenda_model.dart';
 
@@ -14,13 +16,13 @@ class AcademicCalendarTab extends ConsumerStatefulWidget {
 }
 
 class _AcademicCalendarTabState extends ConsumerState<AcademicCalendarTab> {
-  final CalendarFormat _calendarFormat = CalendarFormat.month;
   DateTime _focusedDay = DateTime.now();
   String? _selectedProgramFilter;
 
   @override
   Widget build(BuildContext context) {
-    final agendasAsync = ref.watch(agendaNotifierProvider);
+    // UPDATE: Gunakan CalendarNotifier untuk tampilan bulanan agar lebih ringan
+    final agendasAsync = ref.watch(calendarNotifierProvider(_focusedDay));
     final programsAsync = ref.watch(programNotifierProvider);
     final screenWidth = MediaQuery.of(context).size.width;
 
@@ -59,19 +61,26 @@ class _AcademicCalendarTabState extends ConsumerState<AcademicCalendarTab> {
     );
   }
 
-  // --- FUNGSI DIALOG TAMBAH AGENDA ---
-  void _showAddAgendaDialog(BuildContext context, WidgetRef ref) {
-    final nameController = TextEditingController();
-    DateTimeRange? selectedRange;
-    String status = 'EFEKTIF';
-    String scope = 'GLOBAL';
-    String? targetProgramId;
+  // --- FUNGSI DIALOG TAMBAH AGENDA (DUAL MODE: ADD/EDIT) ---
+  void _showAddAgendaDialog(BuildContext context, WidgetRef ref, {AgendaModel? agenda}) {
+    final activeTA = ref.read(appContextProvider).currentTahunAjaran; // Tambah Konteks TA
+    final isEdit = agenda != null;
+    final nameController = TextEditingController(text: agenda?.namaAgenda);
+    final keteranganController = TextEditingController(text: agenda?.keterangan);
+    DateTimeRange? selectedRange = isEdit
+        ? DateTimeRange(start: agenda.tanggalMulai, end: agenda.tanggalBerakhir)
+        : null;
+    String status = agenda?.statusHariBelajar ?? 'EFEKTIF';
+    String scope = agenda?.scope ?? 'GLOBAL';
+    String? targetProgramId = agenda?.programId;
+    bool isSiswaLibur = agenda?.isSiswaLibur ?? false;
+    bool isGuruMasuk = agenda?.isGuruMasuk ?? true;
 
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: const Text("Buat Agenda Baru", style: TextStyle(fontWeight: FontWeight.bold)),
+          title: Text(isEdit ? "Edit Agenda" : "Buat Agenda Baru", style: const TextStyle(fontWeight: FontWeight.bold)),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           content: SingleChildScrollView(
             child: Column(
@@ -84,6 +93,13 @@ class _AcademicCalendarTabState extends ConsumerState<AcademicCalendarTab> {
                   decoration: _inputDecor("Contoh: Libur Ramadhan"),
                 ),
                 const SizedBox(height: 16),
+                _buildLabel("Keterangan (Opsional)"),
+                TextField(
+                  controller: keteranganController,
+                  maxLines: 2,
+                  decoration: _inputDecor("Tambahkan detail agenda..."),
+                ),
+                const SizedBox(height: 16),
                 _buildLabel("Rentang Tanggal"),
                 OutlinedButton.icon(
                   onPressed: () async {
@@ -91,6 +107,7 @@ class _AcademicCalendarTabState extends ConsumerState<AcademicCalendarTab> {
                       context: context,
                       firstDate: DateTime(2025),
                       lastDate: DateTime(2030),
+                      initialDateRange: selectedRange,
                     );
                     if (range != null) setDialogState(() => selectedRange = range);
                   },
@@ -103,7 +120,7 @@ class _AcademicCalendarTabState extends ConsumerState<AcademicCalendarTab> {
                 const SizedBox(height: 16),
                 _buildLabel("Status Hari"),
                 DropdownButtonFormField<String>(
-                  initialValue: status,
+                  value: status,
                   items: const [
                     DropdownMenuItem(value: 'EFEKTIF', child: Text("HARI EFEKTIF (Hijau)")),
                     DropdownMenuItem(value: 'LIBUR', child: Text("HARI LIBUR (Merah)")),
@@ -112,9 +129,23 @@ class _AcademicCalendarTabState extends ConsumerState<AcademicCalendarTab> {
                   decoration: _inputDecor(""),
                 ),
                 const SizedBox(height: 16),
+                _buildLabel("Pengaturan Operasional"),
+                SwitchListTile(
+                  title: const Text("Siswa Libur", style: TextStyle(fontSize: 13)),
+                  value: isSiswaLibur,
+                  dense: true,
+                  onChanged: (val) => setDialogState(() => isSiswaLibur = val),
+                ),
+                SwitchListTile(
+                  title: const Text("Guru/Staff Tetap Masuk", style: TextStyle(fontSize: 13)),
+                  value: isGuruMasuk,
+                  dense: true,
+                  onChanged: (val) => setDialogState(() => isGuruMasuk = val),
+                ),
+                const SizedBox(height: 16),
                 _buildLabel("Cakupan (Scope)"),
                 DropdownButtonFormField<String>(
-                  initialValue: scope,
+                  value: scope,
                   items: const [
                     DropdownMenuItem(value: 'GLOBAL', child: Text("Global (Semua)")),
                     DropdownMenuItem(value: 'PROG_SPESIFIK', child: Text("Program Spesifik")),
@@ -127,6 +158,7 @@ class _AcademicCalendarTabState extends ConsumerState<AcademicCalendarTab> {
                   _buildLabel("Pilih Program"),
                   ref.watch(programNotifierProvider).when(
                     data: (progs) => DropdownButtonFormField<String>(
+                      value: targetProgramId,
                       items: progs.map((p) => DropdownMenuItem(value: p.id, child: Text(p.namaProgram))).toList(),
                       onChanged: (val) => setDialogState(() => targetProgramId = val),
                       decoration: _inputDecor("Pilih program"),
@@ -145,18 +177,29 @@ class _AcademicCalendarTabState extends ConsumerState<AcademicCalendarTab> {
                 if (nameController.text.isEmpty || selectedRange == null) return;
 
                 final lembagaId = ref.read(appContextProvider).lembaga?.id;
-                final newAgenda = AgendaModel(
-                  id: '',
+                final updatedAgenda = AgendaModel(
+                  id: isEdit ? agenda.id : '',
                   lembagaId: lembagaId!,
+                  tahunAjaranId: activeTA!.id, // UPDATE: Parameter wajib baru
                   namaAgenda: nameController.text.trim(),
                   tanggalMulai: selectedRange!.start,
                   tanggalBerakhir: selectedRange!.end,
                   statusHariBelajar: status,
                   scope: scope,
                   programId: targetProgramId,
+                  keterangan: keteranganController.text.trim(),
+                  isSiswaLibur: isSiswaLibur,
+                  isGuruMasuk: isGuruMasuk,
                 );
 
-                await ref.read(agendaNotifierProvider.notifier).addAgenda(newAgenda);
+                if (isEdit) {
+                  // UPDATE: Pemanggilan Family Provider (Aman karena activeTA sudah dipastikan dengan !)
+                  await ref.read(agendaNotifierProvider(tahunAjaranId: activeTA.id, programId: _selectedProgramFilter).notifier).updateAgenda(updatedAgenda);
+                } else {
+                  // UPDATE: Pemanggilan Family Provider (Aman)
+                  await ref.read(agendaNotifierProvider(tahunAjaranId: activeTA.id, programId: _selectedProgramFilter).notifier).addAgenda(updatedAgenda);
+                }
+
                 if (context.mounted) Navigator.pop(context);
               },
               style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10B981)),
@@ -168,94 +211,75 @@ class _AcademicCalendarTabState extends ConsumerState<AcademicCalendarTab> {
     );
   }
 
-  // --- DIALOG KONFIGURASI PERIODE ---
-  void _showConfigPeriodeDialog(BuildContext context) {
-    showDialog(
+  // --- PICKER TAHUN AJARAN (Membuat tombol di Gambar 3 berfungsi) ---
+  void _showYearSelectionSheet(BuildContext context) {
+    showModalBottomSheet(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.settings_suggest_outlined, size: 48, color: Color(0xFF10B981)),
-            const SizedBox(height: 16),
-            const Text("Konfigurasi Periode", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const Text("TAHUN AJARAN & SEMESTER", style: TextStyle(fontSize: 10, color: Colors.grey, letterSpacing: 1.2)),
-            const SizedBox(height: 24),
-            const Align(alignment: Alignment.centerLeft, child: Text("TAHUN AJARAN AKTIF", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.blueGrey))),
-            const SizedBox(height: 8),
-            DropdownButtonFormField<String>(
-              initialValue: "2023/2024",
-              decoration: InputDecoration(
-                filled: true, fillColor: Colors.grey[50],
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-              ),
-              items: const [DropdownMenuItem(value: "2023/2024", child: Text("2023/2024"))],
-              onChanged: (v) {},
-            ),
-            const SizedBox(height: 16),
-            const Align(alignment: Alignment.centerLeft, child: Text("SEMESTER AKTIF", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.blueGrey))),
-            const SizedBox(height: 8),
-            Row(
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (context) => Consumer(
+        builder: (context, ref, _) {
+          final taAsync = ref.watch(tahunAjaranNotifierProvider);
+          return Container(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {},
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF10B981),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: const Text("Semester Ganjil", style: TextStyle(color: Colors.white, fontSize: 12)),
+                const Text("Pilih Tahun Ajaran Aktif", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                const SizedBox(height: 16),
+                taAsync.when(
+                  data: (list) => ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: list.length,
+                    itemBuilder: (context, index) {
+                      final ta = list[index];
+                      return ListTile(
+                        leading: const Icon(Icons.calendar_today, color: Color(0xFF10B981)),
+                        title: Text(ta.labelTahun, style: const TextStyle(fontWeight: FontWeight.bold)),
+                        subtitle: Text("Semester ${ta.semester}"),
+                        onTap: () async {
+                          await ref.read(tahunAjaranNotifierProvider.notifier).setTahunAjaranAktif(ta.id);
+                          if (context.mounted) Navigator.pop(context);
+                        },
+                      );
+                    },
                   ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () {},
-                    style: OutlinedButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-                    child: const Text("Semester Genap", style: TextStyle(fontSize: 12)),
-                  ),
+                  loading: () => const Center(child: CircularProgressIndicator()),
+                  error: (err, _) => Text("Error: $err"),
                 ),
               ],
             ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF10B981),
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                child: const Text("Simpan Konfigurasi", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-              ),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
 
   Widget _buildFilterBar(AsyncValue programsAsync) {
+    final activeTA = ref.watch(appContextProvider).currentTahunAjaran;
+
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
-          // --- CHIP KONFIGURASI TAHUN AJARAN ---
+          // --- CHIP KONFIGURASI TAHUN AJARAN (BERFUNGSI) ---
           GestureDetector(
-            onTap: () => _showConfigPeriodeDialog(context),
+            onTap: () => _showYearSelectionSheet(context),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              height: 48,
+              constraints: const BoxConstraints(minWidth: 160), // Merapikan ukuran box
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey.shade200)),
-              child: const Row(
+              child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.calendar_today, size: 14, color: Color(0xFF10B981)),
-                  SizedBox(width: 8),
-                  Text("2023/2024 • GANJIL", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                  SizedBox(width: 8),
-                  Icon(Icons.edit, size: 12, color: Colors.grey),
+                  const Icon(Icons.calendar_today, size: 14, color: Color(0xFF10B981)),
+                  const SizedBox(width: 12),
+                  Text(
+                      activeTA != null
+                          ? "${activeTA.labelTahun} • ${activeTA.semester.toUpperCase()}"
+                          : "Pilih Tahun Ajaran",
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)
+                  ),
                 ],
               ),
             ),
@@ -263,22 +287,24 @@ class _AcademicCalendarTabState extends ConsumerState<AcademicCalendarTab> {
           const SizedBox(width: 12),
           // --- CHIP FILTER PROGRAM ---
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            height: 48,
+            constraints: const BoxConstraints(minWidth: 160), // Merapikan ukuran box agar simetris
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey.shade200)),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 const Icon(Icons.filter_list, size: 16, color: Color(0xFF10B981)),
-                const SizedBox(width: 8),
+                const SizedBox(width: 12),
                 programsAsync.when(
                   data: (programs) => DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
+                    child: DropdownButton<String?>(
                       value: _selectedProgramFilter,
                       hint: const Text("Filter Program", style: TextStyle(fontSize: 12)),
                       icon: const Icon(Icons.arrow_drop_down, size: 18),
-                      items: [
-                        const DropdownMenuItem<String>(value: null, child: Text("Semua Program", style: TextStyle(fontSize: 12))),
-                        ...programs.map<DropdownMenuItem<String>>((p) => DropdownMenuItem<String>(value: p.id, child: Text(p.namaProgram, style: const TextStyle(fontSize: 12)))).toList(),
+                      items: <DropdownMenuItem<String?>>[
+                        const DropdownMenuItem<String?>(value: null, child: Text("Semua Program", style: TextStyle(fontSize: 12))),
+                        ...programs.map<DropdownMenuItem<String?>>((p) => DropdownMenuItem<String?>(value: p.id, child: Text(p.namaProgram, style: const TextStyle(fontSize: 12)))).toList(),
                       ],
                       onChanged: (val) => setState(() => _selectedProgramFilter = val),
                     ),
@@ -303,7 +329,7 @@ class _AcademicCalendarTabState extends ConsumerState<AcademicCalendarTab> {
           focusedDay: _focusedDay,
           firstDay: DateTime(2025),
           lastDay: DateTime(2030),
-          calendarFormat: _calendarFormat,
+          calendarFormat: CalendarFormat.month,
           headerStyle: const HeaderStyle(formatButtonVisible: false, titleCentered: true),
           calendarBuilders: CalendarBuilders(
             defaultBuilder: (context, day, focusedDay) {
@@ -323,7 +349,7 @@ class _AcademicCalendarTabState extends ConsumerState<AcademicCalendarTab> {
               );
             },
           ),
-          onPageChanged: (focusedDay) => _focusedDay = focusedDay,
+          onPageChanged: (focusedDay) => setState(() => _focusedDay = focusedDay),
         ),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, _) => Center(child: Text("Error: $err")),
@@ -332,7 +358,6 @@ class _AcademicCalendarTabState extends ConsumerState<AcademicCalendarTab> {
   }
 
   AgendaModel? _getAgendaForDay(List<AgendaModel> agendas, DateTime day) {
-    // Normalisasi jam agar perbandingan tanggal akurat
     final date = DateTime(day.year, day.month, day.day);
 
     final filtered = agendas.where((a) {
@@ -340,8 +365,8 @@ class _AcademicCalendarTabState extends ConsumerState<AcademicCalendarTab> {
       final end = DateTime(a.tanggalBerakhir.year, a.tanggalBerakhir.month, a.tanggalBerakhir.day);
 
       bool isMatchScope = (_selectedProgramFilter == null)
-          ? a.scope == 'GLOBAL'
-          : (a.programId == _selectedProgramFilter || a.scope == 'GLOBAL');
+          ? true
+          : (a.scope.toUpperCase() == 'GLOBAL' || a.programId == _selectedProgramFilter);
 
       bool isMatchDate = date.isAtSameMomentAs(start) ||
           date.isAtSameMomentAs(end) ||
@@ -352,7 +377,6 @@ class _AcademicCalendarTabState extends ConsumerState<AcademicCalendarTab> {
 
     if (filtered.isEmpty) return null;
 
-    // Prioritas: Jika ada status LIBUR, ambil itu. Jika tidak, ambil yang pertama.
     try {
       return filtered.firstWhere((a) => a.statusHariBelajar == 'LIBUR');
     } catch (_) {
@@ -367,27 +391,47 @@ class _AcademicCalendarTabState extends ConsumerState<AcademicCalendarTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text("AGENDA AKADEMIK", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          const Text("AGENDA BULAN INI", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
           const Divider(height: 32),
           agendasAsync.when(
             data: (agendas) {
-              final currentMonthAgendas = agendas.where((a) => a.tanggalMulai.month == _focusedDay.month).toList();
-              if (currentMonthAgendas.isEmpty) return const Center(child: Text("Tidak ada agenda", style: TextStyle(fontSize: 12, color: Colors.grey)));
+              final filteredAgendas = agendas.where((a) {
+                // Cek filter Program (Filter waktu sudah dilakukan di provider)
+                bool matchProg = (_selectedProgramFilter == null) ||
+                    (a.scope.toUpperCase() == 'GLOBAL' || a.programId == _selectedProgramFilter);
+
+                return matchProg;
+              }).toList();
+
+              if (filteredAgendas.isEmpty) return const Center(child: Text("Tidak ada agenda", style: TextStyle(fontSize: 12, color: Colors.grey)));
 
               return ListView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                itemCount: currentMonthAgendas.length,
+                itemCount: filteredAgendas.length,
                 itemBuilder: (context, index) {
-                  final a = currentMonthAgendas[index];
+                  final a = filteredAgendas[index];
                   final bool isLibur = a.statusHariBelajar == 'LIBUR';
                   return ListTile(
                     contentPadding: EdgeInsets.zero,
                     leading: Icon(Icons.circle, size: 10, color: isLibur ? Colors.red : const Color(0xFF10B981)),
                     title: Text(a.namaAgenda, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
                     subtitle: Text(
-                      "${a.tanggalMulai.day} - ${a.tanggalBerakhir.day} ${_getMonthName(a.tanggalMulai.month)}",
+                      "${a.tanggalMulai.day}/${a.tanggalMulai.month} - ${a.tanggalBerakhir.day}/${a.tanggalBerakhir.month}",
                       style: const TextStyle(fontSize: 11),
+                    ),
+                    trailing: PopupMenuButton<String>(
+                      icon: const Icon(Icons.more_vert, size: 18),
+                      onSelected: (val) {
+                        if (val == 'detail') _showDetailAgenda(a);
+                        if (val == 'edit') _showAddAgendaDialog(context, ref, agenda: a);
+                        if (val == 'delete') _confirmDelete(a.id);
+                      },
+                      itemBuilder: (context) => [
+                        const PopupMenuItem(value: 'detail', child: Text('Detail')),
+                        const PopupMenuItem(value: 'edit', child: Text('Edit')),
+                        const PopupMenuItem(value: 'delete', child: Text('Hapus', style: TextStyle(color: Colors.red))),
+                      ],
                     ),
                   );
                 },
@@ -401,7 +445,55 @@ class _AcademicCalendarTabState extends ConsumerState<AcademicCalendarTab> {
     );
   }
 
-  String _getMonthName(int month) => ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'][month - 1];
+  void _showDetailAgenda(AgendaModel agenda) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(agenda.namaAgenda, style: const TextStyle(fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text("Tanggal: ${agenda.tanggalMulai.day}/${agenda.tanggalMulai.month} - ${agenda.tanggalBerakhir.day}/${agenda.tanggalBerakhir.month}"),
+            const SizedBox(height: 8),
+            Text("Status: ${agenda.statusHariBelajar}"),
+            const SizedBox(height: 8),
+            Text("Siswa Libur: ${agenda.isSiswaLibur ? 'YA' : 'TIDAK'}"),
+            Text("Guru Masuk: ${agenda.isGuruMasuk ? 'YA' : 'TIDAK'}"),
+            const SizedBox(height: 12),
+            const Text("Keterangan:", style: TextStyle(fontWeight: FontWeight.bold)),
+            Text(agenda.keterangan ?? "Tidak ada keterangan"),
+          ],
+        ),
+        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text("Tutup"))],
+      ),
+    );
+  }
+
+  void _confirmDelete(String id) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Hapus Agenda?"),
+        content: const Text("Data yang dihapus tidak dapat dikembalikan."),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Batal")),
+          TextButton(
+            onPressed: () async {
+              final activeTA = ref.read(appContextProvider).currentTahunAjaran; // Konteks TA
+              // PERBAIKAN: Menghapus tanda tanya ganda '?' yang memicu warning
+              if (activeTA != null) {
+                await ref.read(agendaNotifierProvider(tahunAjaranId: activeTA.id, programId: _selectedProgramFilter).notifier).deleteAgenda(id);
+              }
+              if (context.mounted) Navigator.pop(context);
+            },
+            child: const Text("Hapus", style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildLabel(String text) => Padding(padding: const EdgeInsets.only(bottom: 8), child: Text(text, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)));
   InputDecoration _inputDecor(String hint) => InputDecoration(hintText: hint, filled: true, fillColor: Colors.grey[50], border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade200)));
 }

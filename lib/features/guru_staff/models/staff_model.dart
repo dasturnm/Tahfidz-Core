@@ -5,6 +5,7 @@ class StaffModel {
   final String? nip;
   final String? kontak;
   final String? alamat;
+  final String? jenisKelamin; // TAMBAHAN: Untuk logika warna Avatar (L/P)
   final bool isActive;
   final DateTime? createdAt;
   // Field tambahan untuk mendukung Hybrid & Global UI
@@ -25,6 +26,7 @@ class StaffModel {
     this.nip,
     this.kontak,
     this.alamat,
+    this.jenisKelamin, // TAMBAHAN
     this.isActive = true,
     this.createdAt,
     this.namaDivisi,
@@ -44,6 +46,7 @@ class StaffModel {
       nip: json['nip'],
       kontak: json['kontak'] ?? json['no_hp'], // Support no_hp dari profiles
       alamat: json['alamat'],
+      jenisKelamin: json['jenis_kelamin'], // TAMBAHAN
       isActive: json['is_active'] ?? (json['status'] == 'aktif'), // Map status ke isActive
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'])
@@ -66,6 +69,7 @@ class StaffModel {
       'nip': nip,
       'kontak': kontak,
       'alamat': alamat,
+      'jenis_kelamin': jenisKelamin, // TAMBAHAN
       'is_active': isActive,
       'namaDivisi': namaDivisi,
       'namaCabang': namaCabang,
@@ -84,6 +88,7 @@ class StaffModel {
     String? nip,
     String? kontak,
     String? alamat,
+    String? jenisKelamin, // TAMBAHAN
     bool? isActive,
     String? namaDivisi,
     String? namaCabang,
@@ -99,6 +104,7 @@ class StaffModel {
       nip: nip ?? this.nip,
       kontak: kontak ?? this.kontak,
       alamat: alamat ?? this.alamat,
+      jenisKelamin: jenisKelamin ?? this.jenisKelamin, // TAMBAHAN
       isActive: isActive ?? this.isActive,
       namaDivisi: namaDivisi ?? this.namaDivisi,
       namaCabang: namaCabang ?? this.namaCabang,

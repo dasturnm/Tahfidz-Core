@@ -3,7 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/student_provider.dart';
-import '../screens/student_form_screen.dart';
+// PERBAIKAN: Menghapus import '../screens/student_form_screen.dart'; yang tidak digunakan
 import '../screens/student_detail_screen.dart';
 
 class StudentGridView extends ConsumerWidget {
@@ -39,10 +39,10 @@ class StudentGridView extends ConsumerWidget {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: Colors.grey.withOpacity(0.1)),
+            border: Border.all(color: Colors.grey.withValues(alpha: 0.1)), // PERBAIKAN: withValues
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.03),
+                color: Colors.black.withValues(alpha: 0.03), // PERBAIKAN: withValues
                 blurRadius: 12,
                 offset: const Offset(0, 4),
               ),
@@ -129,7 +129,7 @@ class StudentGridView extends ConsumerWidget {
       width: 44,
       height: 44,
       decoration: BoxDecoration(
-        color: isLaki ? const Color(0xFF0D9488).withOpacity(0.1) : const Color(0xFFFB7185).withOpacity(0.1),
+        color: isLaki ? const Color(0xFF0D9488).withValues(alpha: 0.1) : const Color(0xFFFB7185).withValues(alpha: 0.1), // PERBAIKAN: withValues
         borderRadius: BorderRadius.circular(14),
       ),
       alignment: Alignment.center,

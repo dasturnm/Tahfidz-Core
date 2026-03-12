@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/program_provider.dart';
+import '../models/program_model.dart'; // Baru: Import model
+import '../../management_lembaga/providers/cabang_provider.dart';
 
 class ProgramFormScreen extends ConsumerStatefulWidget {
-  const ProgramFormScreen({super.key});
+  final ProgramModel? program; // Baru: Untuk mode edit
+  const ProgramFormScreen({super.key, this.program});
 
   @override
   ConsumerState<ProgramFormScreen> createState() => _ProgramFormScreenState();
@@ -12,18 +15,32 @@ class ProgramFormScreen extends ConsumerStatefulWidget {
 class _ProgramFormScreenState extends ConsumerState<ProgramFormScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
-  final _tagController = TextEditingController();
   final _descController = TextEditingController();
   final _regController = TextEditingController();
   final _sppController = TextEditingController();
 
+  String? _selectedCabangId; // Baru: State untuk menyimpan cabang terpilih
   final List<String> _selectedDays = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat'];
   bool _isSaving = false;
 
   @override
+  void initState() {
+    super.initState();
+    // Jika dalam mode edit, isi controller dengan data yang ada
+    if (widget.program != null) {
+      _nameController.text = widget.program!.namaProgram;
+      _descController.text = widget.program!.deskripsi ?? '';
+      _regController.text = widget.program!.biayaPendaftaran.toInt().toString();
+      _sppController.text = widget.program!.biayaSpp.toInt().toString();
+      _selectedCabangId = widget.program!.cabangId;
+      _selectedDays.clear();
+      _selectedDays.addAll(widget.program!.hariAktif);
+    }
+  }
+
+  @override
   void dispose() {
     _nameController.dispose();
-    _tagController.dispose();
     _descController.dispose();
     _regController.dispose();
     _sppController.dispose();
@@ -35,14 +52,31 @@ class _ProgramFormScreenState extends ConsumerState<ProgramFormScreen> {
 
     setState(() => _isSaving = true);
     try {
-      await ref.read(programNotifierProvider.notifier).addProgram(
-        nama: _nameController.text.trim(),
-        tag: _tagController.text.trim(),
-        deskripsi: _descController.text.trim(),
-        pendaftaran: double.tryParse(_regController.text) ?? 0,
-        spp: double.tryParse(_sppController.text) ?? 0,
-        hari: _selectedDays,
-      );
+      if (widget.program == null) {
+        // MODE TAMBAH
+        await ref.read(programNotifierProvider.notifier).addProgram(
+          nama: _nameController.text.trim(),
+          cabangId: _selectedCabangId, // Diubah: Mengirim cabangId bukan tag
+          deskripsi: _descController.text.trim(),
+          pendaftaran: double.tryParse(_regController.text) ?? 0,
+          spp: double.tryParse(_sppController.text) ?? 0,
+          hari: _selectedDays,
+        );
+      } else {
+        // MODE EDIT
+        final updatedProgram = ProgramModel(
+          id: widget.program!.id,
+          lembagaId: widget.program!.lembagaId,
+          cabangId: _selectedCabangId,
+          namaProgram: _nameController.text.trim(),
+          deskripsi: _descController.text.trim(),
+          biayaPendaftaran: double.tryParse(_regController.text) ?? 0,
+          biayaSpp: double.tryParse(_sppController.text) ?? 0,
+          hariAktif: _selectedDays,
+          status: widget.program!.status,
+        );
+        await ref.read(programNotifierProvider.notifier).updateProgram(updatedProgram);
+      }
 
       if (mounted) Navigator.pop(context);
     } finally {
@@ -52,10 +86,16 @@ class _ProgramFormScreenState extends ConsumerState<ProgramFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Ambil daftar cabang untuk dropdown
+    final cabangAsync = ref.watch(cabangListProvider);
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text("Tambah Program Baru", style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(
+          widget.program == null ? "Tambah Program Baru" : "Edit Program",
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
@@ -76,11 +116,23 @@ class _ProgramFormScreenState extends ConsumerState<ProgramFormScreen> {
                 validator: (val) => val!.isEmpty ? "Nama wajib diisi" : null,
               ),
               const SizedBox(height: 20),
-              _buildLabel("Tag Kurikulum"),
-              TextFormField(
-                controller: _tagController,
-                decoration: _inputDecor("Misal: Metode Ummi"),
+
+              // DIUBAH: Mengganti Tag Kurikulum dengan Pilihan Cabang
+              _buildLabel("Pilih Cabang (Opsional)"),
+              cabangAsync.when(
+                data: (list) => DropdownButtonFormField<String>(
+                  value: _selectedCabangId,
+                  decoration: _inputDecor("Pilih lokasi operasional"),
+                  items: list.map((c) => DropdownMenuItem(
+                    value: c.id,
+                    child: Text(c.namaCabang),
+                  )).toList(),
+                  onChanged: (val) => setState(() => _selectedCabangId = val),
+                ),
+                loading: () => const LinearProgressIndicator(),
+                error: (_, __) => const Text("Gagal memuat daftar cabang"),
               ),
+
               const SizedBox(height: 20),
               _buildLabel("Deskripsi Singkat"),
               TextFormField(
@@ -164,7 +216,10 @@ class _ProgramFormScreenState extends ConsumerState<ProgramFormScreen> {
                   ),
                   child: _isSaving
                       ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text("Simpan Program", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                      : Text(
+                    widget.program == null ? "Simpan Program" : "Simpan Perubahan",
+                    style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
                 ),
               ),
             ],

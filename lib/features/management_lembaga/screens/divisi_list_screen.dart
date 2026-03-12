@@ -166,11 +166,41 @@ class _DivisiListScreenState extends ConsumerState<DivisiListScreen> {
             style: TextStyle(color: Colors.grey[600], fontSize: 13),
           ),
         ),
-        trailing: const Icon(Icons.edit_outlined, color: Colors.grey),
-        onTap: () {
-          final lembagaId = ref.read(appContextProvider).lembaga!.id;
-          _showDivisiDialog(lembagaId, divisi: d);
-        },
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              onPressed: () async {
+                final confirmed = await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text("Hapus Divisi?"),
+                    content: Text("Anda yakin ingin menghapus divisi ${d.namaDivisi}?"),
+                    actions: [
+                      TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text("Batal")),
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx, true),
+                        child: const Text("Hapus", style: TextStyle(color: Colors.red)),
+                      ),
+                    ],
+                  ),
+                );
+                if (confirmed == true) {
+                  final lembagaId = ref.read(appContextProvider).lembaga!.id;
+                  await ref.read(divisiListProvider(lembagaId).notifier).deleteDivisi(d.id);
+                }
+              },
+              icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+            ),
+            IconButton(
+              onPressed: () {
+                final lembagaId = ref.read(appContextProvider).lembaga!.id;
+                _showDivisiDialog(lembagaId, divisi: d);
+              },
+              icon: const Icon(Icons.edit_outlined, color: Colors.grey, size: 20),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -233,15 +233,88 @@ class _JabatanListScreenState extends ConsumerState<JabatanListScreen> {
                       ),
                     ],
                   ),
+                  if (j.catatanJabatan != null && j.catatanJabatan!.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        j.catatanJabatan!,
+                        style: TextStyle(color: Colors.grey[500], fontSize: 12, fontStyle: FontStyle.italic),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                 ],
               ),
             ),
-            IconButton(
-              icon: const Icon(Icons.edit_outlined, color: Colors.grey),
-              onPressed: () {
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert, color: Colors.grey),
+              onSelected: (value) async {
                 final lembagaId = ref.read(appContextProvider).lembaga!.id;
-                _showJabatanDialog(lembagaId, jabatan: j);
+                if (value == 'detail') {
+                  showDialog(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: Text(j.namaJabatan),
+                      content: Text(j.catatanJabatan ?? "Tidak ada keterangan tambahan."),
+                      actions: [
+                        TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Tutup")),
+                      ],
+                    ),
+                  );
+                } else if (value == 'edit') {
+                  _showJabatanDialog(lembagaId, jabatan: j);
+                } else if (value == 'delete') {
+                  final confirmed = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: const Text("Hapus Jabatan?"),
+                      content: Text("Anda yakin ingin menghapus jabatan ${j.namaJabatan}?"),
+                      actions: [
+                        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text("Batal")),
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, true),
+                          child: const Text("Hapus", style: TextStyle(color: Colors.red)),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (confirmed == true) {
+                    await ref.read(jabatanListProvider(lembagaId).notifier).deleteJabatan(j.id);
+                  }
+                }
               },
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'detail',
+                  child: Row(
+                    children: [
+                      Icon(Icons.info_outline, color: Colors.blue, size: 20),
+                      SizedBox(width: 8),
+                      Text("Detail"),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'edit',
+                  child: Row(
+                    children: [
+                      Icon(Icons.edit_outlined, color: Colors.grey, size: 20),
+                      SizedBox(width: 8),
+                      Text("Edit"),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'delete',
+                  child: Row(
+                    children: [
+                      Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                      SizedBox(width: 8),
+                      Text("Hapus", style: TextStyle(color: Colors.red)),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ],
         ),

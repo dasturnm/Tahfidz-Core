@@ -19,6 +19,9 @@ class _LevelFormScreenState extends ConsumerState<LevelFormScreen> {
   late TextEditingController _targetController;
   late TextEditingController _urutanController;
 
+  // PERBAIKAN: Konstanta warna tema Biru
+  static const blueTheme = Color(0xFF3B82F6);
+
   @override
   void initState() {
     super.initState();
@@ -44,7 +47,7 @@ class _LevelFormScreenState extends ConsumerState<LevelFormScreen> {
       backgroundColor: Colors.white,
       appBar: AppBar(
         title: Text(isEdit ? "Edit Level" : "Tambah Level"),
-        backgroundColor: const Color(0xFF10B981),
+        backgroundColor: blueTheme, // PERBAIKAN: Tema Biru
         foregroundColor: Colors.white,
         actions: [
           if (isEdit)
@@ -102,7 +105,7 @@ class _LevelFormScreenState extends ConsumerState<LevelFormScreen> {
                 child: ElevatedButton(
                   onPressed: _handleSave,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF10B981),
+                    backgroundColor: blueTheme, // PERBAIKAN: Tema Biru
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                   child: const Text(
@@ -122,13 +125,13 @@ class _LevelFormScreenState extends ConsumerState<LevelFormScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF10B981).withValues(alpha: 0.1),
+        color: blueTheme.withValues(alpha: 0.1), // PERBAIKAN: Tema Biru
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.2)),
+        border: Border.all(color: blueTheme.withValues(alpha: 0.2)), // PERBAIKAN: Tema Biru
       ),
       child: Row(
         children: [
-          const Icon(Icons.layers_outlined, color: Color(0xFF10B981)),
+          const Icon(Icons.layers_outlined, color: blueTheme), // PERBAIKAN: Tema Biru
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -152,6 +155,7 @@ class _LevelFormScreenState extends ConsumerState<LevelFormScreen> {
     final newLevel = LevelModel(
       id: widget.level?.id,
       jenjangId: widget.jenjang.id!,
+      kurikulumId: widget.jenjang.kurikulumId, // PERBAIKAN FATAL: Menghapus operator '!' karena variabel sudah bertipe non-nullable String
       namaLevel: _namaController.text.trim(),
       urutan: int.parse(_urutanController.text),
       modules: widget.level?.modules ?? [], // Mengikuti struktur Level -> Modul
@@ -195,11 +199,11 @@ class _LevelFormScreenState extends ConsumerState<LevelFormScreen> {
   InputDecoration _inputDecoration(String label, IconData icon) {
     return InputDecoration(
       labelText: label,
-      prefixIcon: Icon(icon, color: const Color(0xFF10B981)),
+      prefixIcon: Icon(icon, color: blueTheme), // PERBAIKAN: Tema Biru
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFF10B981), width: 2),
+        borderSide: const BorderSide(color: blueTheme, width: 2), // PERBAIKAN: Tema Biru
       ),
     );
   }

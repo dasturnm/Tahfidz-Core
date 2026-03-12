@@ -6,7 +6,7 @@ part of 'kurikulum_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$kurikulumListHash() => r'9a8a309f3e5b214bf8b9cf96af736746889d5a44';
+String _$kurikulumListHash() => r'8fb47d49d3b0ba3b37896abb4257a912e1ab4e86';
 
 /// Copied from Dart SDK
 class _SystemHash {
@@ -31,11 +31,15 @@ class _SystemHash {
 
 abstract class _$KurikulumList
     extends BuildlessAutoDisposeAsyncNotifier<List<KurikulumModel>> {
-  late final String programId;
+  late final String lembagaId;
+  late final String search;
+  late final String status;
 
   FutureOr<List<KurikulumModel>> build(
-    String programId,
-  );
+    String lembagaId, {
+    String search = '',
+    String status = 'Semua',
+  });
 }
 
 /// See also [KurikulumList].
@@ -49,10 +53,14 @@ class KurikulumListFamily extends Family<AsyncValue<List<KurikulumModel>>> {
 
   /// See also [KurikulumList].
   KurikulumListProvider call(
-    String programId,
-  ) {
+    String lembagaId, {
+    String search = '',
+    String status = 'Semua',
+  }) {
     return KurikulumListProvider(
-      programId,
+      lembagaId,
+      search: search,
+      status: status,
     );
   }
 
@@ -61,7 +69,9 @@ class KurikulumListFamily extends Family<AsyncValue<List<KurikulumModel>>> {
     covariant KurikulumListProvider provider,
   ) {
     return call(
-      provider.programId,
+      provider.lembagaId,
+      search: provider.search,
+      status: provider.status,
     );
   }
 
@@ -85,9 +95,14 @@ class KurikulumListProvider extends AutoDisposeAsyncNotifierProviderImpl<
     KurikulumList, List<KurikulumModel>> {
   /// See also [KurikulumList].
   KurikulumListProvider(
-    String programId,
-  ) : this._internal(
-          () => KurikulumList()..programId = programId,
+    String lembagaId, {
+    String search = '',
+    String status = 'Semua',
+  }) : this._internal(
+          () => KurikulumList()
+            ..lembagaId = lembagaId
+            ..search = search
+            ..status = status,
           from: kurikulumListProvider,
           name: r'kurikulumListProvider',
           debugGetCreateSourceHash:
@@ -97,7 +112,9 @@ class KurikulumListProvider extends AutoDisposeAsyncNotifierProviderImpl<
           dependencies: KurikulumListFamily._dependencies,
           allTransitiveDependencies:
               KurikulumListFamily._allTransitiveDependencies,
-          programId: programId,
+          lembagaId: lembagaId,
+          search: search,
+          status: status,
         );
 
   KurikulumListProvider._internal(
@@ -107,17 +124,23 @@ class KurikulumListProvider extends AutoDisposeAsyncNotifierProviderImpl<
     required super.allTransitiveDependencies,
     required super.debugGetCreateSourceHash,
     required super.from,
-    required this.programId,
+    required this.lembagaId,
+    required this.search,
+    required this.status,
   }) : super.internal();
 
-  final String programId;
+  final String lembagaId;
+  final String search;
+  final String status;
 
   @override
   FutureOr<List<KurikulumModel>> runNotifierBuild(
     covariant KurikulumList notifier,
   ) {
     return notifier.build(
-      programId,
+      lembagaId,
+      search: search,
+      status: status,
     );
   }
 
@@ -126,13 +149,18 @@ class KurikulumListProvider extends AutoDisposeAsyncNotifierProviderImpl<
     return ProviderOverride(
       origin: this,
       override: KurikulumListProvider._internal(
-        () => create()..programId = programId,
+        () => create()
+          ..lembagaId = lembagaId
+          ..search = search
+          ..status = status,
         from: from,
         name: null,
         dependencies: null,
         allTransitiveDependencies: null,
         debugGetCreateSourceHash: null,
-        programId: programId,
+        lembagaId: lembagaId,
+        search: search,
+        status: status,
       ),
     );
   }
@@ -145,13 +173,18 @@ class KurikulumListProvider extends AutoDisposeAsyncNotifierProviderImpl<
 
   @override
   bool operator ==(Object other) {
-    return other is KurikulumListProvider && other.programId == programId;
+    return other is KurikulumListProvider &&
+        other.lembagaId == lembagaId &&
+        other.search == search &&
+        other.status == status;
   }
 
   @override
   int get hashCode {
     var hash = _SystemHash.combine(0, runtimeType.hashCode);
-    hash = _SystemHash.combine(hash, programId.hashCode);
+    hash = _SystemHash.combine(hash, lembagaId.hashCode);
+    hash = _SystemHash.combine(hash, search.hashCode);
+    hash = _SystemHash.combine(hash, status.hashCode);
 
     return _SystemHash.finish(hash);
   }
@@ -161,8 +194,14 @@ class KurikulumListProvider extends AutoDisposeAsyncNotifierProviderImpl<
 // ignore: unused_element
 mixin KurikulumListRef
     on AutoDisposeAsyncNotifierProviderRef<List<KurikulumModel>> {
-  /// The parameter `programId` of this provider.
-  String get programId;
+  /// The parameter `lembagaId` of this provider.
+  String get lembagaId;
+
+  /// The parameter `search` of this provider.
+  String get search;
+
+  /// The parameter `status` of this provider.
+  String get status;
 }
 
 class _KurikulumListProviderElement
@@ -171,10 +210,14 @@ class _KurikulumListProviderElement
   _KurikulumListProviderElement(super.provider);
 
   @override
-  String get programId => (origin as KurikulumListProvider).programId;
+  String get lembagaId => (origin as KurikulumListProvider).lembagaId;
+  @override
+  String get search => (origin as KurikulumListProvider).search;
+  @override
+  String get status => (origin as KurikulumListProvider).status;
 }
 
-String _$jenjangListHash() => r'557870e4a6d5b8cd467c057bd47495bc1eaa32ad';
+String _$jenjangListHash() => r'39f5f40a3036a1dc77de768e538b9133a688b584';
 
 abstract class _$JenjangList
     extends BuildlessAutoDisposeAsyncNotifier<List<JenjangModel>> {
@@ -321,7 +364,7 @@ class _JenjangListProviderElement
   String get kurikulumId => (origin as JenjangListProvider).kurikulumId;
 }
 
-String _$levelListHash() => r'45f266c6eae5eb15af3e32cd3e9cc18d8bfbbc46';
+String _$levelListHash() => r'4a54b6c61649d2e8d68281753a99c137933b6558';
 
 abstract class _$LevelList
     extends BuildlessAutoDisposeAsyncNotifier<List<LevelModel>> {
@@ -466,7 +509,7 @@ class _LevelListProviderElement
   String get jenjangId => (origin as LevelListProvider).jenjangId;
 }
 
-String _$modulListHash() => r'ccb9a94668f4aca87561730b0bec246662c458ec';
+String _$modulListHash() => r'a333dbfe78bd5af7bcac48b85d3248e1d0684041';
 
 abstract class _$ModulList
     extends BuildlessAutoDisposeAsyncNotifier<List<ModulModel>> {
@@ -611,7 +654,7 @@ class _ModulListProviderElement
   String get levelId => (origin as ModulListProvider).levelId;
 }
 
-String _$targetMetrikListHash() => r'f424ee33e7edb13e4c48fd676af6c1448b8487ed';
+String _$targetMetrikListHash() => r'774219c867622a924890a8ed20b3a6f0793a9d18';
 
 abstract class _$TargetMetrikList
     extends BuildlessAutoDisposeAsyncNotifier<List<TargetMetrikModel>> {
@@ -757,6 +800,154 @@ class _TargetMetrikListProviderElement
 
   @override
   String get modulId => (origin as TargetMetrikListProvider).modulId;
+}
+
+String _$levelKelasMappingHash() => r'97418a9b69566556cc6a3b41a257147401441b4e';
+
+abstract class _$LevelKelasMapping
+    extends BuildlessAutoDisposeAsyncNotifier<List<Map<String, dynamic>>> {
+  late final String levelId;
+
+  FutureOr<List<Map<String, dynamic>>> build(
+    String levelId,
+  );
+}
+
+/// See also [LevelKelasMapping].
+@ProviderFor(LevelKelasMapping)
+const levelKelasMappingProvider = LevelKelasMappingFamily();
+
+/// See also [LevelKelasMapping].
+class LevelKelasMappingFamily
+    extends Family<AsyncValue<List<Map<String, dynamic>>>> {
+  /// See also [LevelKelasMapping].
+  const LevelKelasMappingFamily();
+
+  /// See also [LevelKelasMapping].
+  LevelKelasMappingProvider call(
+    String levelId,
+  ) {
+    return LevelKelasMappingProvider(
+      levelId,
+    );
+  }
+
+  @override
+  LevelKelasMappingProvider getProviderOverride(
+    covariant LevelKelasMappingProvider provider,
+  ) {
+    return call(
+      provider.levelId,
+    );
+  }
+
+  static const Iterable<ProviderOrFamily>? _dependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
+
+  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
+      _allTransitiveDependencies;
+
+  @override
+  String? get name => r'levelKelasMappingProvider';
+}
+
+/// See also [LevelKelasMapping].
+class LevelKelasMappingProvider extends AutoDisposeAsyncNotifierProviderImpl<
+    LevelKelasMapping, List<Map<String, dynamic>>> {
+  /// See also [LevelKelasMapping].
+  LevelKelasMappingProvider(
+    String levelId,
+  ) : this._internal(
+          () => LevelKelasMapping()..levelId = levelId,
+          from: levelKelasMappingProvider,
+          name: r'levelKelasMappingProvider',
+          debugGetCreateSourceHash:
+              const bool.fromEnvironment('dart.vm.product')
+                  ? null
+                  : _$levelKelasMappingHash,
+          dependencies: LevelKelasMappingFamily._dependencies,
+          allTransitiveDependencies:
+              LevelKelasMappingFamily._allTransitiveDependencies,
+          levelId: levelId,
+        );
+
+  LevelKelasMappingProvider._internal(
+    super._createNotifier, {
+    required super.name,
+    required super.dependencies,
+    required super.allTransitiveDependencies,
+    required super.debugGetCreateSourceHash,
+    required super.from,
+    required this.levelId,
+  }) : super.internal();
+
+  final String levelId;
+
+  @override
+  FutureOr<List<Map<String, dynamic>>> runNotifierBuild(
+    covariant LevelKelasMapping notifier,
+  ) {
+    return notifier.build(
+      levelId,
+    );
+  }
+
+  @override
+  Override overrideWith(LevelKelasMapping Function() create) {
+    return ProviderOverride(
+      origin: this,
+      override: LevelKelasMappingProvider._internal(
+        () => create()..levelId = levelId,
+        from: from,
+        name: null,
+        dependencies: null,
+        allTransitiveDependencies: null,
+        debugGetCreateSourceHash: null,
+        levelId: levelId,
+      ),
+    );
+  }
+
+  @override
+  AutoDisposeAsyncNotifierProviderElement<LevelKelasMapping,
+      List<Map<String, dynamic>>> createElement() {
+    return _LevelKelasMappingProviderElement(this);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is LevelKelasMappingProvider && other.levelId == levelId;
+  }
+
+  @override
+  int get hashCode {
+    var hash = _SystemHash.combine(0, runtimeType.hashCode);
+    hash = _SystemHash.combine(hash, levelId.hashCode);
+
+    return _SystemHash.finish(hash);
+  }
+}
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+mixin LevelKelasMappingRef
+    on AutoDisposeAsyncNotifierProviderRef<List<Map<String, dynamic>>> {
+  /// The parameter `levelId` of this provider.
+  String get levelId;
+}
+
+class _LevelKelasMappingProviderElement
+    extends AutoDisposeAsyncNotifierProviderElement<LevelKelasMapping,
+        List<Map<String, dynamic>>> with LevelKelasMappingRef {
+  _LevelKelasMappingProviderElement(super.provider);
+
+  @override
+  String get levelId => (origin as LevelKelasMappingProvider).levelId;
 }
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

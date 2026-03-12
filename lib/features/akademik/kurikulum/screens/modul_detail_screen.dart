@@ -2,26 +2,51 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/kurikulum_model.dart';
 import '../providers/kurikulum_provider.dart';
+// Import widget pendukung (Pastikan file ini dibuat di folder widgets)
+import '../widgets/metrik_grid_view.dart';
+import '../widgets/metrik_table_view.dart';
 import '../widgets/target_metrik_dialog.dart';
 
-class ModulDetailScreen extends ConsumerWidget {
+class ModulDetailScreen extends ConsumerStatefulWidget {
   final LevelModel level;
   final ModulModel modul;
 
   const ModulDetailScreen({super.key, required this.level, required this.modul});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ModulDetailScreen> createState() => _ModulDetailScreenState();
+}
+
+class _ModulDetailScreenState extends ConsumerState<ModulDetailScreen> {
+  bool _isGridView = true; // State toggle tampilan
+  final Color _emerald = const Color(0xFF10B981);
+  final Color _slate = const Color(0xFF1E293B); // TAMBAHAN: Konsistensi Slate 2026
+
+  @override
+  Widget build(BuildContext context) {
     // Watch daftar metrik untuk modul ini
-    final metrikAsync = ref.watch(targetMetrikListProvider(modul.id!));
+    final metrikAsync = ref.watch(targetMetrikListProvider(widget.modul.id!));
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text("Manajemen Akademik", style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: const Color(0xFF10B981),
-        foregroundColor: Colors.white,
+        title: const Text("Manajemen Akademik"),
+        backgroundColor: Colors.white, // PERBAIKAN: Gunakan tema terang Hub
+        foregroundColor: _slate, // PERBAIKAN: Gunakan Slate
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded), // PERBAIKAN: Rounded icon
+          onPressed: () => Navigator.pop(context),
+        ),
+        actions: [
+          // TOGGLE VIEW BUTTON
+          IconButton(
+            icon: Icon(_isGridView ? Icons.view_list_rounded : Icons.grid_view_rounded),
+            onPressed: () => setState(() => _isGridView = !_isGridView),
+            tooltip: "Ganti Tampilan",
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: Column(
         children: [
@@ -30,74 +55,57 @@ class ModulDetailScreen extends ConsumerWidget {
             child: metrikAsync.when(
               data: (targets) => targets.isEmpty
                   ? _buildEmptyState(context)
-                  : ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                itemCount: targets.length,
-                itemBuilder: (context, index) {
-                  final target = targets[index];
-                  return _buildMetrikCard(context, ref, target);
-                },
+                  : _isGridView
+                  ? MetrikGridView(
+                targets: targets,
+                onAction: (target) => _showMetrikActionSheet(context, target),
+              )
+                  : MetrikTableView(
+                targets: targets,
+                onAction: (target) => _showMetrikActionSheet(context, target),
               ),
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () => const Center(child: CircularProgressIndicator(color: Color(0xFF10B981))),
               error: (err, _) => Center(child: Text("Error: $err")),
             ),
           ),
         ],
       ),
+      // PERBAIKAN: Menggunakan FAB icon agar konsisten dengan Hub dan Level List
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _showAddMetrikSheet(context),
+        backgroundColor: _slate,
+        child: const Icon(Icons.add, color: Colors.white),
+      ),
     );
   }
 
   Widget _buildBreadcrumbHeader(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(32, 8, 32, 24), // PERBAIKAN: Padding konsisten Hub
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            "JENJANG TAHSIN / LEVEL ${level.namaLevel.toUpperCase()}",
-            style: const TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF10B981),
+            "LEVEL ${widget.level.namaLevel.toUpperCase()}",
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w900,
+              color: _emerald,
               letterSpacing: 1.2,
             ),
           ),
           const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Text(
-                  modul.namaModul,
-                  style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
-                ),
-              ),
-              ElevatedButton.icon(
-                onPressed: () {
-                  showDialog(
-                    context: context,
-                    builder: (ctx) => TargetMetrikDialog(modul: modul),
-                  );
-                },
-                icon: const Icon(Icons.add, size: 18, color: Colors.white),
-                label: const Text(
-                  "TAMBAH METRIK",
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0F172A),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                ),
-              ),
-            ],
+          Text(
+            widget.modul.namaModul,
+            style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: _slate),
           ),
           const SizedBox(height: 12),
           Row(
             children: [
-              _buildBadge(modul.tipe, const Color(0xFF10B981)),
+              _buildBadge(widget.modul.tipe, _emerald),
               const SizedBox(width: 8),
-              _buildBadge("${modul.durasiHari} Hari", Colors.grey),
+              _buildBadge("${widget.modul.durasiHari} Hari", const Color(0xFF64748B)),
             ],
           ),
         ],
@@ -109,85 +117,98 @@ class ModulDetailScreen extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.05),
+        color: color.withValues(alpha: 0.05), // PERBAIKAN: withValues
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withValues(alpha: 0.1)),
+        border: Border.all(color: color.withValues(alpha: 0.1)), // PERBAIKAN: withValues
       ),
       child: Text(
         text.toUpperCase(),
-        style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+        style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 0.5),
       ),
     );
   }
 
-  Widget _buildMetrikCard(BuildContext context, WidgetRef ref, TargetMetrikModel target) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade100),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-            child: const Icon(Icons.track_changes, color: Color(0xFF10B981), size: 24),
-          ),
-          const SizedBox(width: 20),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildInfoRow("METRIK", target.jenisMetrik),
-                const SizedBox(height: 4),
-                _buildInfoRow("CAKUPAN MATERI", "${target.mulai} ➔ ${target.akhir}"),
-                const SizedBox(height: 4),
-                _buildInfoRow("SATUAN", target.satuan),
-              ],
+  // --- MODERN ACTION MENU (BOTTOM SHEET) ---
+
+  void _showMetrikActionSheet(BuildContext context, TargetMetrikModel target) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent, // PERBAIKAN: Background transparan
+      builder: (context) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(32)), // PERBAIKAN: Melengkung
+        ),
+        padding: const EdgeInsets.symmetric(vertical: 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 20),
+              decoration: BoxDecoration(
+                color: Colors.grey[200],
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              const Text("MIN. KKM", style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.grey)),
-              Text("${target.kkm.toInt()}%", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF10B981))),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  _buildIconBtn(Icons.edit_outlined, () {}),
-                  const SizedBox(width: 8),
-                  _buildIconBtn(Icons.delete_outline, () {}, color: Colors.red[300]),
-                ],
-              )
-            ],
+            Text(
+              "Opsi Metrik",
+              style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: _slate),
+            ),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: const Icon(Icons.edit_outlined),
+              title: const Text("Edit Metrik", style: TextStyle(fontWeight: FontWeight.bold)),
+              onTap: () {
+                Navigator.pop(context);
+                _showAddMetrikSheet(context, targetToEdit: target);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete_outline, color: Colors.red),
+              title: const Text("Hapus Metrik", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+              onTap: () {
+                Navigator.pop(context);
+                _showDeleteConfirm(context, target);
+              },
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showAddMetrikSheet(BuildContext context, {TargetMetrikModel? targetToEdit}) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent, // PERBAIKAN: Background transparan
+      builder: (ctx) => TargetMetrikDialog(
+        modul: widget.modul,
+        targetToEdit: targetToEdit,
+      ),
+    );
+  }
+
+  void _showDeleteConfirm(BuildContext context, TargetMetrikModel target) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Text("Hapus Target?", style: TextStyle(fontWeight: FontWeight.bold)),
+        content: const Text("Data target metrik ini akan dihapus permanen."),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Batal")),
+          TextButton(
+              onPressed: () async {
+                await ref.read(targetMetrikListProvider(widget.modul.id!).notifier).deleteTarget(target.id!);
+                if (ctx.mounted) Navigator.pop(ctx);
+              },
+              child: const Text("Hapus", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold))
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(String label, String value) {
-    return Row(
-      children: [
-        SizedBox(
-          width: 100,
-          child: Text(label, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 0.5)),
-        ),
-        Text(value, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
-      ],
-    );
-  }
-
-  Widget _buildIconBtn(IconData icon, VoidCallback onTap, {Color? color}) {
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(6),
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.grey.shade200)),
-        child: Icon(icon, size: 16, color: color ?? Colors.grey),
       ),
     );
   }
@@ -197,9 +218,18 @@ class ModulDetailScreen extends ConsumerWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.ads_click, size: 64, color: Colors.grey[200]),
+          const Icon(Icons.ads_click, size: 80, color: Color(0xFFE2E8F0)),
           const SizedBox(height: 16),
-          const Text("Belum ada target metrik pengujian.", style: TextStyle(color: Colors.grey, fontSize: 14)),
+          const Text("Belum ada target metrik pengujian.", style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w500)),
+          const SizedBox(height: 24),
+          ElevatedButton(
+            onPressed: () => _showAddMetrikSheet(context),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _slate,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text("Buat Metrik Pertama", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          )
         ],
       ),
     );

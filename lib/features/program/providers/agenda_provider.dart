@@ -10,32 +10,81 @@ class AgendaNotifier extends _$AgendaNotifier {
   final _supabase = Supabase.instance.client;
 
   @override
-  Future<List<AgendaModel>> build() async {
+  Future<List<AgendaModel>> build({String? tahunAjaranId, String? programId}) async { // UPDATE: Parameter Filter
     final lembagaId = ref.watch(appContextProvider).lembaga?.id;
     if (lembagaId == null) return [];
-    return _fetchAgendas(lembagaId);
+    return _fetchAgendas(lembagaId, tahunAjaranId, programId);
   }
 
-  Future<List<AgendaModel>> _fetchAgendas(String lembagaId) async {
-    final data = await _supabase
+  Future<List<AgendaModel>> _fetchAgendas(String lembagaId, String? tahunAjaranId, String? programId) async {
+    // UPDATE: Logika Query Berjenjang
+    var query = _supabase
         .from('agenda_akademik')
         .select()
         .eq('lembaga_id', lembagaId);
 
+    if (tahunAjaranId != null) {
+      query = query.eq('tahun_ajaran_id', tahunAjaranId);
+    }
+
+    if (programId != null) {
+      query = query.eq('program_id', programId);
+    }
+
+    final data = await query.order('tanggal_mulai', ascending: true);
     return (data as List).map((e) => AgendaModel.fromJson(e)).toList();
   }
 
   Future<void> addAgenda(AgendaModel agenda) async {
     state = const AsyncValue.loading();
-    await _supabase.from('agenda_akademik').insert({
-      'lembaga_id': agenda.lembagaId,
-      'nama_agenda': agenda.namaAgenda,
-      'tanggal_mulai': agenda.tanggalMulai.toIso8601String(),
-      'tanggal_berakhir': agenda.tanggalBerakhir.toIso8601String(),
-      'status_hari_belajar': agenda.statusHariBelajar,
-      'scope': agenda.scope,
-      'program_id': agenda.programId,
-    });
-    ref.invalidateSelf();
+    try {
+      await _supabase.from('agenda_akademik').insert({
+        'lembaga_id': agenda.lembagaId,
+        'tahun_ajaran_id': agenda.tahunAjaranId, // UPDATE: Connect Tahun Ajaran
+        'nama_agenda': agenda.namaAgenda,
+        'tanggal_mulai': agenda.tanggalMulai.toIso8601String(),
+        'tanggal_berakhir': agenda.tanggalBerakhir.toIso8601String(),
+        'status_hari_belajar': agenda.statusHariBelajar,
+        'scope': agenda.scope,
+        'program_id': agenda.programId,
+        'keterangan': agenda.keterangan,
+        'is_siswa_libur': agenda.isSiswaLibur,
+        'is_guru_masuk': agenda.isGuruMasuk,
+      });
+      ref.invalidateSelf();
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+    }
+  }
+
+  Future<void> updateAgenda(AgendaModel agenda) async {
+    state = const AsyncValue.loading();
+    try {
+      await _supabase.from('agenda_akademik').update({
+        'tahun_ajaran_id': agenda.tahunAjaranId, // UPDATE: Connect Tahun Ajaran
+        'nama_agenda': agenda.namaAgenda,
+        'tanggal_mulai': agenda.tanggalMulai.toIso8601String(),
+        'tanggal_berakhir': agenda.tanggalBerakhir.toIso8601String(),
+        'status_hari_belajar': agenda.statusHariBelajar,
+        'scope': agenda.scope,
+        'program_id': agenda.programId,
+        'keterangan': agenda.keterangan,
+        'is_siswa_libur': agenda.isSiswaLibur,
+        'is_guru_masuk': agenda.isGuruMasuk,
+      }).eq('id', agenda.id);
+      ref.invalidateSelf();
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+    }
+  }
+
+  Future<void> deleteAgenda(String id) async {
+    state = const AsyncValue.loading();
+    try {
+      await _supabase.from('agenda_akademik').delete().eq('id', id);
+      ref.invalidateSelf();
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+    }
   }
 }

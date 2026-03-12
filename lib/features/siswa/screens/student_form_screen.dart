@@ -418,7 +418,7 @@ class _StudentFormScreenState extends ConsumerState<StudentFormScreen> {
         ),
         const SizedBox(height: 8),
         DropdownButtonFormField<Object>(
-          value: value,
+          initialValue: value, // PERBAIKAN: Menggunakan initialValue sesuai standar Flutter 2026
           items: items,
           onChanged: onChanged,
           isExpanded: true, // INI DIA PENYELAMATNYA!

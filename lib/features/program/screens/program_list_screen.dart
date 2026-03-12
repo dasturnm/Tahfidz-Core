@@ -4,6 +4,7 @@ import '../widgets/program_card.dart';
 import '../models/program_model.dart';
 import '../providers/program_provider.dart';
 import '../widgets/academic_calendar_tab.dart';
+import 'agenda_akademik_screen.dart'; // Baru: Import Agenda Screen
 import 'program_form_screen.dart';
 
 class ProgramListScreen extends ConsumerStatefulWidget {
@@ -19,7 +20,7 @@ class _ProgramListScreenState extends ConsumerState<ProgramListScreen> with Sing
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this); // Update length jadi 3
     // Listener untuk memperbarui UI saat tab berpindah (agar FAB berubah)
     _tabController.addListener(() => setState(() {}));
   }
@@ -62,6 +63,7 @@ class _ProgramListScreenState extends ConsumerState<ProgramListScreen> with Sing
                     loading: () => const Center(child: CircularProgressIndicator(color: Color(0xFF10B981))),
                     error: (err, stack) => Center(child: Text("Gagal memuat data: $err")),
                   ),
+                  const AgendaAkademikScreen(), // Baru: Sub Menu Agenda
                   const AcademicCalendarTab(),
                 ],
               ),
@@ -73,92 +75,13 @@ class _ProgramListScreenState extends ConsumerState<ProgramListScreen> with Sing
   }
 
   Widget _buildHeader(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return const Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text("Manajemen Program", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-            SizedBox(height: 4),
-            Text("Kurikulum, Jadwal Efektif, & Kalender.", style: TextStyle(color: Colors.grey)),
-          ],
-        ),
-        IconButton(
-          onPressed: () => _showConfigPeriodeDialog(context),
-          icon: const Icon(Icons.settings_suggest_outlined, color: Color(0xFF10B981)),
-          tooltip: "Konfigurasi Periode",
-        ),
+        Text("Manajemen Program", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+        SizedBox(height: 4),
+        Text("Kurikulum, Jadwal Efektif, & Kalender.", style: TextStyle(color: Colors.grey)),
       ],
-    );
-  }
-
-  // --- DIALOG KONFIGURASI PERIODE (Gambar 3) ---
-  void _showConfigPeriodeDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.settings_suggest_outlined, size: 48, color: Color(0xFF10B981)),
-            const SizedBox(height: 16),
-            const Text("Konfigurasi Periode", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const Text("TAHUN AJARAN & SEMESTER", style: TextStyle(fontSize: 10, color: Colors.grey, letterSpacing: 1.2)),
-            const SizedBox(height: 24),
-            const Align(alignment: Alignment.centerLeft, child: Text("TAHUN AJARAN AKTIF", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.blueGrey))),
-            const SizedBox(height: 8),
-            DropdownButtonFormField<String>(
-              initialValue: "2023/2024",
-              decoration: InputDecoration(
-                filled: true, fillColor: Colors.grey[50],
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-              ),
-              items: const [DropdownMenuItem(value: "2023/2024", child: Text("2023/2024"))],
-              onChanged: (v) {},
-            ),
-            const SizedBox(height: 16),
-            const Align(alignment: Alignment.centerLeft, child: Text("SEMESTER AKTIF", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.blueGrey))),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {},
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF10B981),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: const Text("Semester Ganjil", style: TextStyle(color: Colors.white, fontSize: 12)),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () {},
-                    style: OutlinedButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-                    child: const Text("Semester Genap", style: TextStyle(fontSize: 12)),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF10B981),
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                child: const Text("Simpan Konfigurasi", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -172,7 +95,8 @@ class _ProgramListScreenState extends ConsumerState<ProgramListScreen> with Sing
       indicatorWeight: 3,
       tabs: const [
         Tab(text: "Daftar Katalog Program"),
-        Tab(text: "Kalender Akademik & Event"),
+        Tab(text: "Agenda Akademik"), // Baru
+        Tab(text: "Kalender Akademik"),
       ],
     );
   }

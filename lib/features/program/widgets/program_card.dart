@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/program_model.dart';
 import '../screens/program_detail_screen.dart';
+import '../screens/program_form_screen.dart'; // Baru
 import '../providers/agenda_provider.dart';
 import '../services/effective_day_service.dart';
+import '../../management_lembaga/providers/app_context_provider.dart';
+import '../../akademik/kurikulum/providers/kurikulum_provider.dart'; // Baru
 
 class ProgramCard extends ConsumerWidget {
   final ProgramModel program;
@@ -16,7 +19,8 @@ class ProgramCard extends ConsumerWidget {
     // --- LOGIKA HITUNG HARI EFEKTIF (Dummy Semester 180 Hari) ---
     final now = DateTime.now();
     final dummyEnd = now.add(const Duration(days: 180));
-    final agendaAsync = ref.watch(agendaNotifierProvider);
+    final activeTA = ref.watch(appContextProvider).currentTahunAjaran;
+    final agendaAsync = ref.watch(agendaNotifierProvider(tahunAjaranId: activeTA?.id));
     int effectiveDays = 0;
 
     agendaAsync.whenData((agendas) {
@@ -39,7 +43,7 @@ class ProgramCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildHeader(context, effectiveDays),
+          _buildHeader(context, ref, effectiveDays), // Ditambahkan ref
           const SizedBox(height: 12),
           Text(
             program.deskripsi ?? '',
@@ -53,7 +57,7 @@ class ProgramCard extends ConsumerWidget {
             children: [
               Expanded(child: _buildInvestasiSection()),
               const SizedBox(width: 16),
-              Expanded(child: _buildJadwalSection()),
+              Expanded(child: _buildJadwalSection(effectiveDays)), // Menambahkan parameter
             ],
           ),
           const Spacer(), // Dorong footer ke paling bawah
@@ -63,7 +67,10 @@ class ProgramCard extends ConsumerWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context, int effectiveDays) {
+  Widget _buildHeader(BuildContext context, WidgetRef ref, int effectiveDays) { // Signature diubah (tambah ref)
+    // Menonton status kurikulum secara realtime
+    final kurikulumAsync = ref.watch(kurikulumListProvider(program.id));
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -77,36 +84,77 @@ class ProgramCard extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(program.namaProgram, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-              if (program.tagKurikulum != null)
-                Container(
-                  margin: const EdgeInsets.only(top: 4),
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(color: const Color(0xFF10B981).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
-                  child: Text(program.tagKurikulum!.toUpperCase(), style: const TextStyle(color: Color(0xFF10B981), fontSize: 10, fontWeight: FontWeight.bold)),
-                ),
+              Text(
+                program.namaProgram,
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              ),
+              const SizedBox(height: 4),
+              Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                children: [
+                  // INDIKATOR STATUS KURIKULUM (Otomatis)
+                  kurikulumAsync.when(
+                    data: (list) {
+                      final bool hasKurikulum = list.isNotEmpty;
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: hasKurikulum
+                              ? const Color(0xFF10B981).withValues(alpha: 0.1)
+                              : Colors.orange.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          hasKurikulum ? "KURIKULUM AKTIF" : "KURIKULUM BELUM DIATUR",
+                          style: TextStyle(
+                            color: hasKurikulum ? const Color(0xFF10B981) : Colors.orange,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      );
+                    },
+                    loading: () => const SizedBox.shrink(),
+                    error: (_, __) => const SizedBox.shrink(),
+                  ),
+                ],
+              ),
             ],
           ),
         ),
         Row(
           children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(8)),
-              child: Row(
-                children: [
-                  const Icon(Icons.flash_on, size: 14, color: Colors.orange),
-                  const SizedBox(width: 4),
-                  Text("$effectiveDays HARI EFEKTIF", style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.black54)),
-                ],
+            // PERBAIKAN: InkWell ikon edit dengan navigasi yang berfungsi
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(20),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ProgramFormScreen(program: program),
+                    ),
+                  );
+                },
+                child: const Padding(
+                  padding: EdgeInsets.all(8.0),
+                  child: Icon(Icons.edit_outlined, color: Colors.grey, size: 20),
+                ),
               ),
             ),
-            const SizedBox(width: 8),
-            const Icon(Icons.edit_outlined, color: Colors.grey, size: 20),
             const SizedBox(width: 4),
-            InkWell(
-              onTap: () => _showDeleteConfirmation(context),
-              child: const Icon(Icons.delete_outline, color: Colors.grey, size: 20),
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(20),
+                onTap: () => _showDeleteConfirmation(context),
+                child: const Padding(
+                  padding: EdgeInsets.all(8.0),
+                  child: Icon(Icons.delete_outline, color: Colors.grey, size: 20),
+                ),
+              ),
             ),
           ],
         ),
@@ -158,7 +206,7 @@ class ProgramCard extends ConsumerWidget {
     );
   }
 
-  Widget _buildJadwalSection() {
+  Widget _buildJadwalSection(int effectiveDays) {
     final listHari = ['S', 'S', 'R', 'K', 'J', 'S', 'M'];
     final mappingHari = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
 
@@ -182,6 +230,37 @@ class ProgramCard extends ConsumerWidget {
               child: Text(listHari[i], style: TextStyle(color: isActive ? Colors.white : Colors.grey, fontSize: 10, fontWeight: FontWeight.bold)),
             );
           }),
+        ),
+        const SizedBox(height: 12),
+        // HARI EFEKTIF: Menggunakan FittedBox untuk mencegah overflow piksel
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.grey.shade200),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.flash_on, size: 14, color: Colors.orange),
+                const SizedBox(width: 4),
+                Text(
+                  "$effectiveDays HARI EFEKTIF",
+                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.black87),
+                ),
+              ],
+            ),
+          ),
         ),
       ],
     );

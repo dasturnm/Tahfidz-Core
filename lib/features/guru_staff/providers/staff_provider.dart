@@ -32,9 +32,10 @@ class StaffList extends _$StaffList {
     if (profile == null) return [];
 
     // 3. Ambil semua data personil (Termasuk data absensi hari ini)
+    // UPDATE: Menambahkan jenis_kelamin ke dalam select
     final response = await _supabase
         .from('profiles')
-        .select('*, divisi:divisi_id(nama_divisi), penugasan_staf(status, is_utama, cabang:cabang_id(nama_cabang), jabatan:jabatan_id(nama_jabatan)), absensi(status, tanggal)')
+        .select('*, jenis_kelamin, divisi:divisi_id(nama_divisi), penugasan_staf(status, is_utama, cabang:cabang_id(nama_cabang), jabatan:jabatan_id(nama_jabatan)), absensi(status, tanggal)')
         .eq('lembaga_id', profile['lembaga_id'])
         .order('nama_lengkap', ascending: true);
 

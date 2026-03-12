@@ -85,10 +85,10 @@ class _ClassTableViewState extends ConsumerState<ClassTableView> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.grey.withOpacity(0.1)),
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.1)), // PERBAIKAN: withValues
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withValues(alpha: 0.02), // PERBAIKAN: withValues
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),

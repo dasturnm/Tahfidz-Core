@@ -3,56 +3,86 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/kurikulum_model.dart';
 import '../providers/kurikulum_provider.dart';
 import 'modul_detail_screen.dart'; // Ditambahkan: Import navigasi detail
+// Import widget pendukung (Pastikan file ini dibuat di folder widgets)
+import '../widgets/modul_grid_view.dart';
+import '../widgets/modul_table_view.dart';
 
-class LevelDetailScreen extends ConsumerWidget {
+class LevelDetailScreen extends ConsumerStatefulWidget {
   final LevelModel level;
 
   const LevelDetailScreen({super.key, required this.level});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<LevelDetailScreen> createState() => _LevelDetailScreenState();
+}
+
+class _LevelDetailScreenState extends ConsumerState<LevelDetailScreen> {
+  bool _isGridView = true; // State toggle tampilan
+  final Color _emerald = const Color(0xFF10B981);
+  final Color _slate = const Color(0xFF1E293B); // TAMBAHAN: Konsistensi Slate 2026
+
+  @override
+  Widget build(BuildContext context) {
     // Watch daftar modul di bawah level ini
-    final modulAsync = ref.watch(modulListProvider(level.id!));
+    final modulAsync = ref.watch(modulListProvider(widget.level.id!));
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text("Manajemen Akademik", style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: const Color(0xFF10B981),
-        foregroundColor: Colors.white,
+        title: const Text("Manajemen Akademik"),
+        backgroundColor: Colors.white, // PERBAIKAN: Gunakan tema terang Hub
+        foregroundColor: _slate, // PERBAIKAN: Gunakan Slate
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back_rounded), // PERBAIKAN: Rounded icon
           onPressed: () => Navigator.pop(context),
         ),
+        actions: [
+          // TOGGLE VIEW BUTTON
+          IconButton(
+            icon: Icon(_isGridView ? Icons.view_list_rounded : Icons.grid_view_rounded),
+            onPressed: () => setState(() => _isGridView = !_isGridView),
+            tooltip: "Ganti Tampilan",
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: Column(
         children: [
-          _buildBreadcrumbHeader(context, ref), // Ditambahkan parameter ref
+          _buildBreadcrumbHeader(context),
           Expanded(
             child: modulAsync.when(
               data: (modules) => modules.isEmpty
                   ? _buildEmptyState(context)
-                  : ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                itemCount: modules.length,
-                itemBuilder: (context, index) {
-                  final modul = modules[index];
-                  return _buildModulCard(context, ref, modul);
-                },
+                  : _isGridView
+                  ? ModulGridView(
+                modules: modules,
+                onAction: (m) => _showModulActionSheet(context, m),
+                onTap: (m) => _navigateToModulDetail(context, m),
+              )
+                  : ModulTableView(
+                modules: modules,
+                onAction: (m) => _showModulActionSheet(context, m),
+                onTap: (m) => _navigateToModulDetail(context, m),
               ),
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () => const Center(child: CircularProgressIndicator(color: Color(0xFF10B981))),
               error: (err, _) => Center(child: Text("Error: $err")),
             ),
           ),
         ],
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _showAddModulSheet(context),
+        backgroundColor: _slate,
+        child: const Icon(Icons.add, color: Colors.white),
+      ),
     );
   }
 
-  Widget _buildBreadcrumbHeader(BuildContext context, WidgetRef ref) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+  Widget _buildBreadcrumbHeader(BuildContext context) {
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(32, 8, 32, 24), // PERBAIKAN: Padding konsisten Hub
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -61,33 +91,20 @@ class LevelDetailScreen extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "JENJANG TAHSIN / LEVEL ${level.namaLevel.toUpperCase()}",
-                  style: const TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF10B981),
+                  "LEVEL ${widget.level.namaLevel.toUpperCase()}",
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w900,
+                    color: _emerald,
                     letterSpacing: 1.2,
                   ),
                 ),
                 const SizedBox(height: 4),
-                const Text(
-                  "3. Unit Modul",
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                Text(
+                  "Unit Modul",
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: _slate),
                 ),
               ],
-            ),
-          ),
-          ElevatedButton.icon(
-            onPressed: () => _showAddModulDialog(context, ref),
-            icon: const Icon(Icons.add, size: 18, color: Colors.white),
-            label: const Text(
-              "TAMBAH MODUL",
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11),
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF0F172A),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             ),
           ),
         ],
@@ -95,232 +112,195 @@ class LevelDetailScreen extends ConsumerWidget {
     );
   }
 
-  // --- DIALOG TAMBAH/EDIT MODUL ---
+  // --- MODERN ACTION MENU (BOTTOM SHEET) ---
 
-  void _showAddModulDialog(BuildContext context, WidgetRef ref, {ModulModel? modulToEdit}) {
-    final nameController = TextEditingController(text: modulToEdit?.namaModul);
-    final durationController = TextEditingController(text: modulToEdit?.durasiHari.toString() ?? "30");
-    String selectedTipe = modulToEdit?.tipe ?? 'Hafalan';
-
-    showDialog(
+  void _showModulActionSheet(BuildContext context, ModulModel modul) {
+    showModalBottomSheet(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-          contentPadding: const EdgeInsets.all(32),
-          content: SizedBox(
-            width: 400,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const Icon(Icons.layers_outlined, color: Color(0xFF10B981), size: 28),
-                    const SizedBox(width: 12),
-                    Text(
-                        modulToEdit == null ? "Modul Baru" : "Edit Modul",
-                        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 32),
-                const Text("NAMA MODUL", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1.2)),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: nameController,
-                  decoration: InputDecoration(
-                    hintText: "Contoh: Iqro Jilid 1-3",
-                    filled: true,
-                    fillColor: const Color(0xFFF8FAFC),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text("TIPE", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1.2)),
-                          const SizedBox(height: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF8FAFC),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: DropdownButtonHideUnderline(
-                              child: DropdownButton<String>(
-                                value: ['Hafalan', 'Tahsin', 'Teori', 'Ujian'].contains(selectedTipe) ? selectedTipe : 'Hafalan',
-                                isExpanded: true,
-                                items: ['Hafalan', 'Tahsin', 'Teori', 'Ujian'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-                                onChanged: (v) => setDialogState(() => selectedTipe = v!),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 20),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text("DURASI (HARI)", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1.2)),
-                          const SizedBox(height: 8),
-                          TextField(
-                            controller: durationController,
-                            keyboardType: TextInputType.number,
-                            decoration: InputDecoration(
-                              hintText: "30",
-                              filled: true,
-                              fillColor: const Color(0xFFF8FAFC),
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 32),
-                SizedBox(
-                  width: double.infinity,
-                  height: 54,
-                  child: ElevatedButton(
-                    onPressed: () async {
-                      if (nameController.text.isEmpty) return;
-
-                      final modulData = ModulModel(
-                        id: modulToEdit?.id,
-                        levelId: level.id!,
-                        namaModul: nameController.text.trim(),
-                        tipe: selectedTipe.toUpperCase(),
-                        durasiHari: int.tryParse(durationController.text) ?? 30,
-                      );
-
-                      await ref.read(modulListProvider(level.id!).notifier).saveModul(modulData);
-
-                      if (ctx.mounted) Navigator.pop(ctx);
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF10B981),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      elevation: 0,
-                    ),
-                    child: Text(
-                        modulToEdit == null ? "Simpan Modul" : "Update Modul",
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: TextButton(
-                    onPressed: () => Navigator.pop(ctx),
-                    child: const Text("Batal", style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w600)),
-                  ),
-                ),
-              ],
+      backgroundColor: Colors.transparent, // PERBAIKAN: Untuk rounded corner
+      builder: (context) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+        ),
+        padding: const EdgeInsets.symmetric(vertical: 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 20),
+              decoration: BoxDecoration(
+                color: Colors.grey[200],
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
-          ),
+            Text(
+              modul.namaModul,
+              style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: _slate),
+            ),
+            const SizedBox(height: 24),
+            ListTile(
+              leading: const Icon(Icons.edit_outlined),
+              title: const Text("Edit Modul", style: TextStyle(fontWeight: FontWeight.bold)),
+              onTap: () {
+                Navigator.pop(context);
+                _showAddModulSheet(context, modulToEdit: modul);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete_outline, color: Colors.red),
+              title: const Text("Hapus Modul", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+              onTap: () {
+                Navigator.pop(context);
+                _showDeleteModulConfirm(context, modul);
+              },
+            ),
+            const SizedBox(height: 16),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildModulCard(BuildContext context, WidgetRef ref, ModulModel modul) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey.shade100),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+  // --- MODAL TAMBAH/EDIT MODUL ---
+
+  void _showAddModulSheet(BuildContext context, {ModulModel? modulToEdit}) {
+    final nameController = TextEditingController(text: modulToEdit?.namaModul);
+    final durationController = TextEditingController(text: modulToEdit?.durasiHari.toString() ?? "30");
+    String selectedTipe = modulToEdit?.tipe ?? 'HAFALAN';
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent, // PERBAIKAN: Melengkung
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) => Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
           ),
-        ],
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => ModulDetailScreen(level: level, modul: modul),
-            ),
-          );
-        },
-        child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 32,
+            left: 32,
+            right: 32,
+            top: 32,
+          ),
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Baris 1: Badge Tipe & Menu Aksi
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF10B981).withValues(alpha: 0.05),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
+                  Icon(Icons.layers_outlined, color: _emerald, size: 28),
+                  const SizedBox(width: 12),
+                  Expanded(
                     child: Text(
-                      modul.tipe.toUpperCase(),
-                      style: const TextStyle(
-                        color: Color(0xFF10B981),
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.5,
-                      ),
+                        modulToEdit == null ? "Buat Modul" : "Edit Modul",
+                        style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: _slate)
                     ),
                   ),
-                  _buildTrailingMenu(context, ref, modul),
+                  IconButton(onPressed: () => Navigator.pop(ctx), icon: const Icon(Icons.close)),
                 ],
               ),
-              const SizedBox(height: 20),
-              // Baris 2: Nama Modul
-              Text(
-                modul.namaModul,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF0F172A),
+              const SizedBox(height: 12),
+              const Text("Tentukan unit belajar untuk level ini.", style: TextStyle(color: Colors.grey, fontSize: 13)),
+              const SizedBox(height: 32),
+              const Text("NAMA MODUL", style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.grey, letterSpacing: 1.2)),
+              const SizedBox(height: 8),
+              TextField(
+                controller: nameController,
+                autofocus: true,
+                decoration: InputDecoration(
+                  hintText: "Contoh: Iqro Jilid 1-3",
+                  filled: true,
+                  fillColor: const Color(0xFFF8FAFC),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
                 ),
               ),
-              const SizedBox(height: 20),
-              // Baris 3: Footer (Durasi & Metrik)
+              const SizedBox(height: 24),
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    "${modul.durasiHari} Hari Belajar",
-                    style: TextStyle(color: Colors.grey[500], fontSize: 13),
-                  ),
-                  Row(
-                    children: [
-                      const Icon(Icons.track_changes, size: 14, color: Color(0xFF10B981)),
-                      const SizedBox(width: 4),
-                      Text(
-                        "${modul.targets.length} METRIK",
-                        style: const TextStyle(
-                          color: Color(0xFF10B981),
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text("TIPE", style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.grey, letterSpacing: 1.2)),
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              value: ['HAFALAN', 'TAHSIN', 'TEORI', 'UJIAN'].contains(selectedTipe.toUpperCase()) ? selectedTipe.toUpperCase() : 'HAFALAN',
+                              isExpanded: true,
+                              icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Colors.grey),
+                              style: TextStyle(color: _slate, fontWeight: FontWeight.bold, fontSize: 14),
+                              items: ['HAFALAN', 'TAHSIN', 'TEORI', 'UJIAN'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                              onChanged: (v) => setDialogState(() => selectedTipe = v!),
+                            ),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text("DURASI (HARI)", style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.grey, letterSpacing: 1.2)),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: durationController,
+                          keyboardType: TextInputType.number,
+                          style: TextStyle(fontWeight: FontWeight.bold, color: _slate),
+                          decoration: InputDecoration(
+                            hintText: "30",
+                            filled: true,
+                            fillColor: const Color(0xFFF8FAFC),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
+              ),
+              const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                height: 60,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    if (nameController.text.isEmpty) return;
+
+                    final modulData = ModulModel(
+                      id: modulToEdit?.id,
+                      levelId: widget.level.id!,
+                      namaModul: nameController.text.trim(),
+                      tipe: selectedTipe.toUpperCase(),
+                      durasiHari: int.tryParse(durationController.text) ?? 30,
+                    );
+
+                    await ref.read(modulListProvider(widget.level.id!).notifier).saveModul(modulData);
+
+                    if (ctx.mounted) Navigator.pop(ctx);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _slate, // PERBAIKAN: Tombol Slate
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    elevation: 0,
+                  ),
+                  child: Text(
+                      modulToEdit == null ? "SIMPAN MODUL" : "UPDATE MODUL",
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, letterSpacing: 1)
+                  ),
+                ),
               ),
             ],
           ),
@@ -329,38 +309,30 @@ class LevelDetailScreen extends ConsumerWidget {
     );
   }
 
-  // --- MENU AKSI MODUL ---
-  Widget _buildTrailingMenu(BuildContext context, WidgetRef ref, ModulModel modul) {
-    return PopupMenuButton<String>(
-      icon: const Icon(Icons.more_horiz, color: Color(0xFFE2E8F0)),
-      onSelected: (value) async {
-        if (value == 'edit') {
-          _showAddModulDialog(context, ref, modulToEdit: modul);
-        } else if (value == 'delete') {
-          _showDeleteModulConfirm(context, ref, modul);
-        }
-      },
-      itemBuilder: (context) => [
-        const PopupMenuItem(value: 'edit', child: Row(children: [Icon(Icons.edit_outlined, size: 18), SizedBox(width: 8), Text("Edit")])),
-        const PopupMenuItem(value: 'delete', child: Row(children: [Icon(Icons.delete_outline, size: 18, color: Colors.red), SizedBox(width: 8), Text("Hapus", style: TextStyle(color: Colors.red))])),
-      ],
+  void _navigateToModulDetail(BuildContext context, ModulModel modul) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ModulDetailScreen(level: widget.level, modul: modul),
+      ),
     );
   }
 
-  void _showDeleteModulConfirm(BuildContext context, WidgetRef ref, ModulModel modul) {
+  void _showDeleteModulConfirm(BuildContext context, ModulModel modul) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text("Hapus Unit Modul?"),
-        content: Text("Modul '${modul.namaModul}' akan dihapus permanen dari kurikulum."),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Text("Hapus Unit Modul?", style: TextStyle(fontWeight: FontWeight.bold)),
+        content: Text("Modul '${modul.namaModul}' akan dihapus permanen."),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Batal")),
           TextButton(
               onPressed: () async {
-                await ref.read(modulListProvider(level.id!).notifier).deleteModul(modul.id!);
+                await ref.read(modulListProvider(widget.level.id!).notifier).deleteModul(modul.id!);
                 if (ctx.mounted) Navigator.pop(ctx);
               },
-              child: const Text("Hapus", style: TextStyle(color: Colors.red))
+              child: const Text("Hapus", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold))
           ),
         ],
       ),
@@ -372,12 +344,21 @@ class LevelDetailScreen extends ConsumerWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.auto_stories_outlined, size: 80, color: Colors.grey[100]),
+          const Icon(Icons.auto_stories_outlined, size: 80, color: Color(0xFFE2E8F0)),
           const SizedBox(height: 16),
           const Text(
             "Belum ada unit modul belajar.",
             style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w500),
           ),
+          const SizedBox(height: 24),
+          ElevatedButton(
+            onPressed: () => _showAddModulSheet(context),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _slate,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text("Buat Modul Pertama", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          )
         ],
       ),
     );

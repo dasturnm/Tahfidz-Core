@@ -13,7 +13,9 @@ class StudentProvider extends ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
   String _searchQuery = '';
-
+// Tambahkan variabel state filter baru
+  String _statusFilter = 'Semua';
+  String _genderFilter = 'Semua';
   // Getter
   List<StudentModel> get students {
     if (_searchQuery.isEmpty) return _students;

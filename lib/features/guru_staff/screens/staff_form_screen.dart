@@ -28,6 +28,7 @@ class _StaffFormScreenState extends ConsumerState<StaffFormScreen> {
   // State untuk Dropdown
   String? _selectedCabangId;
   String? _selectedJabatanId;
+  String? _selectedGender; // NEW: State Gender
 
   bool _isLoading = false;
 
@@ -40,6 +41,7 @@ class _StaffFormScreenState extends ConsumerState<StaffFormScreen> {
       _emailController.text = widget.staff!['email'] ?? '';
       _noHpController.text = widget.staff!['no_hp'] ?? '';
       _tglBergabungController.text = widget.staff!['tanggal_bergabung'] ?? ''; // Ambil data lama jika ada
+      _selectedGender = widget.staff!['jenis_kelamin']; // NEW: Ambil gender lama
       // Password tidak diisi saat edit
     }
   }
@@ -104,11 +106,12 @@ class _StaffFormScreenState extends ConsumerState<StaffFormScreen> {
             jabatanId: finalJabatanId,
           );
 
-          // FIX: Update profile tambahan (untuk data seperti tanggal bergabung)
+          // FIX: Update profile tambahan (untuk data seperti tanggal bergabung & jenis kelamin)
           await Supabase.instance.client.from('profiles').update({
             'tanggal_bergabung': _tglBergabungController.text.isEmpty ? null : _tglBergabungController.text,
             'nama_lengkap': _namaController.text,
             'no_hp': _noHpController.text,
+            'jenis_kelamin': _selectedGender, // NEW
           }).eq('id', targetUserId);
 
           // Refresh list agar staff baru muncul
@@ -125,6 +128,7 @@ class _StaffFormScreenState extends ConsumerState<StaffFormScreen> {
           'nama_lengkap': _namaController.text,
           'no_hp': _noHpController.text,
           'tanggal_bergabung': _tglBergabungController.text.isEmpty ? null : _tglBergabungController.text,
+          'jenis_kelamin': _selectedGender, // NEW
         }).eq('id', widget.staff!['id']);
 
         // Refresh list agar perubahan muncul
@@ -269,6 +273,10 @@ class _StaffFormScreenState extends ConsumerState<StaffFormScreen> {
                 ),
                 const SizedBox(height: 16),
 
+                // NEW: Gender Selection
+                _buildDropdownGender(),
+                const SizedBox(height: 16),
+
                 // FIX: Field Kalender (Read Only + Tap Picker)
                 TextFormField(
                   controller: _tglBergabungController,
@@ -381,6 +389,19 @@ class _StaffFormScreenState extends ConsumerState<StaffFormScreen> {
         }
         return null;
       },
+    );
+  }
+
+  Widget _buildDropdownGender() {
+    return DropdownButtonFormField<String>(
+      decoration: _inputDecoration("Jenis Kelamin", Icons.wc),
+      value: _selectedGender,
+      items: const [
+        DropdownMenuItem(value: 'L', child: Text("Laki-laki (Ikhwan)")),
+        DropdownMenuItem(value: 'P', child: Text("Perempuan (Akhwat)")),
+      ],
+      onChanged: (val) => setState(() => _selectedGender = val),
+      validator: (v) => v == null ? "Jenis kelamin wajib dipilih" : null,
     );
   }
 

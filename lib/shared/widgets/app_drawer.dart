@@ -9,6 +9,8 @@ import '../../features/management_lembaga/screens/divisi_list_screen.dart';
 import '../../features/guru_staff/screens/staff_list_screen.dart';
 import '../../features/siswa/screens/student_hub_screen.dart';
 import '../../features/program/screens/program_list_screen.dart';
+import '../../features/program/widgets/academic_calendar_tab.dart'; // Baru: Import Kalender
+import '../../features/program/screens/agenda_akademik_screen.dart'; // Baru: Import Agenda Screen
 
 class AppDrawer extends ConsumerWidget {
   const AppDrawer({super.key});
@@ -57,6 +59,11 @@ class AppDrawer extends ConsumerWidget {
                   onTap: () => _navigate(context, const CabangListScreen()),
                 ),
                 _buildDrawerItem(
+                  icon: Icons.calendar_today_outlined,
+                  label: "Tahun Ajaran",
+                  onTap: () => _navigate(context, const TahunAjaranScreen()),
+                ),
+                _buildDrawerItem(
                   icon: Icons.account_tree_outlined,
                   label: "Divisi & Jabatan",
                   onTap: () => _navigate(context, const DivisiListScreen()),
@@ -65,14 +72,19 @@ class AppDrawer extends ConsumerWidget {
                 const Divider(),
                 _buildSectionHeader("KONTEKS AKADEMIK"),
                 _buildDrawerItem(
-                  icon: Icons.calendar_today_outlined,
-                  label: "Tahun Ajaran",
-                  onTap: () => _navigate(context, const TahunAjaranScreen()),
-                ),
-                _buildDrawerItem(
                   icon: Icons.menu_book_outlined,
                   label: "Program Belajar",
                   onTap: () => _navigate(context, const ProgramListScreen()),
+                ),
+                _buildDrawerItem( // Baru: Menu Agenda Akademik (List View)
+                  icon: Icons.format_list_bulleted, // Ikon diperbarui
+                  label: "Agenda Akademik",
+                  onTap: () => _navigate(context, const AgendaAkademikScreen()),
+                ),
+                _buildDrawerItem( // Baru: Menu Kalender Akademik (Calendar View)
+                  icon: Icons.event_note, // Ikon diperbarui ke Solid
+                  label: "Kalender Akademik",
+                  onTap: () => _navigate(context, const AcademicCalendarTab()),
                 ),
                 _buildDrawerItem(
                   icon: Icons.assignment_outlined,
