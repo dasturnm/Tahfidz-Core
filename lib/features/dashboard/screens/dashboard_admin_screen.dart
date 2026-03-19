@@ -21,7 +21,7 @@ class DashboardAdminScreen extends StatelessWidget {
               spacing: 20,
               runSpacing: 20,
               children: [
-                _buildStatCard(screenWidth, "TOTAL SANTRI", "24", "+2 Santri Baru", Icons.people_outline, Colors.blue),
+                _buildStatCard(screenWidth, "TOTAL SISWA", "24", "+2 Siswa Baru", Icons.people_outline, Colors.blue),
                 _buildStatCard(screenWidth, "RATA-RATA HAFALAN", "4.2 Juz", "On Track Target", Icons.book_outlined, const Color(0xFF10B981)),
                 _buildStatCard(screenWidth, "SISWA LULUS UJIAN", "12", "Bulan Februari", Icons.workspace_premium_outlined, Colors.purple),
                 _buildStatCard(screenWidth, "DURASI kelas", "2.5 Jam", "Harian Efektif", Icons.timer_outlined, Colors.orange),
@@ -36,14 +36,14 @@ class DashboardAdminScreen extends StatelessWidget {
               children: [
                 Expanded(flex: 2, child: _buildActivityChart()),
                 const SizedBox(width: 32),
-                Expanded(flex: 1, child: _buildTopSantriList()),
+                Expanded(flex: 1, child: _buildTopSiswaList()),
               ],
             )
                 : Column(
               children: [
                 _buildActivityChart(),
                 const SizedBox(height: 32),
-                _buildTopSantriList(),
+                _buildTopSiswaList(),
               ],
             ),
           ],
@@ -158,7 +158,7 @@ class DashboardAdminScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTopSantriList() {
+  Widget _buildTopSiswaList() {
     return Container(
       padding: const EdgeInsets.all(24),
       height: 400,
@@ -166,18 +166,18 @@ class DashboardAdminScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text("Top Santri", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const Text("Top Siswa", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 24),
-          _buildSantriItem("1", "Abdurrahman Al-Fatih", "12 JUZ", "95%"),
-          _buildSantriItem("2", "Siti Maryam", "8 JUZ", "88%"),
-          _buildSantriItem("3", "Muhammad Ali", "5 JUZ", "82%"),
-          _buildSantriItem("4", "Zaid bin Tsabit", "15 JUZ", "78%"),
+          _buildSiswaItem("1", "Abdurrahman Al-Fatih", "12 JUZ", "95%"),
+          _buildSiswaItem("2", "Siti Maryam", "8 JUZ", "88%"),
+          _buildSiswaItem("3", "Muhammad Ali", "5 JUZ", "82%"),
+          _buildSiswaItem("4", "Zaid bin Tsabit", "15 JUZ", "78%"),
         ],
       ),
     );
   }
 
-  Widget _buildSantriItem(String rank, String name, String juz, String percent) {
+  Widget _buildSiswaItem(String rank, String name, String juz, String percent) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 20),
       child: Row(

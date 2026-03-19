@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tahfidz_core/services/guru_dan_staff_bulk_service.dart';
 import 'package:tahfidz_core/features/management_lembaga/providers/app_context_provider.dart';
 import 'package:tahfidz_core/features/guru_staff/providers/staff_provider.dart';
-import 'staff_list_screen.dart';
 import 'staff_form_screen.dart';
 // PERBAIKAN: Baris import all_staff_table_screen.dart DIHAPUS karena file akan dihapus
 import '../widgets/assignment_timeline_wrapper.dart';
@@ -251,7 +250,7 @@ class _StaffHubScreenState extends ConsumerState<StaffHubScreen> {
       data: (list) {
         final query = ref.watch(staffSearchProvider).toLowerCase();
         final filtered = list.where((s) {
-          final bool matchesSearch = s.nama.toLowerCase().contains(query) || (s.id?.toLowerCase().contains(query) ?? false);
+          final bool matchesSearch = s.nama.toLowerCase().contains(query) || (s.id.toLowerCase().contains(query) ?? false);
           if (roleFilter == null) return matchesSearch;
           if (roleFilter == 'guru') return matchesSearch && s.role == 'guru';
           return matchesSearch && s.role != 'guru';

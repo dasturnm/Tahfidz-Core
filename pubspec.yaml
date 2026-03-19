@@ -10,6 +10,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
 
   # Database & Auth - Menggunakan versi 2.8+ untuk stabilitas integrasi Auth
   supabase_flutter: ^2.8.1
@@ -24,8 +26,9 @@ dependencies:
 
   # UI Components & Utilities
   google_fonts: ^6.2.1
-  intl: ^0.19.0
+  intl: ^0.20.2
   cupertino_icons: ^1.0.8
+  device_preview: ^1.2.0
 
   # Tambahan Opsional: Shimmer untuk loading state yang cantik
   shimmer: ^3.0.0

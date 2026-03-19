@@ -47,7 +47,7 @@ class JenjangTableView extends StatelessWidget {
                     color: emerald.withValues(alpha: 0.1), // PERBAIKAN: withValues
                     borderRadius: BorderRadius.circular(6),
                   ),
-                  child: Text("${j.levels.length} Level",
+                  child: Text("${j.level.length} Level",
                       style: const TextStyle(color: emerald, fontSize: 11, fontWeight: FontWeight.bold)),
                 ),
               ),

@@ -95,7 +95,7 @@ class KurikulumListScreen extends ConsumerWidget {
                 ),
                 // POIN 5: Menampilkan ringkasan statistik (Level, Modul, Metrik)
                 DataCell(Text(
-                    "${k.totalLevels} Lvl, ${k.totalModules} Mod, ${k.totalTargets} Metrik",
+                    "${k.totalLevel} Lvl, ${k.totalModul} Mod, ${k.totalTarget} Metrik", // PERBAIKAN: Sync ke getter 'totalModul'
                     style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))
                 )),
                 DataCell(Container(
@@ -212,7 +212,7 @@ class KurikulumListScreen extends ConsumerWidget {
                 title: const Text("Mode Linear (Tingkatan Tunggal)", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
                 subtitle: const Text("Jenjang pendidikan akan langsung berisi daftar modul tanpa melalui tingkatan/level.", style: TextStyle(fontSize: 12)),
                 value: isLinear,
-                activeColor: _emerald,
+                activeThumbColor: _emerald,
                 onChanged: (val) => setState(() => isLinear = val),
               ),
               const SizedBox(height: 24),

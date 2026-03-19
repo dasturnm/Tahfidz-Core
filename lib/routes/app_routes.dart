@@ -1,4 +1,3 @@
-
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart'; // TAMBAHKAN INI
@@ -10,8 +9,10 @@ import 'package:tahfidz_core/providers/auth_provider.dart';
 // Import Screens
 import 'package:tahfidz_core/features/auth/screens/login_screen.dart';
 import 'package:tahfidz_core/features/dashboard/screens/dashboard_admin_screen.dart';
-import 'package:tahfidz_core/features/mutabaah/screens/input_mutabaah_screen.dart';
-import 'package:tahfidz_core/features/siswa/screens/student_list_screen.dart';
+import 'package:tahfidz_core/features/mutabaah/screens/mutabaah_input_screen.dart';
+import 'package:tahfidz_core/features/siswa/screens/Siswa_list_screen.dart';
+import 'package:tahfidz_core/features/siswa/models/siswa_model.dart';
+import 'package:tahfidz_core/features/akademik/kurikulum/models/kurikulum_model.dart';
 
 // Baris ini sangat penting untuk Riverpod Generator
 part 'app_routes.g.dart';
@@ -59,7 +60,13 @@ GoRouter router(Ref ref) { // Ganti RouterRef jadi Ref
           ),
           GoRoute(
             path: AppRouteNames.mutabaahInput,
-            builder: (context, state) => const InputMutabaahScreen(),
+            builder: (context, state) {
+              final extra = state.extra as Map<String, dynamic>;
+              return MutabaahInputScreen(
+                siswa: extra['siswa'] as SiswaModel,
+                modul: extra['modul'] as ModulModel,
+              );
+            },
           ),
           GoRoute(
             path: AppRouteNames.siswa,

@@ -60,7 +60,7 @@ class _TahunAjaranScreenState extends ConsumerState<TahunAjaranScreen> {
                 const Text("Semester", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
-                  value: selectedSemester,
+                  initialValue: selectedSemester,
                   items: const [
                     DropdownMenuItem(value: "Ganjil", child: Text("Ganjil")),
                     DropdownMenuItem(value: "Genap", child: Text("Genap")),
@@ -146,7 +146,7 @@ class _TahunAjaranScreenState extends ConsumerState<TahunAjaranScreen> {
                 const Text("Semester", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
-                  value: selectedSemester,
+                  initialValue: selectedSemester,
                   items: const [
                     DropdownMenuItem(value: "Ganjil", child: Text("Ganjil")),
                     DropdownMenuItem(value: "Genap", child: Text("Genap")),

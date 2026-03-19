@@ -11,20 +11,29 @@ class ProgramNotifier extends _$ProgramNotifier {
 
   @override
   Future<List<ProgramModel>> build() async {
-    // Mengambil lembaga_id dari context global aplikasi
-    final lembagaId = ref.watch(appContextProvider).lembaga?.id;
+    // Mengambil data dari context global aplikasi
+    final context = ref.watch(appContextProvider);
+    final lembagaId = context.lembaga?.id;
+    final cabangId = context.currentCabang?.id;
+
     if (lembagaId == null) return [];
 
-    return _fetchPrograms(lembagaId);
+    return _fetchPrograms(lembagaId, cabangId);
   }
 
   // --- FUNGSI AMBIL DATA ---
-  Future<List<ProgramModel>> _fetchPrograms(String lembagaId) async {
-    final response = await _supabase
+  Future<List<ProgramModel>> _fetchPrograms(String lembagaId, [String? cabangId]) async {
+    var query = _supabase
         .from('program')
         .select()
-        .eq('lembaga_id', lembagaId)
-        .order('nama_program');
+        .eq('lembaga_id', lembagaId);
+
+    // Filter: Tampilkan program milik cabang terpilih ATAU program global (cabang_id null)
+    if (cabangId != null && cabangId.isNotEmpty) {
+      query = query.or('cabang_id.eq.$cabangId,cabang_id.is.null');
+    }
+
+    final response = await query.order('nama_program');
 
     return (response as List).map((e) => ProgramModel.fromJson(e)).toList();
   }
@@ -40,7 +49,10 @@ class ProgramNotifier extends _$ProgramNotifier {
   }) async {
     state = const AsyncValue.loading();
 
-    final lembagaId = ref.read(appContextProvider).lembaga?.id;
+    final context = ref.read(appContextProvider);
+    final lembagaId = context.lembaga?.id;
+    final currentCabangId = context.currentCabang?.id;
+
     if (lembagaId == null) return;
 
     state = await AsyncValue.guard(() async {
@@ -54,30 +66,44 @@ class ProgramNotifier extends _$ProgramNotifier {
         'hari_aktif': hari,
       });
 
-      return _fetchPrograms(lembagaId);
+      return _fetchPrograms(lembagaId, currentCabangId);
     });
   }
 
   // --- FUNGSI UPDATE PROGRAM ---
   Future<void> updateProgram(ProgramModel updated) async {
     state = const AsyncValue.loading();
-    final lembagaId = ref.read(appContextProvider).lembaga?.id;
+    final context = ref.read(appContextProvider);
+    final lembagaId = context.lembaga?.id;
+    final cabangId = context.currentCabang?.id;
+
     if (lembagaId == null) return;
 
     state = await AsyncValue.guard(() async {
+      // FIX: Gunakan Map spesifik untuk update guna menghindari konflik RLS/ID di Supabase
       await _supabase
           .from('program')
-          .update(updated.toJson())
+          .update({
+        'nama_program': updated.namaProgram,
+        'cabang_id': updated.cabangId,
+        'deskripsi': updated.deskripsi,
+        'biaya_pendaftaran': updated.biayaPendaftaran,
+        'biaya_spp': updated.biayaSpp,
+        'hari_aktif': updated.hariAktif,
+      })
           .eq('id', updated.id);
 
-      return _fetchPrograms(lembagaId);
+      return _fetchPrograms(lembagaId, cabangId);
     });
   }
 
   // --- FUNGSI HAPUS PROGRAM ---
   Future<void> deleteProgram(String programId) async {
     state = const AsyncValue.loading();
-    final lembagaId = ref.read(appContextProvider).lembaga?.id;
+    final context = ref.read(appContextProvider);
+    final lembagaId = context.lembaga?.id;
+    final currentCabangId = context.currentCabang?.id;
+
     if (lembagaId == null) return;
 
     state = await AsyncValue.guard(() async {
@@ -86,7 +112,7 @@ class ProgramNotifier extends _$ProgramNotifier {
           .delete()
           .eq('id', programId);
 
-      return _fetchPrograms(lembagaId);
+      return _fetchPrograms(lembagaId, currentCabangId);
     });
   }
 }

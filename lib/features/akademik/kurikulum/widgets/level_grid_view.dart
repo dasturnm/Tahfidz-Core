@@ -4,14 +4,14 @@ import 'package:flutter/material.dart';
 import '../models/kurikulum_model.dart';
 
 class LevelGridView extends StatelessWidget {
-  final List<LevelModel> levels;
+  final List<LevelModel> level;
   final Color primaryColor;
   final Function(LevelModel) onAction;
   final Function(LevelModel) onTap;
 
   const LevelGridView({
     super.key,
-    required this.levels,
+    required this.level,
     required this.primaryColor,
     required this.onAction,
     required this.onTap,
@@ -27,11 +27,11 @@ class LevelGridView extends StatelessWidget {
         mainAxisSpacing: 16,
         childAspectRatio: 0.85,
       ),
-      itemCount: levels.length,
+      itemCount: level.length,
       itemBuilder: (context, index) {
-        final level = levels[index];
+        final l = level[index]; // PERBAIKAN: Hindari shadowing variabel 'level'
         return InkWell(
-          onTap: () => onTap(level),
+          onTap: () => onTap(l),
           borderRadius: BorderRadius.circular(20),
           child: Container(
             decoration: BoxDecoration(
@@ -54,7 +54,7 @@ class LevelGridView extends StatelessWidget {
                   right: 8,
                   child: IconButton(
                     icon: const Icon(Icons.more_horiz, color: Colors.grey),
-                    onPressed: () => onAction(level),
+                    onPressed: () => onAction(l),
                   ),
                 ),
                 Padding(
@@ -71,7 +71,7 @@ class LevelGridView extends StatelessWidget {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
-                          "LEVEL ${level.urutan}",
+                          "LEVEL ${l.urutan}",
                           style: TextStyle(
                             color: primaryColor,
                             fontWeight: FontWeight.bold,
@@ -81,7 +81,7 @@ class LevelGridView extends StatelessWidget {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        level.namaLevel,
+                        l.namaLevel,
                         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
@@ -94,7 +94,7 @@ class LevelGridView extends StatelessWidget {
                           const SizedBox(width: 6),
                           Expanded(
                             child: Text(
-                              "Target: ${level.targetTotal} ${level.metrik}",
+                              "Target: ${l.targetTotal} ${l.metrik}",
                               style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                             ),
                           ),
@@ -106,7 +106,7 @@ class LevelGridView extends StatelessWidget {
                           Icon(Icons.auto_stories_outlined, size: 14, color: Colors.grey[400]),
                           const SizedBox(width: 6),
                           Text(
-                            "${level.modules.length} Modul",
+                            "${l.modul.length} Modul", // PERBAIKAN: Sync ke model singular 'modul'
                             style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                           ),
                         ],

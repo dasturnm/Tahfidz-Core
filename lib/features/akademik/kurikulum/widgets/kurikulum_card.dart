@@ -73,7 +73,7 @@ class KurikulumCard extends ConsumerWidget {
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
-              const Spacer(),
+              const SizedBox(height: 12), // Tetap konsisten dengan layout
 
               // 4. BADGES (PERBAIKAN POIN 5: Menampilkan Statistik Lengkap)
               Wrap(
@@ -82,18 +82,19 @@ class KurikulumCard extends ConsumerWidget {
                 children: [
                   // PERBAIKAN: Menambahkan indikator Mode Linear
                   if (kurikulum.isLinear) _buildBadge("LINEAR", Colors.orange),
-                  _buildBadge("${kurikulum.jenjangs.length} JENJANG", bluePrimary),
+                  _buildBadge("${kurikulum.jenjang.length} JENJANG", bluePrimary), // PERBAIKAN: jenjangs -> jenjang
                   // Sembunyikan badge level jika linear karena level bersifat tunggal/bypass
-                  if (!kurikulum.isLinear) _buildBadge("${kurikulum.totalLevels} LEVEL", const Color(0xFF64748B)),
-                  _buildBadge("${kurikulum.totalModules} MODUL", const Color(0xFF64748B)),
-                  // PERBAIKAN: Menggunakan totalTargets sesuai dengan getter di KurikulumModel
-                  _buildBadge("${kurikulum.totalTargets} METRIK", const Color(0xFFF59E0B)),
+                  if (!kurikulum.isLinear) _buildBadge("${kurikulum.totalLevel} LEVEL", const Color(0xFF64748B)),
+                  _buildBadge("${kurikulum.totalModul} MODUL", const Color(0xFF64748B)),
+                  // PERBAIKAN: Menggunakan totalTarget sesuai dengan getter di KurikulumModel
+                  _buildBadge("${kurikulum.totalTarget} METRIK", const Color(0xFFF59E0B)),
                   _buildBadge(
                       kurikulum.isActive ? "AKTIF" : "DRAFT",
                       kurikulum.isActive ? const Color(0xFF10B981) : const Color(0xFF64748B)
                   ),
                 ],
               ),
+              const Spacer(),
               const SizedBox(height: 16),
               const Divider(color: Color(0xFFF1F5F9), height: 1),
               const SizedBox(height: 12),

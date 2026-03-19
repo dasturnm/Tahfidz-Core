@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../guru_staff/providers/staff_provider.dart';
-import '../providers/class_provider.dart';
+import '../providers/kelas_provider.dart'; // PERBAIKAN: Path Import
 import '../models/kelas_model.dart';
 
 class AddKelasDialog extends ConsumerStatefulWidget {
@@ -17,7 +17,7 @@ class _AddKelasDialogState extends ConsumerState<AddKelasDialog> {
   String? _selectedLevel;
   String? _selectedTeacherId;
 
-  final List<String> _levels = ['Ula (Dasar)', 'Wustha (Menengah)', 'Ulya (Tinggi)'];
+  final List<String> _level = ['Ula (Dasar)', 'Wustha (Menengah)', 'Ulya (Tinggi)'];
 
   @override
   void dispose() {
@@ -27,7 +27,7 @@ class _AddKelasDialogState extends ConsumerState<AddKelasDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final gurusAsync = ref.watch(staffListProvider);
+    final guruAsync = ref.watch(staffListProvider);
 
     return AlertDialog(
       title: const Text("Tambah Kelas Baru", style: TextStyle(fontWeight: FontWeight.bold)),
@@ -46,16 +46,18 @@ class _AddKelasDialogState extends ConsumerState<AddKelasDialog> {
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
                 decoration: const InputDecoration(labelText: "Tingkat"),
-                items: _levels.map((l) => DropdownMenuItem(value: l, child: Text(l))).toList(),
+                // PERBAIKAN: Mengembalikan ke 'value' & tipe eksplisit <String>
+                items: _level.map((l) => DropdownMenuItem<String>(value: l, child: Text(l))).toList(),
                 onChanged: (v) => setState(() => _selectedLevel = v),
                 validator: (v) => v == null ? "Pilih tingkat" : null,
               ),
               const SizedBox(height: 16),
               // Dropdown Ambil Data dari Provider Guru
-              gurusAsync.when(
+              guruAsync.when(
                 data: (listGuru) => DropdownButtonFormField<String>(
                   decoration: const InputDecoration(labelText: "Wali Kelas"),
-                  items: listGuru.map((g) => DropdownMenuItem(value: g.id, child: Text(g.nama))).toList(),
+                  // PERBAIKAN: Mengembalikan ke 'value' & tipe eksplisit <String>
+                  items: listGuru.map((g) => DropdownMenuItem<String>(value: g.id, child: Text(g.namaLengkap))).toList(),
                   onChanged: (v) => setState(() => _selectedTeacherId = v),
                   hint: const Text("Pilih Guru"),
                   validator: (v) => v == null ? "Pilih wali kelas" : null,
@@ -73,11 +75,12 @@ class _AddKelasDialogState extends ConsumerState<AddKelasDialog> {
           onPressed: () async {
             if (!_formKey.currentState!.validate()) return;
 
-            await ref.read(classProvider).addClass(
+            // PERBAIKAN: addClass -> addKelas & teacherId -> guruId
+            await ref.read(kelasProvider).addKelas(
               KelasModel(
                 name: _nameController.text,
                 level: _selectedLevel,
-                teacherId: _selectedTeacherId,
+                guruId: _selectedTeacherId,
               ),
             );
 

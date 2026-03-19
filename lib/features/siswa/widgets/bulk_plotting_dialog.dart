@@ -1,7 +1,9 @@
+// Lokasi: lib/features/siswa/widgets/bulk_plotting_dialog.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../providers/student_provider.dart';
-import '../../kelas/providers/class_provider.dart';
+import '../providers/siswa_provider.dart';
+import '../../kelas/providers/kelas_provider.dart';
 
 class BulkPlottingDialog extends ConsumerStatefulWidget {
   const BulkPlottingDialog({super.key});
@@ -11,8 +13,8 @@ class BulkPlottingDialog extends ConsumerStatefulWidget {
 }
 
 class _BulkPlottingDialogState extends ConsumerState<BulkPlottingDialog> {
-  String? _selectedClassId;
-  final List<String> _selectedStudentIds = [];
+  String? _selectedKelasId; // PERBAIKAN: Label Kelas
+  final List<String> _selectedSiswaIds = [];
   String _searchQuery = "";
 
   @override
@@ -20,25 +22,25 @@ class _BulkPlottingDialogState extends ConsumerState<BulkPlottingDialog> {
     super.initState();
     // Pastikan data kelas dan siswa terbaru sudah dimuat
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(classProvider).fetchClasses();
-      ref.read(studentProvider).fetchStudents();
+      ref.read(kelasProvider).fetchKelas(); // PERBAIKAN: Label Kelas
+      ref.read(siswaProvider).fetchSiswa();
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final studentState = ref.watch(studentProvider);
-    final classState = ref.watch(classProvider);
+    final siswaState = ref.watch(siswaProvider); // PERBAIKAN: CamelCase & Konsistensi
+    final kelasState = ref.watch(kelasProvider); // PERBAIKAN: Label Kelas
 
     // Filter siswa berdasarkan pencarian
-    final filteredStudents = studentState.students.where((s) {
+    final filteredSiswa = siswaState.siswa.where((s) {
       return s.namaLengkap.toLowerCase().contains(_searchQuery.toLowerCase());
     }).toList();
 
     return AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
       title: const Text(
-        'Plotting Santri Masal',
+        'Plotting Siswa Masal',
         style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
       ),
       content: SizedBox(
@@ -48,7 +50,7 @@ class _BulkPlottingDialogState extends ConsumerState<BulkPlottingDialog> {
           children: [
             // 1. PILIH KELAS TUJUAN
             const Text(
-              "Pilih Kelas/Kelas Tujuan:",
+              "Pilih Unit Kelas Tujuan:",
               style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey),
             ),
             const SizedBox(height: 8),
@@ -60,13 +62,13 @@ class _BulkPlottingDialogState extends ConsumerState<BulkPlottingDialog> {
               ),
               child: DropdownButtonHideUnderline(
                 child: DropdownButton<String>(
-                  value: _selectedClassId,
+                  value: _selectedKelasId,
                   hint: const Text("Pilih UNIT KELAS"),
                   isExpanded: true,
-                  items: classState.classes.map((c) {
+                  items: kelasState.kelas.map((c) { // PERBAIKAN: Label Kelas Singular
                     return DropdownMenuItem(value: c.id, child: Text(c.name));
                   }).toList(),
-                  onChanged: (val) => setState(() => _selectedClassId = val),
+                  onChanged: (val) => setState(() => _selectedKelasId = val),
                 ),
               ),
             ),
@@ -78,7 +80,7 @@ class _BulkPlottingDialogState extends ConsumerState<BulkPlottingDialog> {
             // 2. SEARCH & PILIH SISWA
             TextField(
               decoration: InputDecoration(
-                hintText: "Cari nama santri...",
+                hintText: "Cari nama siswa...",
                 prefixIcon: const Icon(Icons.search, size: 20),
                 contentPadding: const EdgeInsets.symmetric(vertical: 0),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
@@ -92,21 +94,21 @@ class _BulkPlottingDialogState extends ConsumerState<BulkPlottingDialog> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  "${_selectedStudentIds.length} Santri Terpilih",
+                  "${_selectedSiswaIds.length} siswa Terpilih",
                   style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF4F46E5)),
                 ),
                 TextButton(
                   onPressed: () {
                     setState(() {
-                      if (_selectedStudentIds.length == filteredStudents.length) {
-                        _selectedStudentIds.clear();
+                      if (_selectedSiswaIds.length == filteredSiswa.length) {
+                        _selectedSiswaIds.clear();
                       } else {
-                        _selectedStudentIds.clear();
-                        _selectedStudentIds.addAll(filteredStudents.map((e) => e.id!));
+                        _selectedSiswaIds.clear();
+                        _selectedSiswaIds.addAll(filteredSiswa.map((e) => e.id!));
                       }
                     });
                   },
-                  child: Text(_selectedStudentIds.length == filteredStudents.length ? "Batal Semua" : "Pilih Semua", style: const TextStyle(fontSize: 11)),
+                  child: Text(_selectedSiswaIds.length == filteredSiswa.length ? "Batal Semua" : "Pilih Semua", style: const TextStyle(fontSize: 11)),
                 )
               ],
             ),
@@ -119,25 +121,25 @@ class _BulkPlottingDialogState extends ConsumerState<BulkPlottingDialog> {
                   border: Border.all(color: Colors.grey[200]!),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: filteredStudents.isEmpty
+                child: filteredSiswa.isEmpty
                     ? const Center(child: Text("Data tidak ditemukan", style: TextStyle(fontSize: 12, color: Colors.grey)))
                     : ListView.builder(
-                  itemCount: filteredStudents.length,
+                  itemCount: filteredSiswa.length,
                   itemBuilder: (context, index) {
-                    final s = filteredStudents[index];
-                    final isChecked = _selectedStudentIds.contains(s.id);
+                    final s = filteredSiswa[index];
+                    final isChecked = _selectedSiswaIds.contains(s.id);
                     return CheckboxListTile(
                       value: isChecked,
                       title: Text(s.namaLengkap, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                      subtitle: Text(s.kelas?.name ?? "Belum Ada Kelas", style: const TextStyle(fontSize: 10)),
+                      subtitle: Text(s.kelas?.name ?? "Belum Ada Kelas", style: const TextStyle(fontSize: 10)), // PERBAIKAN: Relasi Kelas
                       activeColor: const Color(0xFF4F46E5),
                       dense: true,
                       onChanged: (val) {
                         setState(() {
                           if (val == true) {
-                            _selectedStudentIds.add(s.id!);
+                            _selectedSiswaIds.add(s.id!);
                           } else {
-                            _selectedStudentIds.remove(s.id);
+                            _selectedSiswaIds.remove(s.id);
                           }
                         });
                       },
@@ -155,14 +157,14 @@ class _BulkPlottingDialogState extends ConsumerState<BulkPlottingDialog> {
           child: const Text('Batal', style: TextStyle(color: Colors.grey)),
         ),
         ElevatedButton(
-          onPressed: (_selectedClassId == null || _selectedStudentIds.isEmpty || studentState.isLoading)
+          onPressed: (_selectedKelasId == null || _selectedSiswaIds.isEmpty || siswaState.isLoading)
               ? null
               : _handleBulkPlotting,
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF4F46E5),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
-          child: studentState.isLoading
+          child: siswaState.isLoading // PERBAIKAN: Case-sensitive fix
               ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
               : const Text('SIMPAN PLOTTING', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         ),
@@ -171,20 +173,20 @@ class _BulkPlottingDialogState extends ConsumerState<BulkPlottingDialog> {
   }
 
   void _handleBulkPlotting() async {
-    final success = await ref.read(studentProvider).bulkAssignToClass(
-      _selectedStudentIds,
-      _selectedClassId,
+    final success = await ref.read(siswaProvider).bulkAssignToKelas( // PERBAIKAN: Label Kelas
+      _selectedSiswaIds,
+      _selectedKelasId,
     );
 
     if (mounted) {
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Berhasil memindahkan santri!"), backgroundColor: Colors.green),
+          const SnackBar(content: Text("Berhasil memindahkan siswa!"), backgroundColor: Colors.green),
         );
         Navigator.pop(context);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Gagal: ${ref.read(studentProvider).errorMessage}"), backgroundColor: Colors.red),
+          SnackBar(content: Text("Gagal: ${ref.read(siswaProvider).errorMessage}"), backgroundColor: Colors.red),
         );
       }
     }

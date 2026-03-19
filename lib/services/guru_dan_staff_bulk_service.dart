@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:share_plus/share_plus.dart'; // Opsional: Untuk membagikan file hasil export
-import '../features/guru_staff/models/staff_model.dart';
+import 'package:tahfidz_core/shared/models/profile_model.dart';
 import '../features/guru_staff/providers/staff_provider.dart';
 import '../features/guru_staff/providers/penugasan_staf_provider.dart';
 import 'auth_service.dart';
@@ -23,7 +23,7 @@ class GuruDanStaffBulkService {
   GuruDanStaffBulkService(this._ref);
 
   // --- 1. EXPORT DATA KE CSV ---
-  Future<void> exportKeCsv(List<StaffModel> listStaff) async {
+  Future<void> exportKeCsv(List<ProfileModel> listStaff) async {
     // Header sesuai dengan prototype React Anda
     List<List<dynamic>> rows = [
       ["Nama Lengkap", "NIP", "Nomor HP", "Email", "Jabatan", "Cabang", "Status"]
@@ -33,7 +33,7 @@ class GuruDanStaffBulkService {
     for (var staff in listStaff) {
       rows.add([
         staff.nama,
-        staff.id?.substring(0, 8).toUpperCase() ?? '-',
+        staff.id.substring(0, 8).toUpperCase() ?? '-',
         staff.kontak ?? '-',
         "-", // Email biasanya sensitif, bisa dikosongkan atau ambil dari auth
         staff.namaJabatan ?? '-',

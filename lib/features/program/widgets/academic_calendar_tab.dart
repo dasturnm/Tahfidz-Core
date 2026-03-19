@@ -120,7 +120,7 @@ class _AcademicCalendarTabState extends ConsumerState<AcademicCalendarTab> {
                 const SizedBox(height: 16),
                 _buildLabel("Status Hari"),
                 DropdownButtonFormField<String>(
-                  value: status,
+                  initialValue: status,
                   items: const [
                     DropdownMenuItem(value: 'EFEKTIF', child: Text("HARI EFEKTIF (Hijau)")),
                     DropdownMenuItem(value: 'LIBUR', child: Text("HARI LIBUR (Merah)")),
@@ -145,7 +145,7 @@ class _AcademicCalendarTabState extends ConsumerState<AcademicCalendarTab> {
                 const SizedBox(height: 16),
                 _buildLabel("Cakupan (Scope)"),
                 DropdownButtonFormField<String>(
-                  value: scope,
+                  initialValue: scope,
                   items: const [
                     DropdownMenuItem(value: 'GLOBAL', child: Text("Global (Semua)")),
                     DropdownMenuItem(value: 'PROG_SPESIFIK', child: Text("Program Spesifik")),
@@ -158,7 +158,7 @@ class _AcademicCalendarTabState extends ConsumerState<AcademicCalendarTab> {
                   _buildLabel("Pilih Program"),
                   ref.watch(programNotifierProvider).when(
                     data: (progs) => DropdownButtonFormField<String>(
-                      value: targetProgramId,
+                      initialValue: targetProgramId,
                       items: progs.map((p) => DropdownMenuItem(value: p.id, child: Text(p.namaProgram))).toList(),
                       onChanged: (val) => setDialogState(() => targetProgramId = val),
                       decoration: _inputDecor("Pilih program"),

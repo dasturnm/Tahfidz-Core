@@ -1,45 +1,49 @@
+// Lokasi: lib/features/akademik/kurikulum/models/kurikulum_model.dart
+
 class KurikulumModel {
   final String? id;
   final String lembagaId;
+  final String? tahunAjaranId; // Tambahan sesuai DB
+  final String? programId; // Tambahan sesuai DB
   final String namaKurikulum;
   final String? deskripsi;
   final String status;
   final bool isActive;
   final bool isLinear; // TAMBAHAN: Logika level tunggal
-  final List<JenjangModel> jenjangs;
+  final List<JenjangModel> jenjang; // PERBAIKAN: Buang 's'
 
   KurikulumModel({
     this.id,
     required this.lembagaId,
+    this.tahunAjaranId, // Tambahan
+    this.programId, // Tambahan
     required this.namaKurikulum,
     this.deskripsi,
     this.status = 'aktif',
     this.isActive = true,
     this.isLinear = false, // TAMBAHAN
-    this.jenjangs = const [],
+    this.jenjang = const [], // PERBAIKAN: Buang 's'
   });
 
   // PERBAIKAN POIN 5: Getters Otomatis untuk Statistik
-  int get totalLevels => jenjangs.fold(0, (sum, j) => sum + j.levels.length);
+  int get totalLevel => jenjang.fold(0, (sum, j) => sum + j.level.length);
 
-  int get totalModules {
+  int get totalModul { // PERBAIKAN: Buang 's'
     int count = 0;
-    for (var j in jenjangs) {
-      for (var l in j.levels) {
-        count += l.modules.length;
+    for (var j in jenjang) {
+      for (var l in j.level) {
+        count += l.modul.length;
       }
     }
     return count;
   }
 
-  // PERBAIKAN: Nama disesuaikan menjadi totalTargets agar konsisten dengan ModulModel.targets
-  int get totalTargets {
+  // PERBAIKAN: Nama disesuaikan menjadi totalTarget agar konsisten dengan ModulModel.target
+  int get totalTarget {
     int count = 0;
-    for (var j in jenjangs) {
-      for (var l in j.levels) {
-        for (var m in l.modules) {
-          count += m.targets.length;
-        }
+    for (var j in jenjang) {
+      for (var l in j.level) {
+        count += l.modul.length; // 1 Modul = 1 Target
       }
     }
     return count;
@@ -48,13 +52,15 @@ class KurikulumModel {
   factory KurikulumModel.fromJson(Map<String, dynamic> json) => KurikulumModel(
     id: json['id']?.toString(),
     lembagaId: json['lembaga_id']?.toString() ?? '',
+    tahunAjaranId: json['tahun_ajaran_id']?.toString(), // Tambahan
+    programId: json['program_id']?.toString(), // Tambahan
     namaKurikulum: json['nama_kurikulum'] ?? '',
     deskripsi: json['deskripsi'],
     status: json['status'] ?? 'aktif',
     isActive: json['is_active'] ?? true,
     isLinear: json['is_linear'] ?? false, // TAMBAHAN: Mapping snake_case
-    jenjangs: (json['jenjangs'] is List)
-        ? (json['jenjangs'] as List)
+    jenjang: (json['jenjang'] is List) // PERBAIKAN: Buang 's'
+        ? (json['jenjang'] as List)
         .whereType<Map<String, dynamic>>()
         .map((x) => JenjangModel.fromJson(x))
         .toList()
@@ -62,14 +68,43 @@ class KurikulumModel {
   );
 
   Map<String, dynamic> toJson() => {
+    if (id != null) 'id': id, // FIX: Sertakan ID untuk sinkronisasi UUID
     'lembaga_id': lembagaId,
+    'tahun_ajaran_id': tahunAjaranId, // Tambahan
+    'program_id': programId, // Tambahan
     'nama_kurikulum': namaKurikulum,
     'deskripsi': deskripsi,
     'status': status,
     'is_active': isActive,
     'is_linear': isLinear, // TAMBAHAN: Mapping snake_case
-    'jenjangs': List<dynamic>.from(jenjangs.map((x) => x.toJson())),
+    'jenjang': List<dynamic>.from(jenjang.map((x) => x.toJson())), // PERBAIKAN: Buang 's'
   };
+
+  KurikulumModel copyWith({
+    String? id,
+    String? lembagaId,
+    String? tahunAjaranId,
+    String? programId,
+    String? namaKurikulum,
+    String? deskripsi,
+    String? status,
+    bool? isActive,
+    bool? isLinear,
+    List<JenjangModel>? jenjang,
+  }) {
+    return KurikulumModel(
+      id: id ?? this.id,
+      lembagaId: lembagaId ?? this.lembagaId,
+      tahunAjaranId: tahunAjaranId ?? this.tahunAjaranId,
+      programId: programId ?? this.programId,
+      namaKurikulum: namaKurikulum ?? this.namaKurikulum,
+      deskripsi: deskripsi ?? this.deskripsi,
+      status: status ?? this.status,
+      isActive: isActive ?? this.isActive,
+      isLinear: isLinear ?? this.isLinear,
+      jenjang: jenjang ?? this.jenjang,
+    );
+  }
 }
 
 class JenjangModel {
@@ -77,14 +112,14 @@ class JenjangModel {
   final String kurikulumId;
   final String namaJenjang;
   final String? deskripsi;
-  final List<LevelModel> levels;
+  final List<LevelModel> level;
 
   JenjangModel({
     this.id,
     required this.kurikulumId,
     required this.namaJenjang,
     this.deskripsi,
-    this.levels = const [],
+    this.level = const [],
   });
 
   factory JenjangModel.fromJson(Map<String, dynamic> json) => JenjangModel(
@@ -92,8 +127,8 @@ class JenjangModel {
     kurikulumId: json['kurikulum_id']?.toString() ?? '',
     namaJenjang: json['nama_jenjang'] ?? '',
     deskripsi: json['deskripsi'],
-    levels: (json['levels'] is List)
-        ? (json['levels'] as List)
+    level: (json['level'] is List)
+        ? (json['level'] as List)
         .whereType<Map<String, dynamic>>()
         .map((x) => LevelModel.fromJson(x))
         .toList()
@@ -101,11 +136,28 @@ class JenjangModel {
   );
 
   Map<String, dynamic> toJson() => {
+    if (id != null) 'id': id, // FIX: Sertakan ID untuk sinkronisasi UUID
     'kurikulum_id': kurikulumId,
     'nama_jenjang': namaJenjang,
     'deskripsi': deskripsi,
-    'levels': List<dynamic>.from(levels.map((x) => x.toJson())),
+    'level': List<dynamic>.from(level.map((x) => x.toJson())),
   };
+
+  JenjangModel copyWith({
+    String? id,
+    String? kurikulumId,
+    String? namaJenjang,
+    String? deskripsi,
+    List<LevelModel>? level,
+  }) {
+    return JenjangModel(
+      id: id ?? this.id,
+      kurikulumId: kurikulumId ?? this.kurikulumId,
+      namaJenjang: namaJenjang ?? this.namaJenjang,
+      deskripsi: deskripsi ?? this.deskripsi,
+      level: level ?? this.level,
+    );
+  }
 }
 
 class LevelModel {
@@ -118,7 +170,7 @@ class LevelModel {
   final int urutan;
   final String? kelasId;
   final String? namaKelas;
-  final List<ModulModel> modules;
+  final List<ModulModel> modul; // PERBAIKAN: Buang 's'
 
   LevelModel({
     this.id,
@@ -130,7 +182,7 @@ class LevelModel {
     required this.urutan,
     this.kelasId,
     this.namaKelas,
-    this.modules = const [],
+    this.modul = const [], // PERBAIKAN: Buang 's'
   });
 
   factory LevelModel.fromJson(Map<String, dynamic> json) => LevelModel(
@@ -141,31 +193,63 @@ class LevelModel {
     targetTotal: (json['target_total'] ?? 0).toDouble(),
     metrik: json['metrik'] ?? 'Juz',
     urutan: json['urutan'] ?? 0,
-    kelasId: (json['classes'] is List && (json['classes'] as List).isNotEmpty)
-        ? json['classes'][0]['id']?.toString()
-        : (json['classes'] is Map) ? json['classes']['id']?.toString() : null,
-    namaKelas: (json['classes'] is List && (json['classes'] as List).isNotEmpty)
-        ? json['classes'][0]['name']?.toString()
-        : (json['classes'] is Map) ? json['classes']['name']?.toString() : null,
-    modules: (json['modules'] is List)
-        ? (json['modules'] as List)
+    // FIX: Sinkronisasi dengan key 'kelas' atau 'classes'
+    kelasId: (json['kelas'] != null)
+        ? (json['kelas'] is List && (json['kelas'] as List).isNotEmpty ? json['kelas'][0]['id']?.toString() : json['kelas']['id']?.toString())
+        : (json['classes'] != null)
+        ? (json['classes'] is List && (json['classes'] as List).isNotEmpty ? json['classes'][0]['id']?.toString() : json['classes']['id']?.toString())
+        : null,
+    namaKelas: (json['kelas'] != null)
+        ? (json['kelas'] is List && (json['kelas'] as List).isNotEmpty ? json['kelas'][0]['name']?.toString() : json['kelas']['name']?.toString())
+        : (json['classes'] != null)
+        ? (json['classes'] is List && (json['classes'] as List).isNotEmpty ? json['classes'][0]['name']?.toString() : json['classes']['name']?.toString())
+        : null,
+    modul: (json['modul'] is List) // PERBAIKAN: Buang 's'
+        ? (json['modul'] as List)
         .whereType<Map<String, dynamic>>()
         .map((x) => ModulModel.fromJson(x))
         .toList()
         : const [],
   );
 
-  Map<String, dynamic> MapToJson() => {
+  Map<String, dynamic> mapToJson() => { // PERBAIKAN: lowerCamelCase
+    if (id != null) 'id': id, // FIX: Sertakan ID untuk sinkronisasi UUID
     'kurikulum_id': kurikulumId,
     'jenjang_id': jenjangId,
     'nama_level': namaLevel,
     'target_total': targetTotal,
     'metrik': metrik,
     'urutan': urutan,
-    'modules': List<dynamic>.from(modules.map((x) => x.toJson())),
+    'modul': List<dynamic>.from(modul.map((x) => x.toJson())), // PERBAIKAN: Buang 's'
   };
 
-  Map<String, dynamic> toJson() => MapToJson();
+  Map<String, dynamic> toJson() => mapToJson();
+
+  LevelModel copyWith({
+    String? id,
+    String? kurikulumId,
+    String? jenjangId,
+    String? namaLevel,
+    double? targetTotal,
+    String? metrik,
+    int? urutan,
+    String? kelasId,
+    String? namaKelas,
+    List<ModulModel>? modul,
+  }) {
+    return LevelModel(
+      id: id ?? this.id,
+      kurikulumId: kurikulumId ?? this.kurikulumId,
+      jenjangId: jenjangId ?? this.jenjangId,
+      namaLevel: namaLevel ?? this.namaLevel,
+      targetTotal: targetTotal ?? this.targetTotal,
+      metrik: metrik ?? this.metrik,
+      urutan: urutan ?? this.urutan,
+      kelasId: kelasId ?? this.kelasId,
+      namaKelas: namaKelas ?? this.namaKelas,
+      modul: modul ?? this.modul,
+    );
+  }
 }
 
 class ModulModel {
@@ -173,16 +257,26 @@ class ModulModel {
   final String levelId;
   final String namaModul;
   final String tipe;
-  final int durasiHari;
-  final List<TargetMetrikModel> targets;
+  final int targetPertemuan;
+  final String? silabus;
+  final bool isSystemGenerated;
+  final String jenisMetrik;
+  final String? mulaiKoordinat;
+  final String? akhirKoordinat;
+  final double kkm;
 
   ModulModel({
     this.id,
     required this.levelId,
     required this.namaModul,
     required this.tipe,
-    this.durasiHari = 30,
-    this.targets = const [],
+    this.targetPertemuan = 30,
+    this.silabus,
+    this.isSystemGenerated = false,
+    this.jenisMetrik = 'HALAMAN',
+    this.mulaiKoordinat,
+    this.akhirKoordinat,
+    this.kkm = 80,
   });
 
   factory ModulModel.fromJson(Map<String, dynamic> json) => ModulModel(
@@ -190,79 +284,54 @@ class ModulModel {
     levelId: json['level_id']?.toString() ?? '',
     namaModul: json['nama_modul'] ?? '',
     tipe: json['tipe'] ?? 'HAFALAN',
-    durasiHari: json['durasi_hari'] ?? 30,
-    targets: (json['targets'] is List)
-        ? (json['targets'] as List)
-        .whereType<Map<String, dynamic>>()
-        .map((x) => TargetMetrikModel.fromJson(x))
-        .toList()
-        : const [],
+    targetPertemuan: json['target_pertemuan'] ?? 30,
+    silabus: json['silabus'],
+    isSystemGenerated: json['is_system_generated'] ?? false,
+    jenisMetrik: json['jenis_metrik'] ?? 'HALAMAN',
+    mulaiKoordinat: json['mulai_koordinat'],
+    akhirKoordinat: json['akhir_koordinat'],
+    kkm: (json['kkm'] ?? 80).toDouble(),
   );
 
   Map<String, dynamic> toJson() => {
+    if (id != null) 'id': id,
     'level_id': levelId,
     'nama_modul': namaModul,
     'tipe': tipe,
-    'durasi_hari': durasiHari,
-    'targets': List<dynamic>.from(targets.map((x) => x.toJson())),
-  };
-}
-
-class TargetMetrikModel {
-  final String? id;
-  final String modulId;
-  final String jenisMetrik;
-  final String inputType;
-  final List<String> options;
-  final bool isPrimary;
-  final bool hasTarget;
-  final String satuan;
-  final String mulai;
-  final String akhir;
-  final double kkm;
-  final double weight;
-
-  TargetMetrikModel({
-    this.id,
-    required this.modulId,
-    required this.jenisMetrik,
-    this.inputType = 'NUMBER',
-    this.options = const [],
-    this.isPrimary = false,
-    this.hasTarget = false,
-    required this.satuan,
-    required this.mulai,
-    required this.akhir,
-    this.kkm = 80,
-    this.weight = 0.0,
-  });
-
-  factory TargetMetrikModel.fromJson(Map<String, dynamic> json) => TargetMetrikModel(
-    id: json['id']?.toString(),
-    modulId: json['modul_id']?.toString() ?? '',
-    jenisMetrik: json['jenis_metrik'] ?? 'JUZ',
-    inputType: json['input_type'] ?? 'NUMBER',
-    options: json['options'] != null ? List<String>.from(json['options']) : const [],
-    isPrimary: json['is_primary'] ?? false,
-    hasTarget: json['has_target'] ?? false,
-    satuan: json['satuan'] ?? '',
-    mulai: json['mulai'] ?? '',
-    akhir: json['akhir'] ?? '',
-    kkm: (json['kkm'] ?? 80).toDouble(),
-    weight: (json['weight'] ?? 0.0).toDouble(),
-  );
-
-  Map<String, dynamic> toJson() => {
-    'modul_id': modulId,
+    'target_pertemuan': targetPertemuan,
+    'silabus': silabus,
+    'is_system_generated': isSystemGenerated,
     'jenis_metrik': jenisMetrik,
-    'input_type': inputType,
-    'options': options,
-    'is_primary': isPrimary,
-    'has_target': hasTarget,
-    'satuan': satuan,
-    'mulai': mulai,
-    'akhir': akhir,
+    'mulai_koordinat': mulaiKoordinat,
+    'akhir_koordinat': akhirKoordinat,
     'kkm': kkm,
-    'weight': weight,
   };
+
+  ModulModel copyWith({
+    String? id,
+    String? levelId,
+    String? namaModul,
+    String? tipe,
+    int? targetPertemuan,
+    String? silabus,
+    bool? isSystemGenerated,
+    String? jenisMetrik,
+    String? mulaiKoordinat,
+    String? akhirKoordinat,
+    double? kkm,
+  }) {
+    return ModulModel(
+      id: id ?? this.id,
+      levelId: levelId ?? this.levelId,
+      namaModul: namaModul ?? this.namaModul,
+      tipe: tipe ?? this.tipe,
+      targetPertemuan: targetPertemuan ?? this.targetPertemuan,
+      silabus: silabus ?? this.silabus,
+      isSystemGenerated: isSystemGenerated ?? this.isSystemGenerated,
+      jenisMetrik: jenisMetrik ?? this.jenisMetrik,
+      mulaiKoordinat: mulaiKoordinat ?? this.mulaiKoordinat,
+      akhirKoordinat: akhirKoordinat ?? this.akhirKoordinat,
+      kkm: kkm ?? this.kkm,
+    );
+  }
 }

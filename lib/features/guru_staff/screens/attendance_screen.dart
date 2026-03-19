@@ -78,13 +78,13 @@ class AttendanceScreen extends ConsumerWidget {
                             // TOMBOL AKSI: H (Hadir), I (Izin), S (Sakit), A (Alpa)
                             Row(
                               children: [
-                                _buildAbsenButton(ref, staff.id!, "H", statusAbsen == "H" ? Colors.green : Colors.grey[300]!, "Hadir"),
+                                _buildAbsenButton(ref, staff.id, "H", statusAbsen == "H" ? Colors.green : Colors.grey[300]!, "Hadir"),
                                 const SizedBox(width: 6),
-                                _buildAbsenButton(ref, staff.id!, "I", statusAbsen == "I" ? Colors.orange : Colors.grey[300]!, "Izin"),
+                                _buildAbsenButton(ref, staff.id, "I", statusAbsen == "I" ? Colors.orange : Colors.grey[300]!, "Izin"),
                                 const SizedBox(width: 6),
-                                _buildAbsenButton(ref, staff.id!, "S", statusAbsen == "S" ? Colors.blue : Colors.grey[300]!, "Sakit"),
+                                _buildAbsenButton(ref, staff.id, "S", statusAbsen == "S" ? Colors.blue : Colors.grey[300]!, "Sakit"),
                                 const SizedBox(width: 6),
-                                _buildAbsenButton(ref, staff.id!, "A", statusAbsen == "A" ? Colors.red : Colors.grey[300]!, "Alpa"),
+                                _buildAbsenButton(ref, staff.id, "A", statusAbsen == "A" ? Colors.red : Colors.grey[300]!, "Alpa"),
                               ],
                             ),
                           ],

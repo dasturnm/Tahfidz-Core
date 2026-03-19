@@ -4,14 +4,14 @@ import 'package:flutter/material.dart';
 import '../models/kurikulum_model.dart';
 
 class LevelTableView extends StatelessWidget {
-  final List<LevelModel> levels;
+  final List<LevelModel> level;
   final Color primaryColor;
   final Function(LevelModel) onAction;
   final Function(LevelModel) onTap;
 
   const LevelTableView({
     super.key,
-    required this.levels,
+    required this.level,
     required this.primaryColor,
     required this.onAction,
     required this.onTap,
@@ -41,22 +41,22 @@ class LevelTableView extends StatelessWidget {
               DataColumn(label: _buildHeader("MODUL")),
               DataColumn(label: _buildHeader("AKSI")),
             ],
-            rows: levels.map((level) {
+            rows: level.map((l) { // PERBAIKAN: Hindari shadowing variabel 'level'
               return DataRow(
                 cells: [
-                  DataCell(Text(level.urutan.toString(), style: const TextStyle(fontWeight: FontWeight.bold))),
+                  DataCell(Text(l.urutan.toString(), style: const TextStyle(fontWeight: FontWeight.bold))),
                   DataCell(
                       InkWell(
-                        onTap: () => onTap(level),
-                        child: Text(level.namaLevel, style: TextStyle(color: primaryColor, fontWeight: FontWeight.w600)),
+                        onTap: () => onTap(l),
+                        child: Text(l.namaLevel, style: TextStyle(color: primaryColor, fontWeight: FontWeight.w600)),
                       )
                   ),
-                  DataCell(Text("${level.targetTotal} ${level.metrik}")),
-                  DataCell(Text("${level.modules.length} Materi")),
+                  DataCell(Text("${l.targetTotal} ${l.metrik}")),
+                  DataCell(Text("${l.modul.length} Materi")), // PERBAIKAN: Sync ke model singular 'modul'
                   DataCell(
                     IconButton(
                       icon: const Icon(Icons.more_vert, color: Colors.grey),
-                      onPressed: () => onAction(level),
+                      onPressed: () => onAction(l),
                     ),
                   ),
                 ],

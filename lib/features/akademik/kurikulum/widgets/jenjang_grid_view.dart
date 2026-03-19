@@ -72,7 +72,7 @@ class JenjangGridView extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    "${jenjang.levels.length} Tingkatan/Level",
+                    "${jenjang.level.length} Tingkatan/Level",
                     style: TextStyle(
                       fontSize: 12,
                       color: Colors.grey[500],

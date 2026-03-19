@@ -14,14 +14,20 @@ class KurikulumList extends _$KurikulumList {
       String lembagaId, {
         String search = '',
         String status = 'Semua',
+        String? programId, // Tambahan filter sesuai model baru
+        String? tahunAjaranId, // Tambahan filter sesuai model baru
       }) async {
     try {
+      // FIX: Validasi agar query tidak error jika ID kosong atau null string
+      if (lembagaId.isEmpty || lembagaId == 'null') return [];
+
       debugPrint("DEBUG: Memuat Kurikulum (Search: $search, Status: $status)");
 
       var query = _supabase
           .from('kurikulum')
-      // PERBAIKAN POIN 3: Deep Select hingga ke level modul & target untuk statistik
-          .select('*, jenjangs:jenjang_kurikulum(*, levels:kurikulum_level(*, modules:modul_kurikulum(*, targets:target_metrik_kurikulum(*)), classes(id, name)))')
+      // FIX: Melepaskan join 'kelas' karena relasi (Foreign Key) belum ada di DB (PGRST200)
+      // MODIFIKASI: Hapus join target_metrik_kurikulum karena sudah menyatu di modul
+          .select('*, jenjang:jenjang_kurikulum(*, level:kurikulum_level(*, modul:modul_kurikulum(*)))')
           .eq('lembaga_id', lembagaId);
 
       // PERBAIKAN POIN 3: Implementasi Pencarian & Filter di Sisi Database
@@ -31,6 +37,15 @@ class KurikulumList extends _$KurikulumList {
 
       if (status != 'Semua') {
         query = query.eq('status', status.toLowerCase());
+      }
+
+      // FIX: Gunakan pengecekan .isNotEmpty untuk keamanan filter tambahan
+      if (programId != null && programId.isNotEmpty) {
+        query = query.eq('program_id', programId);
+      }
+
+      if (tahunAjaranId != null && tahunAjaranId.isNotEmpty) {
+        query = query.eq('tahun_ajaran_id', tahunAjaranId);
       }
 
       final response = await query.order('nama_kurikulum');
@@ -49,12 +64,13 @@ class KurikulumList extends _$KurikulumList {
 
   Future<void> saveKurikulum(KurikulumModel kurikulum) async {
     try {
-      final kurikulumData = kurikulum.toJson()..remove('jenjangs');
+      final kurikulumData = kurikulum.toJson()..remove('jenjang');
       String kurikulumId;
 
       // 1. Upsert Kurikulum utama
       if (kurikulum.id == null) {
-        final res = await _supabase.from('kurikulum').insert(kurikulumData).select().single();
+        // FIX: Pastikan ID null dihapus agar UUID auto-generate di DB
+        final res = await _supabase.from('kurikulum').insert(kurikulumData..remove('id')).select().single();
         kurikulumId = res['id'];
       } else {
         await _supabase.from('kurikulum').update(kurikulumData).eq('id', kurikulum.id!);
@@ -62,14 +78,15 @@ class KurikulumList extends _$KurikulumList {
       }
 
       // 2. Iterasi Jenjang
-      for (var jenjang in kurikulum.jenjangs) {
+      for (var jenjang in kurikulum.jenjang) {
         final jenjangData = jenjang.toJson()
-          ..remove('levels')
+          ..remove('level')
           ..['kurikulum_id'] = kurikulumId;
 
         String jenjangId;
         if (jenjang.id == null) {
-          final res = await _supabase.from('jenjang_kurikulum').insert(jenjangData).select().single();
+          // FIX: Pastikan ID null dihapus agar UUID auto-generate di DB
+          final res = await _supabase.from('jenjang_kurikulum').insert(jenjangData..remove('id')).select().single();
           jenjangId = res['id'];
         } else {
           await _supabase.from('jenjang_kurikulum').update(jenjangData).eq('id', jenjang.id!);
@@ -77,52 +94,32 @@ class KurikulumList extends _$KurikulumList {
         }
 
         // 3. Iterasi Level
-        for (var level in jenjang.levels) {
+        for (var level in jenjang.level) {
           final levelData = level.toJson()
-            ..remove('modules')
+            ..remove('modul')
             ..['jenjang_id'] = jenjangId
             ..['kurikulum_id'] = kurikulumId;
 
           String levelId;
           if (level.id == null) {
-            final res = await _supabase.from('kurikulum_level').insert(levelData).select().single();
+            // FIX: Pastikan ID null dihapus agar UUID auto-generate di DB
+            final res = await _supabase.from('kurikulum_level').insert(levelData..remove('id')).select().single();
             levelId = res['id'];
           } else {
             await _supabase.from('kurikulum_level').update(levelData).eq('id', level.id!);
             levelId = level.id!;
           }
 
-          // 4. Iterasi Modul
-          for (var modul in level.modules) {
+          // 4. Iterasi Modul (Sekarang mencakup data metrik langsung, tanpa looping target)
+          for (var modul in level.modul) {
             final modulData = modul.toJson()
-              ..remove('targets')
               ..['level_id'] = levelId;
 
-            String modulId;
             if (modul.id == null) {
-              final res = await _supabase.from('modul_kurikulum').insert(modulData).select().single();
-              modulId = res['id'];
+              // FIX: Pastikan ID null dihapus agar UUID auto-generate di DB
+              await _supabase.from('modul_kurikulum').insert(modulData..remove('id'));
             } else {
               await _supabase.from('modul_kurikulum').update(modulData).eq('id', modul.id!);
-              modulId = modul.id!;
-            }
-
-            // 5. Iterasi Target Metrik
-            for (var target in modul.targets) {
-              // PERBAIKAN: Membersihkan field tambahan agar tidak error saat simpan ke DB standar
-              final targetData = target.toJson()
-                ..['modul_id'] = modulId
-                ..remove('input_type')
-                ..remove('options')
-                ..remove('is_primary')
-                ..remove('has_target')
-                ..remove('weight');
-
-              if (target.id == null) {
-                await _supabase.from('target_metrik_kurikulum').insert(targetData);
-              } else {
-                await _supabase.from('target_metrik_kurikulum').update(targetData).eq('id', target.id!);
-              }
             }
           }
         }
@@ -151,11 +148,14 @@ class JenjangList extends _$JenjangList {
   @override
   Future<List<JenjangModel>> build(String kurikulumId) async {
     try {
+      // FIX: Proteksi ID null/kosong
+      if (kurikulumId.isEmpty || kurikulumId == 'null') return [];
+
       debugPrint("DEBUG: Memuat Jenjang untuk kurikulumId: $kurikulumId"); // PERBAIKAN: Gunakan debugPrint
       final response = await _supabase
           .from('jenjang_kurikulum')
-      // PERBAIKAN: Deep select hingga modul & target
-          .select('*, levels:kurikulum_level(*, modules:modul_kurikulum(*, targets:target_metrik_kurikulum(*)), classes(id, name))')
+      // MODIFIKASI: Hapus join target_metrik_kurikulum
+          .select('*, level:kurikulum_level(*, modul:modul_kurikulum(*))')
           .eq('kurikulum_id', kurikulumId)
           .order('id');
 
@@ -168,9 +168,9 @@ class JenjangList extends _$JenjangList {
 
   Future<void> saveJenjang(JenjangModel jenjang) async {
     try {
-      final Map<String, dynamic> data = jenjang.toJson()..remove('levels');
+      final Map<String, dynamic> data = jenjang.toJson()..remove('level');
       if (jenjang.id == null) {
-        await _supabase.from('jenjang_kurikulum').insert(data);
+        await _supabase.from('jenjang_kurikulum').insert(data..remove('id'));
       } else {
         await _supabase.from('jenjang_kurikulum').update(data).eq('id', jenjang.id!);
       }
@@ -198,13 +198,16 @@ class LevelList extends _$LevelList {
   @override
   Future<List<LevelModel>> build(String jenjangId) async {
     try {
+      // FIX: Proteksi ID null/kosong
+      if (jenjangId.isEmpty || jenjangId == 'null') return [];
+
       // DEBUG LOG: Sangat penting untuk cek ID yang dikirim UI
       debugPrint("DEBUG: Memuat Level untuk jenjang_id: $jenjangId"); // PERBAIKAN: Gunakan debugPrint
 
       final response = await _supabase
           .from('kurikulum_level')
-      // PERBAIKAN: Deep select termasuk target di dalam modul
-          .select('*, modules:modul_kurikulum(*, targets:target_metrik_kurikulum(*)), classes(id, name)')
+      // MODIFIKASI: Hapus join target_metrik_kurikulum
+          .select('*, modul:modul_kurikulum(*)')
           .eq('jenjang_id', jenjangId)
           .order('id', ascending: true);
 
@@ -218,7 +221,7 @@ class LevelList extends _$LevelList {
 
   Future<void> addLevel(LevelModel level) async {
     try {
-      await _supabase.from('kurikulum_level').insert(level.toJson()..remove('modules'));
+      await _supabase.from('kurikulum_level').insert(level.toJson()..remove('modul')..remove('id'));
       ref.invalidateSelf();
     } catch (e) {
       // SAFE CODE: Menangani error database
@@ -228,9 +231,9 @@ class LevelList extends _$LevelList {
 
   Future<void> saveLevel(LevelModel level) async {
     try {
-      final Map<String, dynamic> data = level.toJson()..remove('modules');
+      final Map<String, dynamic> data = level.toJson()..remove('modul');
       if (level.id == null) {
-        await _supabase.from('kurikulum_level').insert(data);
+        await _supabase.from('kurikulum_level').insert(data..remove('id'));
       } else {
         await _supabase.from('kurikulum_level').update(data).eq('id', level.id!);
       }
@@ -258,10 +261,13 @@ class ModulList extends _$ModulList {
   @override
   Future<List<ModulModel>> build(String levelId) async {
     try {
+      // FIX: Proteksi ID null/kosong
+      if (levelId.isEmpty || levelId == 'null') return [];
+
       debugPrint("DEBUG: Memuat Modul untuk levelId: $levelId"); // PERBAIKAN: Gunakan debugPrint
       final response = await _supabase
           .from('modul_kurikulum')
-          .select('*, targets:target_metrik_kurikulum(*)') // PERBAIKAN: Deep select target
+          .select('*')
           .eq('level_id', levelId);
 
       return (response as List).map((e) => ModulModel.fromJson(e)).toList();
@@ -273,9 +279,9 @@ class ModulList extends _$ModulList {
 
   Future<void> saveModul(ModulModel modul) async {
     try {
-      final Map<String, dynamic> data = modul.toJson()..remove('targets');
+      final Map<String, dynamic> data = modul.toJson();
       if (modul.id == null) {
-        await _supabase.from('modul_kurikulum').insert(data);
+        await _supabase.from('modul_kurikulum').insert(data..remove('id'));
       } else {
         await _supabase.from('modul_kurikulum').update(data).eq('id', modul.id!);
       }
@@ -295,58 +301,7 @@ class ModulList extends _$ModulList {
   }
 }
 
-@riverpod
-class TargetMetrikList extends _$TargetMetrikList {
-  final _supabase = Supabase.instance.client;
-
-  @override
-  Future<List<TargetMetrikModel>> build(String modulId) async {
-    try {
-      debugPrint("DEBUG: Memuat Target untuk modulId: $modulId"); // PERBAIKAN: Gunakan debugPrint
-      final response = await _supabase
-          .from('target_metrik_kurikulum')
-          .select()
-          .eq('modul_id', modulId);
-
-      return (response as List).map((e) => TargetMetrikModel.fromJson(e)).toList();
-    } catch (e) {
-      debugPrint("Error build TargetMetrikList: $e"); // PERBAIKAN: Gunakan debugPrint
-      return [];
-    }
-  }
-
-  Future<void> saveTarget(TargetMetrikModel target) async {
-    try {
-      // PERBAIKAN: Pembersihan data field tambahan sebelum simpan (Insert/Update)
-      final Map<String, dynamic> data = target.toJson()
-        ..remove('input_type')
-        ..remove('options')
-        ..remove('is_primary')
-        ..remove('has_target')
-        ..remove('weight');
-
-      if (target.id == null) {
-        await _supabase.from('target_metrik_kurikulum').insert(data);
-      } else {
-        await _supabase.from('target_metrik_kurikulum').update(data).eq('id', target.id!);
-      }
-      ref.invalidateSelf();
-    } catch (e) {
-      debugPrint("Error saveTarget: $e"); // PERBAIKAN: Gunakan debugPrint
-    }
-  }
-
-  Future<void> deleteTarget(String id) async {
-    try {
-      await _supabase.from('target_metrik_kurikulum').delete().eq('id', id);
-      ref.invalidateSelf();
-    } catch (e) {
-      debugPrint("Error deleteTarget: $e"); // PERBAIKAN: Gunakan debugPrint
-    }
-  }
-}
-
-// PERBAIKAN: Menambahkan provider untuk fitur Penempatan Kelas (Mapping Level ke classes)
+// PERBAIKAN: Menambahkan provider untuk fitur Penempatan Kelas (Mapping Level ke kelas)
 @riverpod
 class LevelKelasMapping extends _$LevelKelasMapping {
   final _supabase = Supabase.instance.client;
@@ -354,10 +309,13 @@ class LevelKelasMapping extends _$LevelKelasMapping {
   @override
   Future<List<Map<String, dynamic>>> build(String levelId) async {
     try {
-      // PERBAIKAN: Join ke tabel profiles untuk mendapatkan nama lengkap muallim
+      // FIX: Proteksi ID null/kosong
+      if (levelId.isEmpty || levelId == 'null') return [];
+
+      // PERBAIKAN: Menggunakan tabel 'kelas' sesuai Schema v2 dan join profiles
       final response = await _supabase
-          .from('classes')
-          .select('id, name, muallim:profiles(nama_lengkap)')
+          .from('kelas')
+          .select('id, name, guru:profiles(nama_lengkap)')
           .eq('level_id', levelId);
 
       return List<Map<String, dynamic>>.from(response);
@@ -370,7 +328,7 @@ class LevelKelasMapping extends _$LevelKelasMapping {
   Future<void> linkKelas(String kelasId, String levelId) async {
     try {
       await _supabase
-          .from('classes')
+          .from('kelas')
           .update({'level_id': levelId})
           .eq('id', kelasId);
       ref.invalidateSelf();
@@ -382,7 +340,7 @@ class LevelKelasMapping extends _$LevelKelasMapping {
   Future<void> unlinkKelas(String kelasId) async {
     try {
       await _supabase
-          .from('classes')
+          .from('kelas')
           .update({'level_id': null})
           .eq('id', kelasId);
       ref.invalidateSelf();

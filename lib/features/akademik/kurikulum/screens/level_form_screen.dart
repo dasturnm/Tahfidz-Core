@@ -158,7 +158,7 @@ class _LevelFormScreenState extends ConsumerState<LevelFormScreen> {
       kurikulumId: widget.jenjang.kurikulumId, // PERBAIKAN FATAL: Menghapus operator '!' karena variabel sudah bertipe non-nullable String
       namaLevel: _namaController.text.trim(),
       urutan: int.parse(_urutanController.text),
-      modules: widget.level?.modules ?? [], // Mengikuti struktur Level -> Modul
+      modul: widget.level?.modul ?? [], // Mengikuti struktur Level -> Modul
     );
 
     await ref.read(levelListProvider(widget.jenjang.id!).notifier).saveLevel(newLevel);

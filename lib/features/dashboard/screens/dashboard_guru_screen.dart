@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-class DashboardGuruScreen extends StatelessWidget {
-  const DashboardGuruScreen({super.key});
+class DashboardGurucreen extends StatelessWidget {
+  const DashboardGurucreen({super.key});
 
   @override
   Widget build(BuildContext context) {

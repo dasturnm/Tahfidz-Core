@@ -1,6 +1,6 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../models/staff_model.dart';
+import 'package:tahfidz_core/shared/models/profile_model.dart';
 
 part 'staff_provider.g.dart';
 
@@ -17,7 +17,7 @@ class StaffList extends _$StaffList {
   final _supabase = Supabase.instance.client;
 
   @override
-  Future<List<StaffModel>> build() async {
+  Future<List<ProfileModel>> build() async {
     // 1. Ambil user yang sedang login
     final user = _supabase.auth.currentUser;
     if (user == null) return [];
@@ -39,7 +39,7 @@ class StaffList extends _$StaffList {
         .eq('lembaga_id', profile['lembaga_id'])
         .order('nama_lengkap', ascending: true);
 
-    // 4. Mapping data Map dari Supabase ke StaffModel
+    // 4. Mapping data Map dari Supabase ke ProfileModel
     final today = DateTime.now().toIso8601String().split('T')[0];
 
     return (response as List).map((json) {
@@ -61,7 +61,7 @@ class StaffList extends _$StaffList {
         orElse: () => null,
       );
 
-      return StaffModel.fromJson({
+      return ProfileModel.fromJson({
         ...json,
         'nama': json['nama_lengkap'], // Sinkronisasi nama kolom
         'namaDivisi': json['divisi']?['nama_divisi'] ?? '-', // Fallback jika null

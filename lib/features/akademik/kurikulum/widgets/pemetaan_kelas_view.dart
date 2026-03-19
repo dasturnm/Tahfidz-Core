@@ -1,3 +1,5 @@
+// Lokasi: lib/features/akademik/kurikulum/widgets/pemetaan_kelas_view.dart
+
 import 'package:flutter/material.dart';
 import '../models/kurikulum_model.dart';
 
@@ -22,8 +24,8 @@ class PemetaanKelasView extends StatelessWidget {
     // Logic Mapping
     var activeMappings = <Map<String, dynamic>>[];
     for (var k in kurikulumList) {
-      for (var j in k.jenjangs) {
-        for (var l in j.levels) {
+      for (var j in k.jenjang) { // PERBAIKAN: Singular jenjang
+        for (var l in j.level) {
           if (l.kelasId != null) {
             activeMappings.add({
               'kelas_name': l.namaKelas,
@@ -47,7 +49,6 @@ class PemetaanKelasView extends StatelessWidget {
     return isGridView ? _buildGridView(activeMappings) : _buildTableView(activeMappings);
   }
 
-  // ... sisa widget helper (GridView/TableView/Card/Badge) tetap identik 100% ...
   Widget _buildGridView(List<Map<String, dynamic>> list) {
     return ListView.builder(
       padding: const EdgeInsets.all(32),
@@ -73,7 +74,7 @@ class PemetaanKelasView extends StatelessWidget {
             contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
             leading: Container(
               padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(color: slate.withOpacity(0.05), shape: BoxShape.circle),
+              decoration: BoxDecoration(color: slate.withValues(alpha: 0.05), shape: BoxShape.circle), // PERBAIKAN: withValues
               child: Icon(Icons.room_preferences_outlined, color: slate, size: 18),
             ),
             title: Text(item['kelas_name'] ?? "Kelas", style: const TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF1E293B))),
@@ -126,12 +127,33 @@ class PemetaanKelasView extends StatelessWidget {
   Widget _buildBadge(String text, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
+      decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)), // PERBAIKAN: withValues
       child: Text(text, style: TextStyle(color: color, fontSize: 9, fontWeight: FontWeight.bold)),
     );
   }
 
   Widget _buildEmptyState() {
-    return const Center(child: Padding(padding: EdgeInsets.all(40.0), child: Text("Belum ada kelas yang dipetakan ke kurikulum.", textAlign: TextAlign.center, style: TextStyle(color: Colors.grey))));
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(48.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.room_preferences_outlined, size: 64, color: Colors.grey[200]),
+            const SizedBox(height: 16),
+            const Text(
+                "Belum Ada Pemetaan Kelas",
+                style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: Color(0xFF1E293B))
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              "Halaman ini menampilkan kelas yang sudah terhubung dengan kurikulum. Silakan hubungkan kelas melalui menu 'Manajemen Kelas' untuk melihat hasilnya di sini.",
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey, fontSize: 13, height: 1.5),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

@@ -5,8 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
-import '../../kelas/providers/class_provider.dart';
-import '../providers/student_provider.dart';
+import '../../kelas/providers/kelas_provider.dart'; // PERBAIKAN: Path Import
+import '../providers/siswa_provider.dart';
 
 class AttendancePrintDialog extends ConsumerStatefulWidget {
   const AttendancePrintDialog({super.key});
@@ -24,8 +24,10 @@ class _AttendancePrintDialogState extends ConsumerState<AttendancePrintDialog> {
     if (_selectedClassId == null) return;
 
     final pdf = pw.Document();
-    final className = ref.read(classProvider).classes.firstWhere((c) => c.id == _selectedClassId).name;
-    final students = ref.read(studentProvider).getStudentsInClass(_selectedClassId!);
+    // PERBAIKAN: classes -> kelas
+    final className = ref.read(kelasProvider).kelas.firstWhere((c) => c.id == _selectedClassId).name;
+    // PERBAIKAN: getsiswaInClass -> getSiswaInKelas
+    final siswa = ref.read(siswaProvider).getSiswaInKelas(_selectedClassId!);
 
     pdf.addPage(
       pw.Page(
@@ -38,11 +40,11 @@ class _AttendancePrintDialogState extends ConsumerState<AttendancePrintDialog> {
               pw.Text("Periode: ${_selectedMonth.month}/${_selectedMonth.year}"),
               pw.SizedBox(height: 20),
               pw.TableHelper.fromTextArray(
-                headers: ['No', 'Nama Santri', ...List.generate(31, (index) => (index + 1).toString())],
-                data: List.generate(students.length, (index) {
+                headers: ['No', 'Nama Siswa', ...List.generate(31, (index) => (index + 1).toString())],
+                data: List.generate(siswa.length, (index) {
                   return [
                     (index + 1).toString(),
-                    students[index].namaLengkap,
+                    siswa[index].namaLengkap,
                     ...List.generate(31, (index) => "")
                   ];
                 }),
@@ -60,7 +62,8 @@ class _AttendancePrintDialogState extends ConsumerState<AttendancePrintDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final classes = ref.watch(classProvider).classes;
+    // PERBAIKAN: classes -> kelas
+    final classes = ref.watch(kelasProvider).kelas;
 
     return AlertDialog(
       title: const Text("Cetak Absensi", style: TextStyle(fontWeight: FontWeight.bold)),

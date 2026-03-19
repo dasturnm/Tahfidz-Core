@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../program/providers/program_provider.dart';
 import '../../akademik/kurikulum/providers/kurikulum_provider.dart';
-import '../providers/student_provider.dart';
-import '../models/student_model.dart';
+import '../providers/siswa_provider.dart';
+import '../models/siswa_model.dart';
 
 class EnrollKurikulumDialog extends ConsumerStatefulWidget {
-  final StudentModel siswa;
+  final SiswaModel siswa;
   const EnrollKurikulumDialog({super.key, required this.siswa});
 
   @override
@@ -74,9 +74,9 @@ class _EnrollKurikulumDialogState extends ConsumerState<EnrollKurikulumDialog> {
             // STEP 3: PILIH JENJANG (Hanya muncul jika kurikulum dipilih) - LOGIKA 4 LAPIS
             if (_selectedKurikulumId != null)
               ref.watch(jenjangListProvider(_selectedKurikulumId!)).when(
-                data: (jenjangs) => DropdownButtonFormField<String>(
+                data: (jenjang) => DropdownButtonFormField<String>(
                   decoration: _inputDecoration("Pilih Jenjang"),
-                  items: jenjangs.map((j) => DropdownMenuItem(value: j.id, child: Text(j.namaJenjang))).toList(),
+                  items: jenjang.map((j) => DropdownMenuItem(value: j.id, child: Text(j.namaJenjang))).toList(),
                   onChanged: (val) => setState(() {
                     _selectedJenjangId = val;
                     _selectedLevelId = null;
@@ -91,9 +91,9 @@ class _EnrollKurikulumDialogState extends ConsumerState<EnrollKurikulumDialog> {
             // STEP 4: PILIH LEVEL AWAL (Sekarang watch berdasarkan Jenjang)
             if (_selectedJenjangId != null)
               ref.watch(levelListProvider(_selectedJenjangId!)).when(
-                data: (levels) => DropdownButtonFormField<String>(
+                data: (level) => DropdownButtonFormField<String>(
                   decoration: _inputDecoration("Mulai dari Level"),
-                  items: levels.map((l) => DropdownMenuItem(value: l.id, child: Text("${l.urutan}. ${l.namaLevel}"))).toList(),
+                  items: level.map((l) => DropdownMenuItem(value: l.id, child: Text("${l.urutan}. ${l.namaLevel}"))).toList(),
                   onChanged: (val) => setState(() => _selectedLevelId = val),
                 ),
                 loading: () => const LinearProgressIndicator(),
@@ -132,8 +132,8 @@ class _EnrollKurikulumDialogState extends ConsumerState<EnrollKurikulumDialog> {
     );
 
     try {
-      // Menggunakan studentProvider (ChangeNotifier) untuk update data kurikulum
-      await ref.read(studentProvider).updateStudent(
+      // Menggunakan siswaProvider (ChangeNotifier) untuk update data kurikulum
+      await ref.read(siswaProvider).updateSiswa(
         widget.siswa.copyWith(
           programId: _selectedProgramId,
         ),

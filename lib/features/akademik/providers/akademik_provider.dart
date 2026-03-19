@@ -3,21 +3,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../program/models/program_model.dart';
-import '../services/akademik_service.dart'; // Import service beserta LevelModel-nya
+import '../services/akademik_service.dart';
+import '../kurikulum/models/kurikulum_model.dart'; // Ambil LevelModel yang sudah disatukan
 
 class AkademikProvider extends ChangeNotifier {
   final AkademikService _akademikService = AkademikService();
 
   // State untuk menyimpan data
-  List<ProgramModel> _programs = [];
-  List<LevelModel> _levels = [];
+  List<ProgramModel> _program = []; // PERBAIKAN: Singular
+  List<LevelModel> _level = [];
 
   bool _isLoading = false;
   String? _errorMessage;
 
   // Getter untuk UI
-  List<ProgramModel> get programs => _programs;
-  List<LevelModel> get levels => _levels;
+  List<ProgramModel> get program => _program; // PERBAIKAN: Singular
+  List<LevelModel> get level => _level;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
@@ -28,14 +29,14 @@ class AkademikProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Menggunakan Future.wait agar kedua data diambil dari Supabase secara paralel (lebih cepat!)
+      // Menggunakan Future.wait agar kedua data diambil dari Supabase secara paralel
       final results = await Future.wait([
-        _akademikService.getPrograms(),
-        _akademikService.getLevels(),
+        _akademikService.getProgram(), // PERBAIKAN: Singular
+        _akademikService.getLevel(),   // PERBAIKAN: camelCase & Singular
       ]);
 
-      _programs = results[0] as List<ProgramModel>;
-      _levels = results[1] as List<LevelModel>;
+      _program = results[0] as List<ProgramModel>; // PERBAIKAN: Singular
+      _level = results[1] as List<LevelModel>;
     } catch (e) {
       _errorMessage = e.toString();
     } finally {

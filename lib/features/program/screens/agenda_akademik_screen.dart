@@ -267,7 +267,7 @@ class _AgendaAkademikScreenState extends ConsumerState<AgendaAkademikScreen> {
                 const SizedBox(height: 16),
                 _buildLabel("Status Hari"),
                 DropdownButtonFormField<String>(
-                  value: status,
+                  initialValue: status,
                   items: const [
                     DropdownMenuItem(value: 'EFEKTIF', child: Text("HARI EFEKTIF")),
                     DropdownMenuItem(value: 'LIBUR', child: Text("HARI LIBUR")),

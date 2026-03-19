@@ -7,7 +7,7 @@ import '../../features/management_lembaga/screens/cabang_list_screen.dart';
 import '../../features/management_lembaga/screens/tahun_ajaran_screen.dart';
 import '../../features/management_lembaga/screens/divisi_list_screen.dart';
 import '../../features/guru_staff/screens/staff_list_screen.dart';
-import '../../features/siswa/screens/student_hub_screen.dart';
+import '../../features/siswa/screens/siswa_hub_screen.dart';
 import '../../features/program/screens/program_list_screen.dart';
 import '../../features/program/widgets/academic_calendar_tab.dart'; // Baru: Import Kalender
 import '../../features/program/screens/agenda_akademik_screen.dart'; // Baru: Import Agenda Screen
@@ -101,16 +101,16 @@ class AppDrawer extends ConsumerWidget {
                 ),
 
                 const Divider(),
-                _buildSectionHeader("DATA SANTRI"),
+                _buildSectionHeader("DATA SISWA"),
                 _buildDrawerItem(
                   icon: Icons.face_outlined,
                   label: "Daftar Siswa",
-                  onTap: () => _navigate(context, const StudentHubScreen()),
+                  onTap: () => _navigate(context, const SiswaHubScreen()),
                 ),
                 _buildDrawerItem(
                   icon: Icons.meeting_room_outlined,
                   label: "Manajemen Kelas",
-                  onTap: () => _navigate(context, const StudentHubScreen()),
+                  onTap: () => _navigate(context, const SiswaHubScreen()),
                 ),
 
                 const SizedBox(height: 20),

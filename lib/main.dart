@@ -9,6 +9,7 @@ import 'package:tahfidz_core/features/management_lembaga/screens/lembaga_profile
 
 // Import halaman update password
 import 'package:tahfidz_core/features/auth/screens/update_password_screen.dart';
+import 'package:device_preview/device_preview.dart';
 
 // Navigator key diperlukan untuk pindah halaman dari listener auth
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -24,7 +25,12 @@ void main() async {
     ),
   );
 
-  runApp(const ProviderScope(child: MyApp()));
+  runApp(
+    DevicePreview(
+      enabled: false,
+      builder: (context) => const ProviderScope(child: MyApp()),
+    ),
+  );
 }
 
 class MyApp extends ConsumerStatefulWidget {
@@ -56,6 +62,8 @@ class _MyAppState extends ConsumerState<MyApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      locale: DevicePreview.locale(context),
+      builder: DevicePreview.appBuilder,
       navigatorKey: navigatorKey, // Navigator key wajib dipasang di sini
       title: 'Tahfidz Core',
       debugShowCheckedModeBanner: false,
@@ -94,9 +102,13 @@ class _AuthGateState extends ConsumerState<AuthGate> {
     if (authState.isAuthenticated) {
       if (!_hasInitialized) {
         _hasInitialized = true;
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          ref.read(appContextProvider.notifier).initContext();
-        });
+        // PENTING: Gunakan Future.microtask agar initContext dipicu segera
+        Future.microtask(() => ref.read(appContextProvider.notifier).initContext());
+
+        // Segera tampilkan loading agar tidak terjadi 'flicker' ke layar profil
+        return const Scaffold(
+          body: Center(child: CircularProgressIndicator()),
+        );
       }
 
       if (appContext.isLoading) {

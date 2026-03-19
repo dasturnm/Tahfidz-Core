@@ -52,16 +52,16 @@ class _LevelDetailScreenState extends ConsumerState<LevelDetailScreen> {
           _buildBreadcrumbHeader(context),
           Expanded(
             child: modulAsync.when(
-              data: (modules) => modules.isEmpty
+              data: (modul) => modul.isEmpty
                   ? _buildEmptyState(context)
                   : _isGridView
                   ? ModulGridView(
-                modules: modules,
+                modul: modul,
                 onAction: (m) => _showModulActionSheet(context, m),
                 onTap: (m) => _navigateToModulDetail(context, m),
               )
                   : ModulTableView(
-                modules: modules,
+                modul: modul,
                 onAction: (m) => _showModulActionSheet(context, m),
                 onTap: (m) => _navigateToModulDetail(context, m),
               ),
@@ -80,32 +80,28 @@ class _LevelDetailScreenState extends ConsumerState<LevelDetailScreen> {
   }
 
   Widget _buildBreadcrumbHeader(BuildContext context) {
-    return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.fromLTRB(32, 8, 32, 24), // PERBAIKAN: Padding konsisten Hub
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(32, 16, 32, 16),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "LEVEL ${widget.level.namaLevel.toUpperCase()}",
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w900,
-                    color: _emerald,
-                    letterSpacing: 1.2,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  "Unit Modul",
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: _slate),
-                ),
-              ],
-            ),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(color: _emerald.withValues(alpha: 0.1), shape: BoxShape.circle),
+            child: Icon(Icons.layers_outlined, color: _emerald, size: 20),
+          ),
+          const SizedBox(width: 16),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "LEVEL ${widget.level.namaLevel.toUpperCase()}",
+                style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.grey, letterSpacing: 1),
+              ),
+              Text(
+                "Unit Modul Belajar",
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: _slate),
+              ),
+            ],
           ),
         ],
       ),
@@ -168,8 +164,9 @@ class _LevelDetailScreenState extends ConsumerState<LevelDetailScreen> {
 
   void _showAddModulSheet(BuildContext context, {ModulModel? modulToEdit}) {
     final nameController = TextEditingController(text: modulToEdit?.namaModul);
-    final durationController = TextEditingController(text: modulToEdit?.durasiHari.toString() ?? "30");
-    String selectedTipe = modulToEdit?.tipe ?? 'HAFALAN';
+    final durationController = TextEditingController(text: modulToEdit?.targetPertemuan.toString() ?? "30");
+    // Fallback: Jika data lama 'HAFALAN', konversi ke 'TAHFIDZ'
+    String selectedTipe = (modulToEdit?.tipe == 'HAFALAN') ? 'TAHFIDZ' : (modulToEdit?.tipe ?? 'BELAJAR BACA');
 
     showModalBottomSheet(
       context: context,
@@ -236,11 +233,11 @@ class _LevelDetailScreenState extends ConsumerState<LevelDetailScreen> {
                           ),
                           child: DropdownButtonHideUnderline(
                             child: DropdownButton<String>(
-                              value: ['HAFALAN', 'TAHSIN', 'TEORI', 'UJIAN'].contains(selectedTipe.toUpperCase()) ? selectedTipe.toUpperCase() : 'HAFALAN',
+                              value: ['BELAJAR BACA', 'TAJWID', 'TAHSIN', 'TAHFIDZ', 'MATAN', 'HADITS', 'ADAB'].contains(selectedTipe.toUpperCase()) ? selectedTipe.toUpperCase() : 'BELAJAR BACA',
                               isExpanded: true,
                               icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Colors.grey),
                               style: TextStyle(color: _slate, fontWeight: FontWeight.bold, fontSize: 14),
-                              items: ['HAFALAN', 'TAHSIN', 'TEORI', 'UJIAN'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                              items: ['BELAJAR BACA', 'TAJWID', 'TAHSIN', 'TAHFIDZ', 'MATAN', 'HADITS', 'ADAB'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
                               onChanged: (v) => setDialogState(() => selectedTipe = v!),
                             ),
                           ),
@@ -253,7 +250,7 @@ class _LevelDetailScreenState extends ConsumerState<LevelDetailScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text("DURASI (HARI)", style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.grey, letterSpacing: 1.2)),
+                        const Text("TARGET PERTEMUAN", style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.grey, letterSpacing: 1.2)),
                         const SizedBox(height: 8),
                         TextField(
                           controller: durationController,
@@ -284,7 +281,13 @@ class _LevelDetailScreenState extends ConsumerState<LevelDetailScreen> {
                       levelId: widget.level.id!,
                       namaModul: nameController.text.trim(),
                       tipe: selectedTipe.toUpperCase(),
-                      durasiHari: int.tryParse(durationController.text) ?? 30,
+                      targetPertemuan: int.tryParse(durationController.text) ?? 30,
+                      silabus: modulToEdit?.silabus,
+                      isSystemGenerated: modulToEdit?.isSystemGenerated ?? false,
+                      jenisMetrik: modulToEdit?.jenisMetrik ?? 'HALAMAN',
+                      mulaiKoordinat: modulToEdit?.mulaiKoordinat,
+                      akhirKoordinat: modulToEdit?.akhirKoordinat,
+                      kkm: modulToEdit?.kkm ?? 80,
                     );
 
                     await ref.read(modulListProvider(widget.level.id!).notifier).saveModul(modulData);
@@ -341,25 +344,32 @@ class _LevelDetailScreenState extends ConsumerState<LevelDetailScreen> {
 
   Widget _buildEmptyState(BuildContext context) {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.auto_stories_outlined, size: 80, color: Color(0xFFE2E8F0)),
-          const SizedBox(height: 16),
-          const Text(
-            "Belum ada unit modul belajar.",
-            style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w500),
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton(
-            onPressed: () => _showAddModulSheet(context),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: _slate,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(40),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.auto_stories_outlined, size: 64, color: Color(0xFFE2E8F0)),
+            const SizedBox(height: 16),
+            const Text("Belum Ada Unit Modul", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
+            const SizedBox(height: 8),
+            const Text(
+              "Klik tombol + untuk mulai menyusun unit modul belajar. Setiap unit bisa berisi cakupan materi, target pertemuan, dan KKM kelulusan.",
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey, fontSize: 13, height: 1.4),
             ),
-            child: const Text("Buat Modul Pertama", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          )
-        ],
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: () => _showAddModulSheet(context),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _slate,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: const Text("Buat Modul Pertama", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            )
+          ],
+        ),
       ),
     );
   }

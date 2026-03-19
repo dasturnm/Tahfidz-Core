@@ -395,7 +395,7 @@ class _StaffFormScreenState extends ConsumerState<StaffFormScreen> {
   Widget _buildDropdownGender() {
     return DropdownButtonFormField<String>(
       decoration: _inputDecoration("Jenis Kelamin", Icons.wc),
-      value: _selectedGender,
+      initialValue: _selectedGender,
       items: const [
         DropdownMenuItem(value: 'L', child: Text("Laki-laki (Ikhwan)")),
         DropdownMenuItem(value: 'P', child: Text("Perempuan (Akhwat)")),

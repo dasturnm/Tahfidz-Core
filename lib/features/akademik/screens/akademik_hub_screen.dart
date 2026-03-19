@@ -2,13 +2,16 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../management_lembaga/providers/app_context_provider.dart'; // PERBAIKAN: Import Context
 import '../kurikulum/providers/kurikulum_provider.dart';
 import '../kurikulum/models/kurikulum_model.dart';
 import '../kurikulum/screens/kurikulum_detail_screen.dart'; // PERBAIKAN: Import file terpisah
-import '../kurikulum/widgets/kurikulum_card.dart';
 // IMPORT MODULAR: Memisahkan komponen agar Hub tetap ramping sesuai nama sub-judul
 import '../kurikulum/widgets/katalog_modul_view.dart';
 import '../kurikulum/widgets/pemetaan_kelas_view.dart';
+import '../kurikulum/widgets/add_kurikulum_sheet.dart'; // IMPORT BARU
+import '../kurikulum/widgets/kurikulum_grid_view.dart'; // IMPORT BARU
+import '../kurikulum/widgets/kurikulum_table_view.dart'; // IMPORT BARU
 
 class AkademikHubScreen extends ConsumerStatefulWidget {
   final String lembagaId;
@@ -47,7 +50,11 @@ class _AkademikHubScreenState extends ConsumerState<AkademikHubScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final kurikulumAsync = ref.watch(kurikulumListProvider(widget.lembagaId));
+    // FIX: Ambil lembagaId secara reaktif dari context agar data muncul otomatis saat inisialisasi selesai
+    final appContext = ref.watch(appContextProvider);
+    final effectiveLembagaId = appContext.lembaga?.id ?? widget.lembagaId;
+
+    final kurikulumAsync = ref.watch(kurikulumListProvider(effectiveLembagaId));
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -75,19 +82,21 @@ class _AkademikHubScreenState extends ConsumerState<AkademikHubScreen> {
 
                   // PERBAIKAN: Implementasi RefreshIndicator untuk menarik data (Pull to Refresh)
                   // Gunakan sortedList agar Katalog & Pemetaan terpengaruh filter
-                  if (_selectedTab != 0) return RefreshIndicator(
-                    onRefresh: () => ref.refresh(kurikulumListProvider(widget.lembagaId).future),
-                    color: _emerald,
-                    child: _buildActiveKurikulumContent(sortedList),
-                  );
+                  if (_selectedTab != 0) {
+                    return RefreshIndicator(
+                      onRefresh: () => ref.refresh(kurikulumListProvider(effectiveLembagaId).future),
+                      color: _emerald,
+                      child: _buildActiveKurikulumContent(sortedList),
+                    );
+                  }
 
                   if (list.isEmpty) return _buildEmptyState("Belum ada blueprint kurikulum.");
 
                   // Tampilkan Daftar Kurikulum (Blueprint)
                   return RefreshIndicator(
-                    onRefresh: () => ref.refresh(kurikulumListProvider(widget.lembagaId).future),
+                    onRefresh: () => ref.refresh(kurikulumListProvider(effectiveLembagaId).future),
                     color: _emerald,
-                    child: _buildMainScrollableContent(sortedList, filteredList),
+                    child: _buildMainScrollableContent(sortedList, filteredList, effectiveLembagaId),
                   );
                 },
                 loading: () => Center(child: CircularProgressIndicator(color: _emerald)),
@@ -100,7 +109,12 @@ class _AkademikHubScreenState extends ConsumerState<AkademikHubScreen> {
       // PERBAIKAN: Menambahkan kembali Tombol Plus (FAB) di pojok kanan bawah
       floatingActionButton: (_selectedTab == 0 && _isListView)
           ? FloatingActionButton(
-        onPressed: () => _showAddKurikulumSheet(context),
+        onPressed: () => AddKurikulumSheet.show(
+          context: context,
+          ref: ref,
+          lembagaId: effectiveLembagaId,
+          slate: _slate,
+        ),
         backgroundColor: _slate,
         child: const Icon(Icons.add, color: Colors.white),
       )
@@ -109,7 +123,7 @@ class _AkademikHubScreenState extends ConsumerState<AkademikHubScreen> {
   }
 
   // PERBAIKAN: Memisahkan konten agar selalu bisa di-scroll untuk RefreshIndicator
-  Widget _buildMainScrollableContent(List<KurikulumModel> fullList, List<KurikulumModel> filteredList) {
+  Widget _buildMainScrollableContent(List<KurikulumModel> fullList, List<KurikulumModel> filteredList, String effectiveLembagaId) {
     if (_selectedTab != 0) return _buildActiveKurikulumContent(fullList);
 
     if (fullList.isEmpty) {
@@ -124,8 +138,25 @@ class _AkademikHubScreenState extends ConsumerState<AkademikHubScreen> {
 
     if (_isListView) {
       return _isGridView
-          ? _buildKurikulumGrid(filteredList)
-          : _buildKurikulumTable(filteredList);
+          ? KurikulumGridView(
+        list: filteredList,
+        lembagaId: effectiveLembagaId,
+        slate: _slate,
+        onSelect: (k) => setState(() {
+          _activeKurikulum = k;
+          _isListView = false;
+        }),
+      )
+          : KurikulumTableView(
+        list: filteredList,
+        lembagaId: effectiveLembagaId,
+        emerald: _emerald,
+        slate: _slate,
+        onSelect: (k) => setState(() {
+          _activeKurikulum = k;
+          _isListView = false;
+        }),
+      );
     }
 
     return _buildActiveKurikulumContent(filteredList);
@@ -266,8 +297,8 @@ class _AkademikHubScreenState extends ConsumerState<AkademikHubScreen> {
         decoration: BoxDecoration(
           color: isActive ? Colors.white : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: isActive ? _emerald.withOpacity(0.1) : Colors.transparent),
-          boxShadow: isActive ? [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10)] : null,
+          border: Border.all(color: isActive ? _emerald.withValues(alpha: 0.1) : Colors.transparent),
+          boxShadow: isActive ? [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10)] : null,
         ),
         child: Row(
           children: [
@@ -316,105 +347,6 @@ class _AkademikHubScreenState extends ConsumerState<AkademikHubScreen> {
     }
   }
 
-  Widget _buildKurikulumGrid(List<KurikulumModel> list) {
-    return GridView.builder(
-      physics: const AlwaysScrollableScrollPhysics(), // Wajib untuk RefreshIndicator
-      padding: const EdgeInsets.all(32),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 1, // Disesuaikan untuk mobile
-        mainAxisSpacing: 24,
-        childAspectRatio: 0.85,
-      ),
-      itemCount: list.length,
-      itemBuilder: (context, index) {
-        final k = list[index];
-        return KurikulumCard(
-          kurikulum: k,
-          onTap: () => setState(() {
-            _activeKurikulum = k;
-            _isListView = false;
-          }),
-          // PERBAIKAN: Menghubungkan tombol Edit
-          onEdit: () => _showAddKurikulumSheet(context, kurikulum: k),
-          // PERBAIKAN: Menghubungkan tombol Hapus dengan refresh state dan dialog konfirmasi
-          onDelete: () => _confirmDelete(context, k),
-        );
-      },
-    );
-  }
-
-  // PERBAIKAN POIN 2 & 4: Table View Modern (Glassmorphism Style)
-  Widget _buildKurikulumTable(List<KurikulumModel> list) {
-    return ListView.builder(
-      physics: const AlwaysScrollableScrollPhysics(), // Wajib untuk RefreshIndicator
-      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-      itemCount: list.length,
-      itemBuilder: (context, index) {
-        final k = list[index];
-        return Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFF1F5F9)),
-            boxShadow: [
-              BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))
-            ],
-          ),
-          child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-            title: Row(
-              children: [
-                // PERBAIKAN: Gunakan Expanded untuk mencegah overflow teks nama kurikulum
-                Expanded(
-                  child: Text(
-                    k.namaKurikulum,
-                    style: const TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF1E293B)),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                // Indikator Level Tunggal vs Hierarki
-                _buildBadge(k.isLinear ? "LINEAR" : "HIERARKI", k.isLinear ? Colors.orange : _emerald),
-              ],
-            ),
-            subtitle: Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                "${k.jenjangs.length} Jng | ${k.totalLevels} Lvl | ${k.totalModules} Mod",
-                style: const TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.w600),
-              ),
-            ),
-            // PERBAIKAN: Menambah menu aksi pada tampilan tabel dengan dialog konfirmasi
-            trailing: PopupMenuButton<String>(
-              icon: const Icon(Icons.more_vert, size: 18, color: Colors.grey),
-              onSelected: (val) async {
-                if (val == 'edit') _showAddKurikulumSheet(context, kurikulum: k);
-                if (val == 'delete') _confirmDelete(context, k);
-              },
-              itemBuilder: (context) => [
-                const PopupMenuItem(value: 'edit', child: Text("Edit")),
-                const PopupMenuItem(value: 'delete', child: Text("Hapus", style: TextStyle(color: Colors.red))),
-              ],
-            ),
-            onTap: () => setState(() {
-              _activeKurikulum = k;
-              _isListView = false;
-            }),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildBadge(String text, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
-      child: Text(text, style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold)),
-    );
-  }
-
   Widget _buildEmptyState(String message) {
     return Center(
       child: Column(
@@ -424,88 +356,6 @@ class _AkademikHubScreenState extends ConsumerState<AkademikHubScreen> {
           const SizedBox(height: 16),
           Text(message, style: const TextStyle(color: Colors.grey)),
         ],
-      ),
-    );
-  }
-
-  // --- MODAL TAMBAH/EDIT KURIKULUM (Untuk Tombol Plus & Edit) ---
-  void _showAddKurikulumSheet(BuildContext context, {KurikulumModel? kurikulum}) {
-    final nameController = TextEditingController(text: kurikulum?.namaKurikulum);
-    bool isLinear = kurikulum?.isLinear ?? false;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setState) => Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
-          ),
-          padding: EdgeInsets.only(
-              bottom: MediaQuery.of(ctx).viewInsets.bottom + 32,
-              left: 32, right: 32, top: 32
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                  kurikulum == null ? "Buat Blueprint Baru" : "Edit Blueprint",
-                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900)
-              ),
-              const SizedBox(height: 32),
-              TextField(
-                controller: nameController,
-                autofocus: true,
-                decoration: InputDecoration(
-                  labelText: "NAMA KURIKULUM",
-                  filled: true,
-                  fillColor: const Color(0xFFF8FAFC),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-                ),
-              ),
-              const SizedBox(height: 24),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text("Mode Linear", style: TextStyle(fontWeight: FontWeight.bold)),
-                subtitle: const Text("Tanpa jenjang bertingkat/level."),
-                value: isLinear,
-                onChanged: (val) => setState(() => isLinear = val),
-              ),
-              const SizedBox(height: 32),
-              SizedBox(
-                width: double.infinity,
-                height: 60,
-                child: ElevatedButton(
-                  onPressed: () async {
-                    if (nameController.text.isEmpty) return;
-
-                    final data = KurikulumModel(
-                      id: kurikulum?.id,
-                      lembagaId: widget.lembagaId,
-                      namaKurikulum: nameController.text.trim(),
-                      isLinear: isLinear,
-                      jenjangs: kurikulum?.jenjangs ?? [],
-                    );
-
-                    // PERBAIKAN: Gunakan await dan invalidate agar UI refresh
-                    await ref.read(kurikulumListProvider(widget.lembagaId).notifier).saveKurikulum(data);
-                    ref.invalidate(kurikulumListProvider(widget.lembagaId));
-
-                    if (ctx.mounted) Navigator.pop(ctx);
-                  },
-                  style: ElevatedButton.styleFrom(backgroundColor: _slate, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
-                  child: Text(
-                      kurikulum == null ? "SIMPAN" : "PERBARUI",
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
@@ -541,32 +391,6 @@ class _AkademikHubScreenState extends ConsumerState<AkademikHubScreen> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  // TAMBAHAN: Dialog Konfirmasi Hapus
-  void _confirmDelete(BuildContext context, KurikulumModel k) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text("Hapus Kurikulum?", style: TextStyle(fontWeight: FontWeight.bold)),
-        content: Text("Apakah Anda yakin ingin menghapus '${k.namaKurikulum}'? Semua data jenjang, level, dan modul di dalamnya akan ikut terhapus."),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text("Batal", style: TextStyle(color: Colors.grey)),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(ctx);
-              await ref.read(kurikulumListProvider(widget.lembagaId).notifier).deleteKurikulum(k.id!);
-              ref.invalidate(kurikulumListProvider(widget.lembagaId));
-            },
-            child: const Text("Hapus", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-          ),
-        ],
       ),
     );
   }

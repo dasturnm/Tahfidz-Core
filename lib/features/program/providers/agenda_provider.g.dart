@@ -6,7 +6,7 @@ part of 'agenda_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$agendaNotifierHash() => r'2f64f18b65df943dddd9d3c5588a16c3144ed216';
+String _$agendaNotifierHash() => r'01572e0c3d0050589f523888baf521c58c6c730c';
 
 /// Copied from Dart SDK
 class _SystemHash {

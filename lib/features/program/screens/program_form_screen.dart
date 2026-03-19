@@ -121,7 +121,7 @@ class _ProgramFormScreenState extends ConsumerState<ProgramFormScreen> {
               _buildLabel("Pilih Cabang (Opsional)"),
               cabangAsync.when(
                 data: (list) => DropdownButtonFormField<String>(
-                  value: _selectedCabangId,
+                  initialValue: _selectedCabangId,
                   decoration: _inputDecor("Pilih lokasi operasional"),
                   items: list.map((c) => DropdownMenuItem(
                     value: c.id,

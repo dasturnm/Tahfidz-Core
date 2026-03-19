@@ -1,14 +1,16 @@
+// lib/features/akademik/kurikulum/widgets/modul_table_view.dart
+
 import 'package:flutter/material.dart';
 import '../models/kurikulum_model.dart';
 
 class ModulTableView extends StatelessWidget {
-  final List<ModulModel> modules;
+  final List<ModulModel> modul;
   final Function(ModulModel) onAction;
   final Function(ModulModel) onTap;
 
   const ModulTableView({
     super.key,
-    required this.modules,
+    required this.modul,
     required this.onAction,
     required this.onTap,
   });
@@ -31,10 +33,10 @@ class ModulTableView extends StatelessWidget {
           columns: const [
             DataColumn(label: Text("MODUL / MATERI", style: _headerStyle)),
             DataColumn(label: Text("TIPE", style: _headerStyle)),
-            DataColumn(label: Text("ESTIMASI", style: _headerStyle)),
+            DataColumn(label: Text("TARGET", style: _headerStyle)),
             DataColumn(label: Text("AKSI", style: _headerStyle)),
           ],
-          rows: modules.map((m) {
+          rows: modul.map((m) {
             return DataRow(cells: [
               DataCell(
                   InkWell(
@@ -43,7 +45,7 @@ class ModulTableView extends StatelessWidget {
                   )
               ),
               DataCell(Text(m.tipe)),
-              DataCell(Text("${m.durasiHari} Hari")),
+              DataCell(Text("${m.targetPertemuan} Pertemuan")),
               DataCell(
                   IconButton(
                     icon: const Icon(Icons.more_vert, size: 18, color: Colors.grey),

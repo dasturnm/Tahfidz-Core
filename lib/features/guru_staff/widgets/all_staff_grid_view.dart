@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import '../models/staff_model.dart';
+import 'package:tahfidz_core/shared/models/profile_model.dart';
 import '../screens/staff_detail_screen.dart';
 
 class AllStaffGridView extends StatelessWidget {
-  final List<StaffModel> staffList;
-  final Function(StaffModel) onActionTap;
+  final List<ProfileModel> staffList;
+  final Function(ProfileModel) onActionTap;
 
   const AllStaffGridView({
     super.key,
@@ -103,7 +103,7 @@ class AllStaffGridView extends StatelessWidget {
     return CircleAvatar(radius: 4, backgroundColor: isActive ? Colors.green : Colors.red);
   }
 
-  Widget _buildFooterButtons(BuildContext context, StaffModel staff) {
+  Widget _buildFooterButtons(BuildContext context, ProfileModel staff) {
     return Container(
       decoration: const BoxDecoration(border: Border(top: BorderSide(color: Color(0xFFF1F5F9)))),
       child: Row(

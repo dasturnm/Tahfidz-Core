@@ -207,9 +207,21 @@ class AppContext extends _$AppContext {
           .select('cabang:cabang_id(*)')
           .eq('profile_id', user.id);
 
-      final List<CabangModel> branches = (accessData as List)
+      List<CabangModel> branches = (accessData as List)
+          .where((item) => item['cabang'] != null)
           .map((item) => CabangModel.fromJson(item['cabang']))
           .toList();
+
+      // FIX: Jika cabang kosong (kasus OWNER), ambil semua cabang milik lembaga ini
+      if (branches.isEmpty) {
+        final allBranches = await _supabase
+            .from('cabang')
+            .select()
+            .eq('lembaga_id', lembaga.id);
+        branches = (allBranches as List)
+            .map((e) => CabangModel.fromJson(e))
+            .toList();
+      }
 
       // 3. Ambil Tahun Ajaran Aktif
       TahunAjaranModel? tahunAktif;
@@ -224,6 +236,19 @@ class AppContext extends _$AppContext {
         } catch (taErr) {
           // Abaikan jika tahun ajaran aktif tidak ditemukan
           tahunAktif = null;
+        }
+      }
+
+      // FIX: Jika masih null, cari record TA yang is_active = true di tabel tahun_ajaran
+      if (tahunAktif == null) {
+        final taFallback = await _supabase
+            .from('tahun_ajaran')
+            .select()
+            .eq('lembaga_id', lembaga.id)
+            .eq('is_active', true)
+            .maybeSingle();
+        if (taFallback != null) {
+          tahunAktif = TahunAjaranModel.fromJson(taFallback);
         }
       }
 

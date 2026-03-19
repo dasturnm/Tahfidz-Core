@@ -49,7 +49,7 @@ class _StaffAssignmentScreenState extends ConsumerState<StaffAssignmentScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // INFO STAFF
-            // FIX: Menggunakan key 'nama' sesuai mapping dari StaffModel.toJson()
+            // FIX: Menggunakan key 'nama' sesuai mapping dari ProfileModel.toJson()
             Text(widget.staff['nama'] ?? 'Tanpa Nama', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             const SizedBox(height: 24),
 

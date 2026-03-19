@@ -1,11 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/kurikulum_model.dart';
-import '../providers/kurikulum_provider.dart';
-// Import widget pendukung (Pastikan file ini dibuat di folder widgets)
-import '../widgets/metrik_grid_view.dart';
-import '../widgets/metrik_table_view.dart';
-import '../widgets/target_metrik_dialog.dart';
+import 'modul_form_screen.dart';
 
 class ModulDetailScreen extends ConsumerStatefulWidget {
   final LevelModel level;
@@ -18,63 +14,36 @@ class ModulDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _ModulDetailScreenState extends ConsumerState<ModulDetailScreen> {
-  bool _isGridView = true; // State toggle tampilan
   final Color _emerald = const Color(0xFF10B981);
-  final Color _slate = const Color(0xFF1E293B); // TAMBAHAN: Konsistensi Slate 2026
+  final Color _slate = const Color(0xFF1E293B);
 
   @override
   Widget build(BuildContext context) {
-    // Watch daftar metrik untuk modul ini
-    final metrikAsync = ref.watch(targetMetrikListProvider(widget.modul.id!));
-
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text("Manajemen Akademik"),
-        backgroundColor: Colors.white, // PERBAIKAN: Gunakan tema terang Hub
-        foregroundColor: _slate, // PERBAIKAN: Gunakan Slate
+        title: const Text("Detail Modul Belajar"),
+        backgroundColor: Colors.white,
+        foregroundColor: _slate,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded), // PERBAIKAN: Rounded icon
+          icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => Navigator.pop(context),
         ),
-        actions: [
-          // TOGGLE VIEW BUTTON
-          IconButton(
-            icon: Icon(_isGridView ? Icons.view_list_rounded : Icons.grid_view_rounded),
-            onPressed: () => setState(() => _isGridView = !_isGridView),
-            tooltip: "Ganti Tampilan",
-          ),
-          const SizedBox(width: 8),
-        ],
       ),
       body: Column(
         children: [
           _buildBreadcrumbHeader(context),
           Expanded(
-            child: metrikAsync.when(
-              data: (targets) => targets.isEmpty
-                  ? _buildEmptyState(context)
-                  : _isGridView
-                  ? MetrikGridView(
-                targets: targets,
-                onAction: (target) => _showMetrikActionSheet(context, target),
-              )
-                  : MetrikTableView(
-                targets: targets,
-                onAction: (target) => _showMetrikActionSheet(context, target),
-              ),
-              loading: () => const Center(child: CircularProgressIndicator(color: Color(0xFF10B981))),
-              error: (err, _) => Center(child: Text("Error: $err")),
-            ),
+            child: _buildModulContent(context),
           ),
         ],
       ),
-      // PERBAIKAN: Menggunakan FAB icon agar konsisten dengan Hub dan Level List
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddMetrikSheet(context),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _navigateToEdit(context),
         backgroundColor: _slate,
-        child: const Icon(Icons.add, color: Colors.white),
+        icon: const Icon(Icons.edit_outlined, color: Colors.white),
+        label: const Text("Edit Konfigurasi", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
       ),
     );
   }
@@ -82,7 +51,8 @@ class _ModulDetailScreenState extends ConsumerState<ModulDetailScreen> {
   Widget _buildBreadcrumbHeader(BuildContext context) {
     return Container(
       color: Colors.white,
-      padding: const EdgeInsets.fromLTRB(32, 8, 32, 24), // PERBAIKAN: Padding konsisten Hub
+      padding: const EdgeInsets.fromLTRB(32, 8, 32, 24),
+      width: double.infinity,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -105,9 +75,103 @@ class _ModulDetailScreenState extends ConsumerState<ModulDetailScreen> {
             children: [
               _buildBadge(widget.modul.tipe, _emerald),
               const SizedBox(width: 8),
-              _buildBadge("${widget.modul.durasiHari} Hari", const Color(0xFF64748B)),
+              _buildBadge("${widget.modul.targetPertemuan} Pertemuan", const Color(0xFF64748B)),
             ],
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildModulContent(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildInfoCard(
+            title: "SILABUS & MATERI",
+            icon: Icons.description_outlined,
+            content: widget.modul.silabus ?? "Belum ada deskripsi silabus untuk modul ini.",
+          ),
+          const SizedBox(height: 24),
+          _buildInfoCard(
+            title: "PARAMETER PENGUKURAN (METRIK)",
+            icon: Icons.straighten_rounded,
+            child: Column(
+              children: [
+                _buildDetailRow("Jenis Metrik", widget.modul.jenisMetrik),
+                _buildDetailRow("Mulai Dari", widget.modul.mulaiKoordinat ?? "-"),
+                _buildDetailRow("Hingga", widget.modul.akhirKoordinat ?? "-"),
+                _buildDetailRow("KKM Lulus", "${widget.modul.kkm.toInt()}%"),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          if (widget.modul.isSystemGenerated)
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: _emerald.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: _emerald.withOpacity(0.1)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.verified_user_rounded, color: _emerald),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Text(
+                      "Modul ini terhubung otomatis dengan Data Mushaf.",
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF065F46)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoCard({required String title, required IconData icon, String? content, Widget? child}) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 20, offset: const Offset(0, 10)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 18, color: Colors.grey),
+              const SizedBox(width: 8),
+              Text(title, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.grey, letterSpacing: 1)),
+            ],
+          ),
+          const SizedBox(height: 16),
+          if (content != null)
+            Text(content, style: TextStyle(fontSize: 15, color: _slate, height: 1.5, fontWeight: FontWeight.w500)),
+          if (child != null) child,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(color: Colors.grey, fontWeight: FontWeight.w500)),
+          Text(value, style: TextStyle(color: _slate, fontWeight: FontWeight.w900)),
         ],
       ),
     );
@@ -117,9 +181,9 @@ class _ModulDetailScreenState extends ConsumerState<ModulDetailScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.05), // PERBAIKAN: withValues
+        color: color.withOpacity(0.05),
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withValues(alpha: 0.1)), // PERBAIKAN: withValues
+        border: Border.all(color: color.withOpacity(0.1)),
       ),
       child: Text(
         text.toUpperCase(),
@@ -128,109 +192,11 @@ class _ModulDetailScreenState extends ConsumerState<ModulDetailScreen> {
     );
   }
 
-  // --- MODERN ACTION MENU (BOTTOM SHEET) ---
-
-  void _showMetrikActionSheet(BuildContext context, TargetMetrikModel target) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent, // PERBAIKAN: Background transparan
-      builder: (context) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(32)), // PERBAIKAN: Melengkung
-        ),
-        padding: const EdgeInsets.symmetric(vertical: 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.only(bottom: 20),
-              decoration: BoxDecoration(
-                color: Colors.grey[200],
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            Text(
-              "Opsi Metrik",
-              style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: _slate),
-            ),
-            const SizedBox(height: 16),
-            ListTile(
-              leading: const Icon(Icons.edit_outlined),
-              title: const Text("Edit Metrik", style: TextStyle(fontWeight: FontWeight.bold)),
-              onTap: () {
-                Navigator.pop(context);
-                _showAddMetrikSheet(context, targetToEdit: target);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.delete_outline, color: Colors.red),
-              title: const Text("Hapus Metrik", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-              onTap: () {
-                Navigator.pop(context);
-                _showDeleteConfirm(context, target);
-              },
-            ),
-            const SizedBox(height: 16),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showAddMetrikSheet(BuildContext context, {TargetMetrikModel? targetToEdit}) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent, // PERBAIKAN: Background transparan
-      builder: (ctx) => TargetMetrikDialog(
-        modul: widget.modul,
-        targetToEdit: targetToEdit,
-      ),
-    );
-  }
-
-  void _showDeleteConfirm(BuildContext context, TargetMetrikModel target) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: const Text("Hapus Target?", style: TextStyle(fontWeight: FontWeight.bold)),
-        content: const Text("Data target metrik ini akan dihapus permanen."),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Batal")),
-          TextButton(
-              onPressed: () async {
-                await ref.read(targetMetrikListProvider(widget.modul.id!).notifier).deleteTarget(target.id!);
-                if (ctx.mounted) Navigator.pop(ctx);
-              },
-              child: const Text("Hapus", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold))
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEmptyState(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.ads_click, size: 80, color: Color(0xFFE2E8F0)),
-          const SizedBox(height: 16),
-          const Text("Belum ada target metrik pengujian.", style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w500)),
-          const SizedBox(height: 24),
-          ElevatedButton(
-            onPressed: () => _showAddMetrikSheet(context),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: _slate,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            child: const Text("Buat Metrik Pertama", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          )
-        ],
+  void _navigateToEdit(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ModulFormScreen(level: widget.level, modul: widget.modul),
       ),
     );
   }

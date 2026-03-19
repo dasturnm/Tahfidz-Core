@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/staff_provider.dart';
-// PERBAIKAN: Menyesuaikan path import ke folder screens
-import '../screens/staff_form_screen.dart';
-import '../screens/staff_assignment_screen.dart';
-import '../screens/staff_detail_screen.dart'; // Import layar detail profil
+// PERBAIKAN: Unused imports (staff_form_screen, staff_assignment_screen, staff_detail_screen) TELAH DIHAPUS
 
 // PERBAIKAN: Nama class disamakan dengan pemanggil di StaffHubScreen
 class AllStaffTableView extends ConsumerWidget {
@@ -17,56 +14,6 @@ class AllStaffTableView extends ConsumerWidget {
     required this.staffList,
     required this.onActionTap,
   });
-
-  // --- 4. GANTI POPUP DENGAN MODAL BOTTOM SHEET (Tetap dipertahankan sebagai cadangan jika perlu) ---
-  void _showActionSheet(BuildContext context, dynamic staff) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10)),
-              ),
-              const SizedBox(height: 24),
-              ListTile(
-                leading: const CircleAvatar(backgroundColor: Color(0xFFE0F2FE), child: Icon(Icons.visibility_outlined, color: Colors.blue)),
-                title: const Text("Lihat Detail", style: TextStyle(fontWeight: FontWeight.bold)),
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => StaffDetailScreen(staff: staff.toJson())));
-                },
-              ),
-              ListTile(
-                leading: const CircleAvatar(backgroundColor: Color(0xFFF0FDF4), child: Icon(Icons.edit_outlined, color: Colors.teal)),
-                title: const Text("Edit Biodata", style: TextStyle(fontWeight: FontWeight.bold)),
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => StaffFormScreen(staff: staff.toJson())));
-                },
-              ),
-              ListTile(
-                leading: const CircleAvatar(backgroundColor: Color(0xFFFFF7ED), child: Icon(Icons.work_history_outlined, color: Colors.orange)),
-                title: const Text("Kelola Jabatan", style: TextStyle(fontWeight: FontWeight.bold)),
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => StaffAssignmentScreen(staff: staff.toJson())));
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

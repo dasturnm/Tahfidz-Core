@@ -23,12 +23,16 @@ class AgendaNotifier extends _$AgendaNotifier {
         .select()
         .eq('lembaga_id', lembagaId);
 
-    if (tahunAjaranId != null) {
+    // FIX: Filter tahun_ajaran_id dinonaktifkan sementara karena kolom belum ada di database
+    /*
+    if (tahunAjaranId != null && tahunAjaranId.isNotEmpty) {
       query = query.eq('tahun_ajaran_id', tahunAjaranId);
     }
+    */
 
-    if (programId != null) {
-      query = query.eq('program_id', programId);
+    // FIX: Logika OR agar Agenda Global (program_id null) tetap muncul di semua program
+    if (programId != null && programId.isNotEmpty) {
+      query = query.or('program_id.eq.$programId,program_id.is.null');
     }
 
     final data = await query.order('tanggal_mulai', ascending: true);
@@ -40,7 +44,7 @@ class AgendaNotifier extends _$AgendaNotifier {
     try {
       await _supabase.from('agenda_akademik').insert({
         'lembaga_id': agenda.lembagaId,
-        'tahun_ajaran_id': agenda.tahunAjaranId, // UPDATE: Connect Tahun Ajaran
+        // 'tahun_ajaran_id': agenda.tahunAjaranId, // UPDATE: Connect Tahun Ajaran (Dinonaktifkan sementara)
         'nama_agenda': agenda.namaAgenda,
         'tanggal_mulai': agenda.tanggalMulai.toIso8601String(),
         'tanggal_berakhir': agenda.tanggalBerakhir.toIso8601String(),
@@ -61,7 +65,7 @@ class AgendaNotifier extends _$AgendaNotifier {
     state = const AsyncValue.loading();
     try {
       await _supabase.from('agenda_akademik').update({
-        'tahun_ajaran_id': agenda.tahunAjaranId, // UPDATE: Connect Tahun Ajaran
+        // 'tahun_ajaran_id': agenda.tahunAjaranId, // UPDATE: Connect Tahun Ajaran (Dinonaktifkan sementara)
         'nama_agenda': agenda.namaAgenda,
         'tanggal_mulai': agenda.tanggalMulai.toIso8601String(),
         'tanggal_berakhir': agenda.tanggalBerakhir.toIso8601String(),

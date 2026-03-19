@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/kurikulum_provider.dart';
 import '../models/kurikulum_model.dart';
 import 'level_list_screen.dart';
+import 'modul_detail_screen.dart';
+import 'modul_form_screen.dart'; // TAMBAHAN: Untuk bypass form
 
 class KurikulumDetailScreen extends ConsumerWidget {
   final KurikulumModel kurikulum;
@@ -33,14 +35,14 @@ class KurikulumDetailScreen extends ConsumerWidget {
           child: Stack(
             children: [
               jenjangAsync.when(
-                data: (jenjangs) => jenjangs.isEmpty
-                    ? _buildEmptyState(context, ref) // PERBAIKAN POIN 1
+                data: (jenjang) => jenjang.isEmpty
+                    ? _buildEmptyState(context, ref)
                     : ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                  itemCount: jenjangs.length,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                  itemCount: jenjang.length,
                   itemBuilder: (context, index) {
-                    final jenjang = jenjangs[index];
-                    return _buildJenjangCard(context, jenjang);
+                    final j = jenjang[index];
+                    return _buildJenjangCard(context, j, ref);
                   },
                 ),
                 loading: () => Center(child: CircularProgressIndicator(color: _emerald)),
@@ -52,7 +54,7 @@ class KurikulumDetailScreen extends ConsumerWidget {
                 bottom: 32,
                 right: 32,
                 child: FloatingActionButton(
-                  onPressed: () => _showAddJenjangSheet(context, ref),
+                  onPressed: () => _showAddJenjangheet(context, ref),
                   backgroundColor: _slate,
                   child: const Icon(Icons.add, color: Colors.white),
                 ),
@@ -65,61 +67,45 @@ class KurikulumDetailScreen extends ConsumerWidget {
   }
 
   Widget _buildBreadcrumbHeader(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(32, 8, 32, 24),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(32, 16, 32, 16),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "KURIKULUM ${kurikulum.namaKurikulum.toUpperCase()}",
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w900,
-                    color: _emerald,
-                    letterSpacing: 1.2,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  "1. Jenjang Pendidikan",
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: _slate),
-                ),
-              ],
-            ),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(color: _emerald.withValues(alpha: 0.1), shape: BoxShape.circle),
+            child: Icon(Icons.account_tree_outlined, color: _emerald, size: 20),
+          ),
+          const SizedBox(width: 16),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text("STRUKTUR KURIKULUM", style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.grey, letterSpacing: 1)),
+              Text(kurikulum.namaKurikulum, style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: _slate)),
+            ],
           ),
         ],
       ),
     );
   }
 
-  Widget _buildJenjangCard(BuildContext context, JenjangModel jenjang) {
+  Widget _buildJenjangCard(BuildContext context, JenjangModel jenjang, WidgetRef ref) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.grey.withValues(alpha: 0.1)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFF1F5F9)),
       ),
       child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
         leading: Container(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
             color: const Color(0xFFF8FAFC),
             borderRadius: BorderRadius.circular(16),
           ),
-          child: const Icon(Icons.layers_outlined, color: Color(0xFF94A3B8), size: 24),
+          child: const Icon(Icons.layers_outlined, color: Color(0xFF94A3B8), size: 20),
         ),
         title: Row(
           children: [
@@ -132,11 +118,11 @@ class KurikulumDetailScreen extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: Colors.orange.withOpacity(0.1),
+                  color: Colors.orange.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: const Text(
-                  "LINEAR",
+                  "LINIER",
                   style: TextStyle(color: Colors.orange, fontSize: 10, fontWeight: FontWeight.bold),
                 ),
               ),
@@ -144,54 +130,68 @@ class KurikulumDetailScreen extends ConsumerWidget {
           ],
         ),
         subtitle: Text(
-          // PERBAIKAN POIN 4 & 5: Logika Level Tunggal & Sinkronisasi Info Modul
             kurikulum.isLinear
-                ? "${jenjang.levels.fold(0, (sum, l) => sum + l.modules.length)} Modul Pelatihan"
-                : "${jenjang.levels.length} Tingkatan / Level",
-            style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold)
+                ? "Isi Materi & Modul"
+                : "${jenjang.level.length} Tingkatan Level",
+            style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.w500)
         ),
-        trailing: const Icon(Icons.chevron_right_rounded, color: Colors.grey, size: 24),
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => LevelListScreen(
-                jenjang: jenjang,
-                isLinear: kurikulum.isLinear, // Teruskan flag ke layar berikutnya
-              ),
-            ),
-          );
-        },
+        trailing: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.grey, size: 14),
+        onTap: () => _handleNavigation(context, ref, jenjang),
       ),
     );
   }
 
-  // PERBAIKAN POIN 1: Instruksi buat jenjang saat kosong
+  Future<void> _handleNavigation(BuildContext context, WidgetRef ref, JenjangModel j) async {
+    if (kurikulum.isLinear) {
+      LevelModel? shadowLevel;
+      if (j.level.isEmpty) {
+        showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator()));
+        try {
+          await ref.read(levelListProvider(j.id!).notifier).saveLevel(
+            LevelModel(kurikulumId: kurikulum.id!, jenjangId: j.id!, namaLevel: j.namaJenjang, urutan: 0),
+          );
+          final updatedLevels = await ref.refresh(levelListProvider(j.id!).future);
+          shadowLevel = updatedLevels.first;
+          if (context.mounted) Navigator.pop(context);
+        } catch (e) {
+          if (context.mounted) Navigator.pop(context);
+          return;
+        }
+      } else {
+        shadowLevel = j.level.first;
+      }
+
+      if (shadowLevel.modul.isEmpty) {
+        if (context.mounted) {
+          Navigator.push(context, MaterialPageRoute(builder: (context) => ModulFormScreen(level: shadowLevel!)));
+        }
+      } else {
+        if (context.mounted) {
+          Navigator.push(context, MaterialPageRoute(
+            builder: (context) => ModulDetailScreen(level: shadowLevel!, modul: shadowLevel.modul.first),
+          ));
+        }
+      }
+    } else {
+      Navigator.push(context, MaterialPageRoute(builder: (context) => LevelListScreen(jenjang: j, isLinear: false)));
+    }
+  }
+
   Widget _buildEmptyState(BuildContext context, WidgetRef ref) {
     return Center(
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.all(48.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.account_tree_outlined, size: 80, color: Color(0xFFE2E8F0)),
+            const Icon(Icons.account_tree_outlined, size: 64, color: Color(0xFFE2E8F0)),
             const SizedBox(height: 16),
+            const Text("Belum Ada Jenjang", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
+            const SizedBox(height: 8),
             const Text(
-              "Kurikulum berhasil dibuat! Langkah selanjutnya, silakan tentukan Jenjang pendidikan pertama Anda.",
+              "Kurikulum sudah siap. Sekarang, tambahkan jenjang pendidikan (seperti Dasar, Menengah, dst) dengan mengklik tombol + di pojok kanan bawah.",
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w500, height: 1.5),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: () => _showAddJenjangSheet(context, ref),
-              icon: const Icon(Icons.add, color: Colors.white, size: 18),
-              label: const Text("BUAT JENJANG PERTAMA", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _emerald,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                elevation: 0,
-              ),
+              style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w500, height: 1.5, fontSize: 13),
             ),
           ],
         ),
@@ -199,7 +199,7 @@ class KurikulumDetailScreen extends ConsumerWidget {
     );
   }
 
-  void _showAddJenjangSheet(BuildContext context, WidgetRef ref) {
+  void _showAddJenjangheet(BuildContext context, WidgetRef ref) {
     final controller = TextEditingController();
 
     showModalBottomSheet(
@@ -224,7 +224,7 @@ class KurikulumDetailScreen extends ConsumerWidget {
                 Icon(Icons.layers_outlined, color: _emerald, size: 28),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Text("Tambah Jenjang Baru", style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: _slate)),
+                  child: Text("Tambah Jenjang", style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: _slate)),
                 ),
                 IconButton(onPressed: () => Navigator.pop(ctx), icon: const Icon(Icons.close)),
               ],
@@ -232,8 +232,8 @@ class KurikulumDetailScreen extends ConsumerWidget {
             const SizedBox(height: 8),
             Text(
               kurikulum.isLinear
-                  ? "Mode Linear: Jenjang ini akan langsung berisi modul."
-                  : "Mode Hierarki: Anda akan mengatur tingkatan di jenjang ini.",
+                  ? "Jenjang linier akan otomatis memiliki satu modul materi."
+                  : "Anda akan mengatur tingkatan level di jenjang ini.",
               style: const TextStyle(color: Colors.grey, fontSize: 13),
             ),
             const SizedBox(height: 24),
@@ -270,7 +270,7 @@ class KurikulumDetailScreen extends ConsumerWidget {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   elevation: 0,
                 ),
-                child: const Text("SIMPAN JENJANG", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900)),
+                child: const Text("SIMPAN", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900)),
               ),
             ),
           ],

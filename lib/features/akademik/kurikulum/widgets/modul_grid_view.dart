@@ -1,14 +1,16 @@
+// lib/features/akademik/kurikulum/widgets/modul_grid_view.dart
+
 import 'package:flutter/material.dart';
 import '../models/kurikulum_model.dart';
 
 class ModulGridView extends StatelessWidget {
-  final List<ModulModel> modules;
+  final List<ModulModel> modul;
   final Function(ModulModel) onAction;
   final Function(ModulModel) onTap;
 
   const ModulGridView({
     super.key,
-    required this.modules,
+    required this.modul,
     required this.onAction,
     required this.onTap,
   });
@@ -25,11 +27,11 @@ class ModulGridView extends StatelessWidget {
         mainAxisSpacing: 16,
         childAspectRatio: 0.9,
       ),
-      itemCount: modules.length,
+      itemCount: modul.length,
       itemBuilder: (context, index) {
-        final modul = modules[index];
+        final m = modul[index]; // PERBAIKAN: Hindari shadowing variabel 'modul'
         return InkWell(
-          onTap: () => onTap(modul),
+          onTap: () => onTap(m),
           borderRadius: BorderRadius.circular(24),
           child: Container(
             decoration: BoxDecoration(
@@ -51,7 +53,7 @@ class ModulGridView extends StatelessWidget {
                   right: 8,
                   child: IconButton(
                     icon: const Icon(Icons.more_horiz, color: Colors.grey),
-                    onPressed: () => onAction(modul),
+                    onPressed: () => onAction(m),
                   ),
                 ),
                 Padding(
@@ -66,13 +68,13 @@ class ModulGridView extends StatelessWidget {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
-                          modul.tipe.toUpperCase(),
+                          m.tipe.toUpperCase(),
                           style: const TextStyle(color: emerald, fontWeight: FontWeight.bold, fontSize: 9),
                         ),
                       ),
                       const Spacer(),
                       Text(
-                        modul.namaModul,
+                        m.namaModul,
                         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF1E293B)),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
@@ -83,7 +85,7 @@ class ModulGridView extends StatelessWidget {
                           const Icon(Icons.timer_outlined, size: 14, color: Colors.grey),
                           const SizedBox(width: 4),
                           Text(
-                            "${modul.durasiHari} Hari",
+                            "${m.targetPertemuan} Pertemuan",
                             style: const TextStyle(fontSize: 12, color: Colors.grey),
                           ),
                         ],

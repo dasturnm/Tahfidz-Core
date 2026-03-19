@@ -6,7 +6,8 @@ import '../../program/screens/program_list_screen.dart';
 import '../../akademik/screens/akademik_hub_screen.dart';
 import '../../guru_staff/screens/staff_hub_screen.dart';
 import 'dashboard_admin_screen.dart';
-import '../../siswa/screens/student_hub_screen.dart';
+import '../../siswa/screens/Siswa_hub_screen.dart';
+import '../../mutabaah/screens/mutabaah_hub_screen.dart';
 
 class MainLayoutScreen extends ConsumerStatefulWidget {
   const MainLayoutScreen({super.key});
@@ -30,7 +31,8 @@ class _MainLayoutScreenState extends ConsumerState<MainLayoutScreen> {
       const StaffHubScreen(),
       const ProgramListScreen(),
       AkademikHubScreen(lembagaId: contextState.lembaga?.id ?? ""), // PERBAIKAN: Gunakan lembagaId
-      const StudentHubScreen(),
+      const SiswaHubScreen(),
+      const MutabaahHubScreen(),
       const Center(child: Text("Keuangan Screen")),
     ];
 
@@ -134,13 +136,14 @@ class _MainLayoutScreenState extends ConsumerState<MainLayoutScreen> {
                 _buildMenuItem(4, Icons.school_outlined, "Kurikulum & Level"),
 
                 const Divider(height: 16),
-                _buildSectionLabel("DATA SANTRI"),
+                _buildSectionLabel("DATA SISWA"),
                 _buildMenuItem(5, Icons.face_outlined, "Daftar Siswa"),
                 _buildMenuItem(5, Icons.meeting_room_outlined, "Manajemen Kelas"),
+                _buildMenuItem(6, Icons.history_edu_rounded, "Mutabaah Siswa"),
 
                 const Divider(height: 16),
                 _buildSectionLabel("ADMINISTRASI"),
-                _buildMenuItem(6, Icons.account_balance_wallet_outlined, "Keuangan"),
+                _buildMenuItem(7, Icons.account_balance_wallet_outlined, "Keuangan"),
               ],
             ),
           ),

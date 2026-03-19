@@ -34,11 +34,11 @@ class PenugasanStafModel {
     final cabang = json['cabang'] as Map<String, dynamic>?;
 
     return PenugasanStafModel(
-      id: json['id'] ?? '',
-      lembagaId: json['lembaga_id'] ?? '',
-      cabangId: json['cabang_id'] ?? '',
-      profileId: json['profile_id'] ?? '',
-      jabatanId: json['jabatan_id'],
+      id: json['id']?.toString() ?? '', // FIX: Robust UUID handling
+      lembagaId: json['lembaga_id']?.toString() ?? '',
+      cabangId: json['cabang_id']?.toString() ?? '',
+      profileId: json['profile_id']?.toString() ?? '',
+      jabatanId: json['jabatan_id']?.toString(),
       status: json['status'] ?? 'aktif',
       tanggalMulai: json['tanggal_mulai'],
       // Ambil nama dari relasi, sesuaikan field 'nama_lengkap' dengan kolom di tabel profiles Anda

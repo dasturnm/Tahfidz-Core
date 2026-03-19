@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/staff_provider.dart';
-import '../models/staff_model.dart';
+import 'package:tahfidz_core/shared/models/profile_model.dart';
 import 'assignment_timeline.dart';
 
 class AssignmentTimelineWrapper extends ConsumerStatefulWidget {
@@ -12,19 +12,19 @@ class AssignmentTimelineWrapper extends ConsumerStatefulWidget {
 }
 
 class _AssignmentTimelineWrapperState extends ConsumerState<AssignmentTimelineWrapper> {
-  StaffModel? _selectedStaff;
+  ProfileModel? _selectedStaff;
   List<Map<String, dynamic>>? _history;
   bool _isFetching = false;
 
   // FUNGSI: Memanggil fetchHistory dari provider
-  Future<void> _loadHistory(StaffModel staff) async {
+  Future<void> _loadHistory(ProfileModel staff) async {
     setState(() {
       _selectedStaff = staff;
       _isFetching = true;
     });
 
     try {
-      final data = await ref.read(staffListProvider.notifier).fetchHistory(staff.id!);
+      final data = await ref.read(staffListProvider.notifier).fetchHistory(staff.id);
       if (mounted) {
         setState(() {
           _history = data;
@@ -64,7 +64,7 @@ class _AssignmentTimelineWrapperState extends ConsumerState<AssignmentTimelineWr
       data: (allStaff) {
         final filteredStaff = allStaff.where((s) =>
         s.nama.toLowerCase().contains(searchQuery) ||
-            (s.id?.toLowerCase().contains(searchQuery) ?? false)
+            (s.id.toLowerCase().contains(searchQuery) ?? false)
         ).toList();
 
         if (filteredStaff.isEmpty) {

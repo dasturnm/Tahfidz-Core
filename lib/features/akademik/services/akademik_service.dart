@@ -2,27 +2,13 @@
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../program/models/program_model.dart';
-
-// Model Sederhana untuk Level Kurikulum (Disisipkan di sini agar praktis)
-class LevelModel {
-  final String id;
-  final String namaLevel;
-
-  LevelModel({required this.id, required this.namaLevel});
-
-  factory LevelModel.fromJson(Map<String, dynamic> json) {
-    return LevelModel(
-      id: json['id'].toString(),
-      namaLevel: json['nama_level'] ?? 'Tanpa Nama',
-    );
-  }
-}
+import '../kurikulum/models/kurikulum_model.dart'; // Tambahan: Menggunakan model terpusat
 
 class AkademikService {
   final SupabaseClient _supabase = Supabase.instance.client;
 
   /// Mengambil daftar semua Program yang statusnya 'aktif'
-  Future<List<ProgramModel>> getPrograms() async {
+  Future<List<ProgramModel>> getProgram() async { // PERBAIKAN: Singular
     try {
       final response = await _supabase
           .from('program')
@@ -37,7 +23,7 @@ class AkademikService {
   }
 
   /// Mengambil daftar semua Level dari kurikulum_level
-  Future<List<LevelModel>> getLevels() async {
+  Future<List<LevelModel>> getLevel() async {
     try {
       final response = await _supabase
           .from('kurikulum_level')

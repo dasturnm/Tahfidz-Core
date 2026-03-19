@@ -36,7 +36,7 @@ class _LevelListScreenState extends ConsumerState<LevelListScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC), // Standar background modern
       appBar: AppBar(
-        title: const Text("Manajemen Akademik"),
+        title: Text(widget.isLinear ? "Pengaturan Konten" : "Tingkatan Level"),
         backgroundColor: Colors.white,
         foregroundColor: _slate, // PERBAIKAN: Gunakan Slate
         elevation: 0,
@@ -59,17 +59,17 @@ class _LevelListScreenState extends ConsumerState<LevelListScreen> {
           _buildBreadcrumbHeader(context),
           Expanded(
             child: levelAsync.when(
-              data: (levels) => levels.isEmpty
+              data: (level) => level.isEmpty
                   ? _buildEmptyState()
                   : _isGridView
                   ? LevelGridView(
-                levels: levels,
+                level: level,
                 primaryColor: _emerald,
                 onAction: (level) => _showActionSheet(context, level),
                 onTap: (level) => _navigateToDetail(context, level),
               )
                   : LevelTableView(
-                levels: levels,
+                level: level,
                 primaryColor: _emerald,
                 onAction: (level) => _showActionSheet(context, level),
                 onTap: (level) => _navigateToDetail(context, level),
@@ -82,7 +82,7 @@ class _LevelListScreenState extends ConsumerState<LevelListScreen> {
       ),
       // PERBAIKAN: Mengikuti standar Hub, tombol plus di pojok kanan bawah
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddLevelSheet(context),
+        onPressed: () => _showAddLevelheet(context),
         backgroundColor: _slate,
         child: const Icon(Icons.add, color: Colors.white),
       ),
@@ -90,30 +90,29 @@ class _LevelListScreenState extends ConsumerState<LevelListScreen> {
   }
 
   Widget _buildBreadcrumbHeader(BuildContext context) {
-    return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.fromLTRB(32, 8, 32, 24), // Padding konsisten Hub
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(32, 16, 32, 16),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(color: _emerald.withValues(alpha: 0.1), shape: BoxShape.circle),
+            child: Icon(Icons.layers_outlined, color: _emerald, size: 20),
+          ),
+          const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   "JENJANG ${widget.jenjang.namaJenjang.toUpperCase()}",
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w900,
-                    color: _emerald,
-                    letterSpacing: 1.2,
-                  ),
+                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.grey, letterSpacing: 1),
+                  overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 4),
                 Text(
-                  // PERBAIKAN: Logika Level Tunggal (Bypass naming)
-                  widget.isLinear ? "Modul Pembelajaran" : "Tingkatan (Level)",
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: _slate),
+                  widget.isLinear ? "Unit Materi" : "Daftar Level",
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: _slate),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
@@ -157,7 +156,7 @@ class _LevelListScreenState extends ConsumerState<LevelListScreen> {
               title: const Text("Edit Data", style: TextStyle(fontWeight: FontWeight.bold)),
               onTap: () {
                 Navigator.pop(context);
-                _showAddLevelSheet(context, levelToEdit: level);
+                _showAddLevelheet(context, levelToEdit: level);
               },
             ),
             ListTile(
@@ -177,7 +176,7 @@ class _LevelListScreenState extends ConsumerState<LevelListScreen> {
 
   // --- DIALOG BUAT LEVEL (CONVERTED TO SHEET) ---
 
-  void _showAddLevelSheet(BuildContext context, {LevelModel? levelToEdit}) {
+  void _showAddLevelheet(BuildContext context, {LevelModel? levelToEdit}) {
     final nameController = TextEditingController(text: levelToEdit?.namaLevel);
 
     showModalBottomSheet(
@@ -207,7 +206,7 @@ class _LevelListScreenState extends ConsumerState<LevelListScreen> {
                   child: Text(
                     // PERBAIKAN: Logika Level Tunggal
                     levelToEdit == null
-                        ? (widget.isLinear ? "Atur Konten Modul" : "Buat Tingkatan (Level)")
+                        ? (widget.isLinear ? "Siapkan Materi" : "Buat Level Baru")
                         : "Edit Konfigurasi",
                     style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: _slate),
                   ),
@@ -218,13 +217,13 @@ class _LevelListScreenState extends ConsumerState<LevelListScreen> {
             const SizedBox(height: 12),
             Text(
               widget.isLinear
-                  ? "Definisikan grup materi untuk jenjang linear ini."
+                  ? "Menyiapkan kontainer materi untuk jenjang linier."
                   : "Tentukan cakupan materi untuk tingkatan ini.",
               style: const TextStyle(color: Colors.grey, fontSize: 13),
             ),
             const SizedBox(height: 32),
             Text(
-                widget.isLinear ? "NAMA GRUP MODUL" : "NAMA LEVEL",
+                widget.isLinear ? "NAMA KONTAINER" : "NAMA LEVEL",
                 style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.grey, letterSpacing: 1.2)
             ),
             const SizedBox(height: 8),
@@ -232,7 +231,7 @@ class _LevelListScreenState extends ConsumerState<LevelListScreen> {
               controller: nameController,
               autofocus: true,
               decoration: InputDecoration(
-                hintText: widget.isLinear ? "Contoh: Modul Materi Utama" : "Contoh: Level 3 (Juz 28)",
+                hintText: widget.isLinear ? "Contoh: Materi Utama" : "Contoh: Level 3",
                 filled: true,
                 fillColor: const Color(0xFFF8FAFC),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
@@ -291,7 +290,7 @@ class _LevelListScreenState extends ConsumerState<LevelListScreen> {
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: const Text("Hapus Data?", style: TextStyle(fontWeight: FontWeight.bold)),
-        content: Text("Seluruh modul di dalamnya juga akan terhapus."),
+        content: const Text("Seluruh modul di dalamnya juga akan terhapus."),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Batal")),
           TextButton(
@@ -308,28 +307,37 @@ class _LevelListScreenState extends ConsumerState<LevelListScreen> {
 
   Widget _buildEmptyState() {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.stairs_outlined, size: 80, color: Color(0xFFE2E8F0)),
-          const SizedBox(height: 16),
-          Text(
-            widget.isLinear ? "Belum ada konfigurasi modul." : "Belum ada tingkatan/level.",
-            style: const TextStyle(color: Colors.grey, fontWeight: FontWeight.w500),
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton(
-            onPressed: () => _showAddLevelSheet(context),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: _slate,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(40),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.stairs_outlined, size: 64, color: Colors.grey[200]),
+            const SizedBox(height: 16),
+            const Text("Konten Belum Diatur", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
+            const SizedBox(height: 8),
+            Text(
+              widget.isLinear
+                  ? "Klik tombol + untuk mulai mengatur modul pembelajaran yang akan dipelajari pada jenjang pendidikan ini."
+                  : "Klik tombol + untuk menambah tingkatan materi (Level) pada jenjang pendidikan ini.",
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.grey, fontSize: 13, height: 1.4),
             ),
-            child: Text(
-                widget.isLinear ? "Mulai Atur Modul" : "Buat Level Pertama",
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)
-            ),
-          )
-        ],
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: () => _showAddLevelheet(context),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _slate,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: Text(
+                  widget.isLinear ? "Mulai Atur" : "Buat Level Pertama",
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)
+              ),
+            )
+          ],
+        ),
       ),
     );
   }

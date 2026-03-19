@@ -21,12 +21,12 @@ final staffSearchProvider =
 );
 
 typedef _$StaffSearch = AutoDisposeNotifier<String>;
-String _$staffListHash() => r'61099aba04f2e28e923d82ce9970c1af1c50104c';
+String _$staffListHash() => r'6e11343ecb5e3fdb478c4713630cf333f3bbe805';
 
 /// See also [StaffList].
 @ProviderFor(StaffList)
 final staffListProvider =
-    AutoDisposeAsyncNotifierProvider<StaffList, List<StaffModel>>.internal(
+    AutoDisposeAsyncNotifierProvider<StaffList, List<ProfileModel>>.internal(
   StaffList.new,
   name: r'staffListProvider',
   debugGetCreateSourceHash:
@@ -35,6 +35,6 @@ final staffListProvider =
   allTransitiveDependencies: null,
 );
 
-typedef _$StaffList = AutoDisposeAsyncNotifier<List<StaffModel>>;
+typedef _$StaffList = AutoDisposeAsyncNotifier<List<ProfileModel>>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

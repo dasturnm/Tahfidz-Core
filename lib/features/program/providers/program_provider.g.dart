@@ -6,7 +6,7 @@ part of 'program_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$programNotifierHash() => r'9e909b403a0652f18e1e54712049e0b6a9e0b528';
+String _$programNotifierHash() => r'f12709740a0d7f82bc793be2c981ba20898b2578';
 
 /// See also [ProgramNotifier].
 @ProviderFor(ProgramNotifier)

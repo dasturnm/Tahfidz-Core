@@ -77,7 +77,7 @@ class StaffListScreen extends ConsumerWidget {
           final listStaff = listAll.where((s) {
             final bool matchesRole = showAdminOnly ? s.role != 'guru' : s.role == 'guru';
             final bool matchesSearch = s.nama.toLowerCase().contains(searchQuery) ||
-                (s.id?.toLowerCase().contains(searchQuery) ?? false);
+                (s.id.toLowerCase().contains(searchQuery) ?? false);
             return matchesRole && matchesSearch;
           }).toList();
 
