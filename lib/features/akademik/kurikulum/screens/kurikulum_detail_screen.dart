@@ -80,7 +80,7 @@ class KurikulumDetailScreen extends ConsumerWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text("STRUKTUR KURIKULUM", style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.grey, letterSpacing: 1)),
+              const Text("STRUKTUR KURIKULUM", style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.grey, letterSpacing: 1)),
               Text(kurikulum.namaKurikulum, style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: _slate)),
             ],
           ),
@@ -178,17 +178,17 @@ class KurikulumDetailScreen extends ConsumerWidget {
   }
 
   Widget _buildEmptyState(BuildContext context, WidgetRef ref) {
-    return Center(
+    return const Center(
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(48.0),
+        padding: EdgeInsets.all(48.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.account_tree_outlined, size: 64, color: Color(0xFFE2E8F0)),
-            const SizedBox(height: 16),
-            const Text("Belum Ada Jenjang", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
-            const SizedBox(height: 8),
-            const Text(
+            Icon(Icons.account_tree_outlined, size: 64, color: Color(0xFFE2E8F0)),
+            SizedBox(height: 16),
+            Text("Belum Ada Jenjang", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
+            SizedBox(height: 8),
+            Text(
               "Kurikulum sudah siap. Sekarang, tambahkan jenjang pendidikan (seperti Dasar, Menengah, dst) dengan mengklik tombol + di pojok kanan bawah.",
               textAlign: TextAlign.center,
               style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w500, height: 1.5, fontSize: 13),

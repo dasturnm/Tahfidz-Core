@@ -11,7 +11,7 @@ Future<List<Map<String, dynamic>>> quranSurahList(QuranSurahListRef ref) async {
 
   final response = await supabase
       .from('quran_surah')
-      .select('id, name_id, total_ayah, juz_start, juz_end')
+      .select('id, name_id, nama_latin, total_ayah, juz_start, juz_end')
       .order('id', ascending: true);
 
   return List<Map<String, dynamic>>.from(response);

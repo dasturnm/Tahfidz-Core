@@ -112,9 +112,9 @@ class _ModulDetailScreenState extends ConsumerState<ModulDetailScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: _emerald.withOpacity(0.05),
+                color: _emerald.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: _emerald.withOpacity(0.1)),
+                border: Border.all(color: _emerald.withValues(alpha: 0.1)),
               ),
               child: Row(
                 children: [
@@ -142,7 +142,7 @@ class _ModulDetailScreenState extends ConsumerState<ModulDetailScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 20, offset: const Offset(0, 10)),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 20, offset: const Offset(0, 10)),
         ],
       ),
       child: Column(
@@ -181,9 +181,9 @@ class _ModulDetailScreenState extends ConsumerState<ModulDetailScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.05),
+        color: color.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withOpacity(0.1)),
+        border: Border.all(color: color.withValues(alpha: 0.1)),
       ),
       child: Text(
         text.toUpperCase(),

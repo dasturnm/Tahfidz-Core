@@ -259,6 +259,7 @@ class ModulModel {
   final String tipe;
   final int targetPertemuan;
   final String? silabus;
+  final List<SilabusItemModel> silabusContent; // TAMBAHAN
   final bool isSystemGenerated;
   final String jenisMetrik;
   final String? mulaiKoordinat;
@@ -272,6 +273,7 @@ class ModulModel {
     required this.tipe,
     this.targetPertemuan = 30,
     this.silabus,
+    this.silabusContent = const [], // TAMBAHAN
     this.isSystemGenerated = false,
     this.jenisMetrik = 'HALAMAN',
     this.mulaiKoordinat,
@@ -286,6 +288,12 @@ class ModulModel {
     tipe: json['tipe'] ?? 'HAFALAN',
     targetPertemuan: json['target_pertemuan'] ?? 30,
     silabus: json['silabus'],
+    silabusContent: (json['silabus_content'] is List) // TAMBAHAN
+        ? (json['silabus_content'] as List)
+        .whereType<Map<String, dynamic>>()
+        .map((x) => SilabusItemModel.fromJson(x))
+        .toList()
+        : const [],
     isSystemGenerated: json['is_system_generated'] ?? false,
     jenisMetrik: json['jenis_metrik'] ?? 'HALAMAN',
     mulaiKoordinat: json['mulai_koordinat'],
@@ -300,6 +308,7 @@ class ModulModel {
     'tipe': tipe,
     'target_pertemuan': targetPertemuan,
     'silabus': silabus,
+    'silabus_content': List<dynamic>.from(silabusContent.map((x) => x.toJson())), // TAMBAHAN
     'is_system_generated': isSystemGenerated,
     'jenis_metrik': jenisMetrik,
     'mulai_koordinat': mulaiKoordinat,
@@ -314,6 +323,7 @@ class ModulModel {
     String? tipe,
     int? targetPertemuan,
     String? silabus,
+    List<SilabusItemModel>? silabusContent, // TAMBAHAN
     bool? isSystemGenerated,
     String? jenisMetrik,
     String? mulaiKoordinat,
@@ -327,6 +337,7 @@ class ModulModel {
       tipe: tipe ?? this.tipe,
       targetPertemuan: targetPertemuan ?? this.targetPertemuan,
       silabus: silabus ?? this.silabus,
+      silabusContent: silabusContent ?? this.silabusContent, // TAMBAHAN
       isSystemGenerated: isSystemGenerated ?? this.isSystemGenerated,
       jenisMetrik: jenisMetrik ?? this.jenisMetrik,
       mulaiKoordinat: mulaiKoordinat ?? this.mulaiKoordinat,
@@ -334,4 +345,29 @@ class ModulModel {
       kkm: kkm ?? this.kkm,
     );
   }
+}
+
+// CLASS BARU UNTUK ISI CSV
+class SilabusItemModel {
+  final int pertemuan;
+  final String materi;
+  final String? keterangan;
+
+  SilabusItemModel({
+    required this.pertemuan,
+    required this.materi,
+    this.keterangan,
+  });
+
+  factory SilabusItemModel.fromJson(Map<String, dynamic> json) => SilabusItemModel(
+    pertemuan: json['pertemuan'] ?? 0,
+    materi: json['materi'] ?? '',
+    keterangan: json['keterangan'],
+  );
+
+  Map<String, dynamic> toJson() => {
+    'pertemuan': pertemuan,
+    'materi': materi,
+    'keterangan': keterangan,
+  };
 }

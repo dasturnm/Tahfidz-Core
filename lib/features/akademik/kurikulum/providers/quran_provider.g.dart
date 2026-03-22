@@ -6,7 +6,7 @@ part of 'quran_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$quranSurahListHash() => r'8a020bad80656f9c5f392641f4d0beb069185977';
+String _$quranSurahListHash() => r'd48cc81a2ca7ba7aca2849fa7813e877ff331cb8';
 
 /// See also [quranSurahList].
 @ProviderFor(quranSurahList)

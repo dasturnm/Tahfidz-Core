@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../management_lembaga/providers/app_context_provider.dart';
 import '../../management_lembaga/screens/management_hub_screen.dart';
 import '../../program/screens/program_list_screen.dart';
@@ -8,33 +9,22 @@ import '../../guru_staff/screens/staff_hub_screen.dart';
 import 'dashboard_admin_screen.dart';
 import '../../siswa/screens/Siswa_hub_screen.dart';
 import '../../mutabaah/screens/mutabaah_hub_screen.dart';
+import '../../mushaf/screens/mushaf_index_screen.dart';
+import '../../mushaf/screens/mushaf_screen.dart';
 
 class MainLayoutScreen extends ConsumerStatefulWidget {
-  const MainLayoutScreen({super.key});
+  final Widget child;
+  const MainLayoutScreen({super.key, required this.child});
 
   @override
   ConsumerState<MainLayoutScreen> createState() => _MainLayoutScreenState();
 }
 
 class _MainLayoutScreenState extends ConsumerState<MainLayoutScreen> {
-  int _selectedIndex = 0;
-
   @override
   Widget build(BuildContext context) {
     // Watch context untuk mendapatkan programId yang aktif
     final contextState = ref.watch(appContextProvider);
-
-    // Daftar Layar Utama (Sub-Menu) dipindahkan ke sini agar bisa akses contextState
-    final List<Widget> screens = [
-      const DashboardAdminScreen(),
-      const ManagementHubScreen(),
-      const StaffHubScreen(),
-      const ProgramListScreen(),
-      AkademikHubScreen(lembagaId: contextState.lembaga?.id ?? ""), // PERBAIKAN: Gunakan lembagaId
-      const SiswaHubScreen(),
-      const MutabaahHubScreen(),
-      const Center(child: Text("Keuangan Screen")),
-    ];
 
     final screenWidth = MediaQuery.of(context).size.width;
     final bool isMobile = screenWidth < 1000;
@@ -58,7 +48,7 @@ class _MainLayoutScreenState extends ConsumerState<MainLayoutScreen> {
           Expanded(
             child: Container(
               color: const Color(0xFFF8FAFC),
-              child: screens[_selectedIndex], // Menggunakan variabel lokal screens
+              child: widget.child,
             ),
           ),
         ],
@@ -136,10 +126,11 @@ class _MainLayoutScreenState extends ConsumerState<MainLayoutScreen> {
                 _buildMenuItem(4, Icons.school_outlined, "Kurikulum & Level"),
 
                 const Divider(height: 16),
-                _buildSectionLabel("DATA SISWA"),
+                _buildSectionLabel("KONTEKS TAHFIDZ"),
                 _buildMenuItem(5, Icons.face_outlined, "Daftar Siswa"),
                 _buildMenuItem(5, Icons.meeting_room_outlined, "Manajemen Kelas"),
                 _buildMenuItem(6, Icons.history_edu_rounded, "Mutabaah Siswa"),
+                _buildMenuItem(8, Icons.menu_book_outlined, "Mushaf Al-Qur'an"),
 
                 const Divider(height: 16),
                 _buildSectionLabel("ADMINISTRASI"),
@@ -166,10 +157,25 @@ class _MainLayoutScreenState extends ConsumerState<MainLayoutScreen> {
   }
 
   Widget _buildMenuItem(int index, IconData icon, String label) {
-    bool isSelected = _selectedIndex == index;
+    final location = GoRouterState.of(context).matchedLocation;
+
+    // Sinkronisasi Indeks dengan URL GoRouter
+    final Map<int, String> indexToPath = {
+      0: '/dashboard',
+      1: '/setup-lembaga',
+      5: '/siswa',
+      6: '/mutabaah-input',
+      8: '/mushaf-index',
+    };
+
+    bool isSelected = indexToPath[index] == location;
+    if (index == 0 && (location == '/' || location == '/dashboard')) isSelected = true;
+
     return InkWell(
       onTap: () {
-        setState(() => _selectedIndex = index);
+        if (indexToPath.containsKey(index)) {
+          context.go(indexToPath[index]!);
+        }
         if (Navigator.canPop(context)) Navigator.pop(context);
       },
       borderRadius: BorderRadius.circular(12),
