@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:tahfidz_core/features/auth/screens/login_screen.dart';
 import 'package:tahfidz_core/features/dashboard/screens/main_layout_screen.dart';
-import 'package:tahfidz_core/providers/auth_provider.dart';
-import 'package:tahfidz_core/features/management_lembaga/providers/app_context_provider.dart';
+import 'package:tahfidz_core/features/auth/providers/auth_provider.dart';
+import 'package:tahfidz_core/core/providers/app_context_provider.dart';
 import 'package:tahfidz_core/features/management_lembaga/screens/lembaga_profile_screen.dart';
 import 'package:tahfidz_core/routes/app_routes.dart'; // TAMBAHKAN INI
 

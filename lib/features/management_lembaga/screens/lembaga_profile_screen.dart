@@ -2,7 +2,7 @@ import 'dart:io'; // Ditambahkan untuk cek ukuran file
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart'; // Wajib tambah ini di pubspec.yaml
-import '../providers/app_context_provider.dart';
+import '../../../core/providers/app_context_provider.dart';
 import '../models/lembaga_model.dart';
 
 class LembagaProfileScreen extends ConsumerStatefulWidget {

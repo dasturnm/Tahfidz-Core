@@ -1,6 +1,6 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../management_lembaga/providers/app_context_provider.dart';
+import '../../../core/providers/app_context_provider.dart';
 import '../models/agenda_model.dart';
 
 part 'kalender_provider.g.dart';

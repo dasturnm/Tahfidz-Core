@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../siswa/models/siswa_model.dart';
 import '../../akademik/kurikulum/models/kurikulum_model.dart';
-import '../providers/mutabaah_provider.dart';
-import '../providers/mutabaah_pdf_service.dart';
+import '../services/mutabaah_provider.dart';
+import '../services/mutabaah_pdf_service.dart';
 
 class MutabaahStatsDashboard extends ConsumerWidget {
   final SiswaModel siswa;

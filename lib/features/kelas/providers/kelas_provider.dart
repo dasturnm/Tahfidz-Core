@@ -2,7 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../management_lembaga/providers/app_context_provider.dart'; // Import context
+import '../../../core/providers/app_context_provider.dart'; // Import context
 import '../models/kelas_model.dart';
 import '../services/kelas_service.dart';
 

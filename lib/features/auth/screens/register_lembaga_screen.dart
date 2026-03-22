@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:tahfidz_core/services/auth_service.dart';
+import 'package:tahfidz_core/features/auth/services/auth_service.dart';
 
 class RegisterLembagaScreen extends ConsumerStatefulWidget {
   const RegisterLembagaScreen({super.key});

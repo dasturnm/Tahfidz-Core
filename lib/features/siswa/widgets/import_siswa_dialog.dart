@@ -7,7 +7,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:csv/csv.dart'; // Import normal, sudah bebas masalah
 import '../models/siswa_model.dart';
 import '../providers/siswa_provider.dart';
-import '../../management_lembaga/providers/app_context_provider.dart';
+import '../../../core/providers/app_context_provider.dart';
 
 class ImportSiswaDialog extends ConsumerStatefulWidget {
   const ImportSiswaDialog({super.key});

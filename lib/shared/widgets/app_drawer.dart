@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../features/management_lembaga/providers/app_context_provider.dart';
+import '../../core/providers/app_context_provider.dart';
 // Import Screen yang sudah kita buat
 import '../../features/management_lembaga/screens/lembaga_profile_screen.dart';
 import '../../features/management_lembaga/screens/cabang_list_screen.dart';

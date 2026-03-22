@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../management_lembaga/providers/app_context_provider.dart';
+import '../../../core/providers/app_context_provider.dart';
 import '../../management_lembaga/screens/management_hub_screen.dart';
 import '../../program/screens/program_list_screen.dart';
 import '../../akademik/screens/akademik_hub_screen.dart';

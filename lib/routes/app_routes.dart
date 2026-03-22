@@ -3,8 +3,8 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart'; // TAMBAHKAN INI
 import 'package:tahfidz_core/core/constants/app_routes.dart';
 import 'package:tahfidz_core/core/layout/auth_layout.dart';
-import 'package:tahfidz_core/providers/auth_provider.dart';
-import 'package:tahfidz_core/features/management_lembaga/providers/app_context_provider.dart';
+import 'package:tahfidz_core/features/auth/providers/auth_provider.dart';
+import 'package:tahfidz_core/core/providers/app_context_provider.dart';
 import 'package:tahfidz_core/features/management_lembaga/screens/lembaga_profile_screen.dart';
 
 // Import Screens

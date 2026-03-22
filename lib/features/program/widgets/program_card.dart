@@ -5,7 +5,7 @@ import '../screens/program_detail_screen.dart';
 import '../screens/program_form_screen.dart'; // Baru
 import '../providers/agenda_provider.dart';
 import '../services/effective_day_service.dart';
-import '../../management_lembaga/providers/app_context_provider.dart';
+import '../../../core/providers/app_context_provider.dart';
 import '../../akademik/kurikulum/providers/kurikulum_provider.dart'; // Baru
 
 class ProgramCard extends ConsumerWidget {

@@ -1,6 +1,6 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:tahfidz_core/services/auth_service.dart';
+import 'package:tahfidz_core/features/auth/services/auth_service.dart';
 
 part 'auth_provider.g.dart';
 

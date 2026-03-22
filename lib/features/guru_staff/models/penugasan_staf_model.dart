@@ -6,6 +6,7 @@ class PenugasanStafModel {
   final String? jabatanId;
   final String status;
   final String? tanggalMulai;
+  final bool isUtama;
 
   // Data Relasi (Diambil otomatis pakai JOIN Supabase)
   final String? namaStaf;
@@ -21,6 +22,7 @@ class PenugasanStafModel {
     this.jabatanId,
     this.status = 'aktif',
     this.tanggalMulai,
+    this.isUtama = false,
     this.namaStaf,
     this.emailStaf,
     this.namaJabatan,
@@ -41,6 +43,7 @@ class PenugasanStafModel {
       jabatanId: json['jabatan_id']?.toString(),
       status: json['status'] ?? 'aktif',
       tanggalMulai: json['tanggal_mulai'],
+      isUtama: json['is_utama'] ?? false,
       // Ambil nama dari relasi, sesuaikan field 'nama_lengkap' dengan kolom di tabel profiles Anda
       namaStaf: profile?['nama_lengkap'] ?? profile?['full_name'] ?? 'Tanpa Nama',
       emailStaf: profile?['email'] ?? '-',
@@ -58,6 +61,7 @@ class PenugasanStafModel {
       'jabatan_id': jabatanId,
       'status': status,
       'tanggal_mulai': tanggalMulai,
+      'is_utama': isUtama,
     };
   }
 
@@ -69,6 +73,7 @@ class PenugasanStafModel {
     String? jabatanId,
     String? status,
     String? tanggalMulai,
+    bool? isUtama,
     String? namaStaf,
     String? emailStaf,
     String? namaJabatan,
@@ -82,6 +87,7 @@ class PenugasanStafModel {
       jabatanId: jabatanId ?? this.jabatanId,
       status: status ?? this.status,
       tanggalMulai: tanggalMulai ?? this.tanggalMulai,
+      isUtama: isUtama ?? this.isUtama,
       namaStaf: namaStaf ?? this.namaStaf,
       emailStaf: emailStaf ?? this.emailStaf,
       namaJabatan: namaJabatan ?? this.namaJabatan,

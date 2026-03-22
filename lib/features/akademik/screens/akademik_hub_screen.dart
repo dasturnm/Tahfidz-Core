@@ -2,7 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../management_lembaga/providers/app_context_provider.dart'; // PERBAIKAN: Import Context
+import '../../../core/providers/app_context_provider.dart'; // PERBAIKAN: Import Context
 import '../kurikulum/providers/kurikulum_provider.dart';
 import '../kurikulum/models/kurikulum_model.dart';
 import '../kurikulum/screens/kurikulum_detail_screen.dart'; // PERBAIKAN: Import file terpisah

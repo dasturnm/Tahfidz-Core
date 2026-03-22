@@ -3,7 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import '../providers/mutabaah_provider.dart';
+import '../services/mutabaah_provider.dart';
 import '../models/mutabaah_model.dart';
 import '../../siswa/providers/siswa_provider.dart';
 

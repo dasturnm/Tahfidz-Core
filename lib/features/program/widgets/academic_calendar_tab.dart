@@ -5,7 +5,7 @@ import '../providers/agenda_provider.dart';
 import '../providers/program_provider.dart';
 import '../providers/kalender_provider.dart'; // Baru: Import Kalender
 import '../../management_lembaga/providers/tahun_ajaran_notifier.dart'; // FIX: Jalur diperbaiki
-import '../../management_lembaga/providers/app_context_provider.dart';
+import '../../../core/providers/app_context_provider.dart';
 import '../models/agenda_model.dart';
 
 class AcademicCalendarTab extends ConsumerStatefulWidget {

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../providers/app_context_provider.dart';
+import '../../../core/providers/app_context_provider.dart';
 import '../providers/lembaga_provider.dart'; // Ditambahkan: Import provider baru
 import '../models/divisi_model.dart';
 

@@ -8,7 +8,7 @@ import '../models/siswa_model.dart';
 import '../providers/siswa_provider.dart';
 import '../../akademik/providers/akademik_provider.dart';
 import '../../kelas/providers/kelas_provider.dart';
-import '../../management_lembaga/providers/app_context_provider.dart';
+import '../../../core/providers/app_context_provider.dart';
 
 class SiswaFormScreen extends ConsumerStatefulWidget {
   final SiswaModel? existingSiswa;

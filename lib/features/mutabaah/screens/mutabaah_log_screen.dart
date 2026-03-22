@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../siswa/models/siswa_model.dart';
 import '../models/mutabaah_model.dart';
-import '../providers/mutabaah_provider.dart';
+import '../services/mutabaah_provider.dart';
 
 class MutabaahLogScreen extends ConsumerWidget {
   final SiswaModel siswa;

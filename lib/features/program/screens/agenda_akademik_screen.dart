@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/agenda_provider.dart';
 import '../providers/program_provider.dart';
-import '../../management_lembaga/providers/app_context_provider.dart';
+import '../../../core/providers/app_context_provider.dart';
 import '../models/agenda_model.dart';
 // PERBAIKAN: Menghapus import 'package:tahfidz_core/shared/widgets/app_drawer.dart' yang tidak terpakai
 

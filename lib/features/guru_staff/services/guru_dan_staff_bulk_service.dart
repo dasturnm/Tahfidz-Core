@@ -7,9 +7,9 @@ import 'package:path_provider/path_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:share_plus/share_plus.dart'; // Opsional: Untuk membagikan file hasil export
 import 'package:tahfidz_core/shared/models/profile_model.dart';
-import '../features/guru_staff/providers/staff_provider.dart';
-import '../features/guru_staff/providers/penugasan_staf_provider.dart';
-import 'auth_service.dart';
+import '../providers/staff_provider.dart';
+import '../providers/penugasan_staf_provider.dart';
+import '../../auth/services/auth_service.dart';
 
 part 'guru_dan_staff_bulk_service.g.dart';
 

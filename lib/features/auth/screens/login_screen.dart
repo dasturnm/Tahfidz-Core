@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:tahfidz_core/providers/auth_provider.dart';
+import 'package:tahfidz_core/features/auth/providers/auth_provider.dart';
 import 'package:tahfidz_core/core/widgets/app_button.dart';
 import 'package:tahfidz_core/features/auth/screens/register_lembaga_screen.dart';
 // Import halaman lupa password (pastikan path ini sesuai nanti)

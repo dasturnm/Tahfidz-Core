@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:tahfidz_core/services/auth_service.dart';
-import 'package:tahfidz_core/features/management_lembaga/providers/app_context_provider.dart'; // Tambahkan ini
+import 'package:tahfidz_core/features/auth/services/auth_service.dart';
+import 'package:tahfidz_core/core/providers/app_context_provider.dart'; // Tambahkan ini
 import 'package:tahfidz_core/features/management_lembaga/providers/lembaga_provider.dart';
 import 'package:tahfidz_core/features/guru_staff/providers/penugasan_staf_provider.dart';
 import 'package:tahfidz_core/features/guru_staff/providers/staff_provider.dart';

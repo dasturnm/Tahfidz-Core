@@ -6,7 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../akademik/kurikulum/models/kurikulum_model.dart';
 import '../../siswa/models/siswa_model.dart';
 import '../models/mutabaah_model.dart';
-import '../providers/mutabaah_provider.dart';
+import '../services/mutabaah_provider.dart';
 import '../services/mutabaah_tahfidz_service.dart';
 
 class MutabaahInputScreen extends ConsumerStatefulWidget {

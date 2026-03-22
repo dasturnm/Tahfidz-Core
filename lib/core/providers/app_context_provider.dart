@@ -2,9 +2,9 @@ import 'dart:io';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 // Perbaiki path import: naik satu tingkat ke folder management_lembaga, lalu masuk ke models
-import '../models/lembaga_model.dart';
-import '../models/cabang_model.dart';
-import '../models/tahun_ajaran_model.dart';
+import '../../features/management_lembaga/models/lembaga_model.dart';
+import '../../features/management_lembaga/models/cabang_model.dart';
+import '../../features/management_lembaga/models/tahun_ajaran_model.dart';
 
 part 'app_context_provider.g.dart';
 
