@@ -28,6 +28,7 @@ class SiswaHubScreen extends ConsumerStatefulWidget {
   ConsumerState<SiswaHubScreen> createState() => _SiswaHubScreenState();
 }
 
+// FIX: Nama class diubah dari _StaffHubScreenState menjadi _SiswaHubScreenState
 class _SiswaHubScreenState extends ConsumerState<SiswaHubScreen> {
   int _activeTab = 0; // 0: Siswa, 1: kelas
   bool _isSiswaGridView = false;
@@ -202,9 +203,11 @@ class _SiswaHubScreenState extends ConsumerState<SiswaHubScreen> {
               controller: _searchController,
               onChanged: (val) {
                 if (_activeTab == 0) {
-                  ref.read(siswaProvider.notifier).searchSiswa(val);
+                  // FIX: Menggunakan siswaSearchProvider hasil generator
+                  ref.read(siswaSearchProvider.notifier).updateQuery(val);
                 } else {
-                  ref.read(kelasProvider.notifier).searchKelas(val); // PERBAIKAN: Singular & Label Kelas
+                  // FIX: Menggunakan kelasSearchProvider sesuai arsitektur baru
+                  ref.read(kelasSearchProvider.notifier).updateQuery(val);
                 }
               },
               decoration: const InputDecoration(
@@ -284,7 +287,7 @@ class _SiswaHubScreenState extends ConsumerState<SiswaHubScreen> {
             boxShadow: isActive ? [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 4)] : [],
           ),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.center, // FIX: Perbaikan typo dari MainRectangle
             children: [
               Icon(icon, size: 16, color: isActive ? const Color(0xFF0D9488) : Colors.grey),
               const SizedBox(width: 8),

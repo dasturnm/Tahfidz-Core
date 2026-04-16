@@ -1,10 +1,12 @@
+// Lokasi: lib/features/program/screens/agenda_akademik_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/agenda_provider.dart';
 import '../providers/program_provider.dart';
 import '../../../core/providers/app_context_provider.dart';
-import '../models/agenda_model.dart';
-// PERBAIKAN: Menghapus import 'package:tahfidz_core/shared/widgets/app_drawer.dart' yang tidak terpakai
+// FIX: Menggunakan absolute import agar sinkron dengan lokasi model yang baru
+import 'package:tahfidz_core/features/program/models/agenda_model.dart';
 
 class AgendaAkademikScreen extends ConsumerStatefulWidget {
   const AgendaAkademikScreen({super.key});
@@ -19,9 +21,10 @@ class _AgendaAkademikScreenState extends ConsumerState<AgendaAkademikScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final activeTA = ref.watch(appContextProvider).currentTahunAjaran; // Tambah Konteks TA
+    final activeTA = ref.watch(appContextProvider).currentTahunAjaran;
+    // FIX: Memberikan default value '' untuk menghindari error argument_type_not_assignable
     final agendasAsync = ref.watch(agendaNotifierProvider(
-        tahunAjaranId: activeTA?.id,
+        tahunAjaranId: activeTA?.id ?? '',
         programId: _selectedProgramFilter
     ));
     final programsAsync = ref.watch(programNotifierProvider);
@@ -40,9 +43,7 @@ class _AgendaAkademikScreenState extends ConsumerState<AgendaAkademikScreen> {
             child: agendasAsync.when(
               data: (agendas) {
                 final filteredAgendas = agendas.where((a) {
-                  // Filter Bulan (Filter lokal yang tersisa)
                   bool matchMonth = _selectedMonthFilter == null || a.tanggalMulai.month == _selectedMonthFilter;
-
                   return matchMonth;
                 }).toList();
 
@@ -90,12 +91,12 @@ class _AgendaAkademikScreenState extends ConsumerState<AgendaAkademikScreen> {
                         ),
                         trailing: PopupMenuButton<String>(
                           onSelected: (val) {
-                            if (val == 'detail') _showDetailAgenda(a); // Baru: Aksi Detail
+                            if (val == 'detail') _showDetailAgenda(a);
                             if (val == 'edit') _showAddAgendaDialog(context, ref, agenda: a);
-                            if (val == 'delete') _confirmDelete(a.id);
+                            if (val == 'delete') _confirmDelete(a.id ?? '');
                           },
                           itemBuilder: (context) => [
-                            const PopupMenuItem(value: 'detail', child: Text('Detail')), // Baru: Menu Detail
+                            const PopupMenuItem(value: 'detail', child: Text('Detail')),
                             const PopupMenuItem(value: 'edit', child: Text('Edit')),
                             const PopupMenuItem(value: 'delete', child: Text('Hapus', style: TextStyle(color: Colors.red))),
                           ],
@@ -122,7 +123,6 @@ class _AgendaAkademikScreenState extends ConsumerState<AgendaAkademikScreen> {
         scrollDirection: Axis.horizontal,
         child: Row(
           children: [
-            // Filter Bulan (FIX: Menggunakan int? untuk mencegah crash)
             _buildDropdownContainer(
               icon: Icons.calendar_month,
               child: DropdownButtonHideUnderline(
@@ -141,7 +141,6 @@ class _AgendaAkademikScreenState extends ConsumerState<AgendaAkademikScreen> {
               ),
             ),
             const SizedBox(width: 12),
-            // Filter Program (FIX: Menggunakan String? dan eksplisit tipe data)
             _buildDropdownContainer(
               icon: Icons.filter_list,
               child: programsAsync.when(
@@ -172,7 +171,7 @@ class _AgendaAkademikScreenState extends ConsumerState<AgendaAkademikScreen> {
   Widget _buildDropdownContainer({required IconData icon, required Widget child}) {
     return Container(
       height: 48,
-      constraints: const BoxConstraints(minWidth: 140), // Merapikan ukuran box
+      constraints: const BoxConstraints(minWidth: 140),
       padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -190,7 +189,6 @@ class _AgendaAkademikScreenState extends ConsumerState<AgendaAkademikScreen> {
     );
   }
 
-  // --- FUNGSI DETAIL AGENDA ---
   void _showDetailAgenda(AgendaModel agenda) {
     showDialog(
       context: context,
@@ -222,7 +220,6 @@ class _AgendaAkademikScreenState extends ConsumerState<AgendaAkademikScreen> {
     );
   }
 
-  // --- RE-USE DIALOG LOGIC ---
   void _showAddAgendaDialog(BuildContext context, WidgetRef ref, {AgendaModel? agenda}) {
     final activeTA = ref.read(appContextProvider).currentTahunAjaran;
     final isEdit = agenda != null;
@@ -237,84 +234,150 @@ class _AgendaAkademikScreenState extends ConsumerState<AgendaAkademikScreen> {
     bool isSiswaLibur = agenda?.isSiswaLibur ?? false;
     bool isGuruMasuk = agenda?.isGuruMasuk ?? true;
 
+    bool isRecurring = false;
+    DateTime? untilDate;
+
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: Text(isEdit ? "Edit Agenda" : "Buat Agenda Baru", style: const TextStyle(fontWeight: FontWeight.bold)),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildLabel("Nama Agenda"),
-                TextField(controller: nameController, decoration: _inputDecor("Contoh: Libur Ramadhan")),
-                const SizedBox(height: 16),
-                _buildLabel("Keterangan"),
-                TextField(controller: keteranganController, maxLines: 2, decoration: _inputDecor("Detail agenda...")),
-                const SizedBox(height: 16),
-                _buildLabel("Rentang Tanggal"),
-                OutlinedButton.icon(
-                  onPressed: () async {
-                    final range = await showDateRangePicker(context: context, firstDate: DateTime(2025), lastDate: DateTime(2030), initialDateRange: selectedRange);
-                    if (range != null) setDialogState(() => selectedRange = range);
-                  },
-                  icon: const Icon(Icons.calendar_month, size: 18),
-                  label: Text(selectedRange == null ? "Pilih Tanggal" : "${selectedRange!.start.day}/${selectedRange!.start.month} - ${selectedRange!.end.day}/${selectedRange!.end.month}"),
-                  style: OutlinedButton.styleFrom(minimumSize: const Size(double.infinity, 50)),
-                ),
-                const SizedBox(height: 16),
-                _buildLabel("Status Hari"),
-                DropdownButtonFormField<String>(
-                  initialValue: status,
-                  items: const [
-                    DropdownMenuItem(value: 'EFEKTIF', child: Text("HARI EFEKTIF")),
-                    DropdownMenuItem(value: 'LIBUR', child: Text("HARI LIBUR")),
+        builder: (context, setDialogState) {
+          final programs = ref.watch(programNotifierProvider).value ?? [];
+
+          return AlertDialog(
+            title: Text(isEdit ? "Edit Agenda" : "Buat Agenda Baru", style: const TextStyle(fontWeight: FontWeight.bold)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildLabel("Nama Agenda"),
+                  TextField(controller: nameController, decoration: _inputDecor("Contoh: Rapat Rutin Guru")),
+                  const SizedBox(height: 16),
+
+                  _buildLabel("Jangkauan Agenda"),
+                  DropdownButtonFormField<String>(
+                    // FIX: Dropdown menggunakan 'value' bukan 'initialValue'
+                    initialValue: scope,
+                    items: const [
+                      DropdownMenuItem(value: 'GLOBAL', child: Text("🌍 Seluruh Program")),
+                      DropdownMenuItem(value: 'PROG_SPESIFIK', child: Text("🎯 Program Spesifik")),
+                    ],
+                    onChanged: (val) => setDialogState(() => scope = val!),
+                    decoration: _inputDecor(""),
+                  ),
+                  const SizedBox(height: 12),
+
+                  if (scope == 'PROG_SPESIFIK') ...[
+                    _buildLabel("Pilih Program"),
+                    DropdownButtonFormField<String>(
+                      // FIX: Dropdown menggunakan 'value' bukan 'initialValue'
+                      initialValue: targetProgramId,
+                      items: programs.map((p) => DropdownMenuItem(value: p.id, child: Text(p.namaProgram))).toList(),
+                      onChanged: (val) => setDialogState(() => targetProgramId = val),
+                      decoration: _inputDecor("Pilih target program"),
+                    ),
+                    const SizedBox(height: 16),
                   ],
-                  onChanged: (val) => setDialogState(() => status = val!),
-                  decoration: _inputDecor(""),
-                ),
-                SwitchListTile(title: const Text("Siswa Libur", style: TextStyle(fontSize: 13)), value: isSiswaLibur, dense: true, onChanged: (val) => setDialogState(() => isSiswaLibur = val)),
-                SwitchListTile(title: const Text("Guru Tetap Masuk", style: TextStyle(fontSize: 13)), value: isGuruMasuk, dense: true, onChanged: (val) => setDialogState(() => isGuruMasuk = val)),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text("Batal")),
-            ElevatedButton(
-              onPressed: () async {
-                if (nameController.text.isEmpty || selectedRange == null) return;
-                final lembagaId = ref.read(appContextProvider).lembaga?.id;
-                final updatedAgenda = AgendaModel(
-                  id: isEdit ? agenda.id : '',
-                  lembagaId: lembagaId!,
-                  tahunAjaranId: activeTA!.id,
-                  namaAgenda: nameController.text.trim(),
-                  tanggalMulai: selectedRange!.start,
-                  tanggalBerakhir: selectedRange!.end,
-                  statusHariBelajar: status,
-                  scope: scope,
-                  programId: targetProgramId,
-                  keterangan: keteranganController.text.trim(),
-                  isSiswaLibur: isSiswaLibur,
-                  isGuruMasuk: isGuruMasuk,
-                );
 
-                // FIX: Jalankan aksi sesuai mode edit atau tambah
-                if (isEdit) {
-                  await ref.read(agendaNotifierProvider(tahunAjaranId: activeTA.id, programId: _selectedProgramFilter).notifier).updateAgenda(updatedAgenda);
-                } else {
-                  await ref.read(agendaNotifierProvider(tahunAjaranId: activeTA.id, programId: _selectedProgramFilter).notifier).addAgenda(updatedAgenda);
-                }
+                  _buildLabel("Keterangan"),
+                  TextField(controller: keteranganController, maxLines: 2, decoration: _inputDecor("Detail agenda...")),
+                  const SizedBox(height: 16),
 
-                if (context.mounted) Navigator.pop(context);
-              },
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10B981)),
-              child: const Text("Simpan", style: TextStyle(color: Colors.white)),
+                  _buildLabel("Rentang Tanggal"),
+                  OutlinedButton.icon(
+                    onPressed: () async {
+                      final range = await showDateRangePicker(context: context, firstDate: DateTime(2025), lastDate: DateTime(2030), initialDateRange: selectedRange);
+                      if (range != null) setDialogState(() => selectedRange = range);
+                    },
+                    icon: const Icon(Icons.calendar_month, size: 18),
+                    label: Text(selectedRange == null ? "Pilih Tanggal" : "${selectedRange!.start.day}/${selectedRange!.start.month} - ${selectedRange!.end.day}/${selectedRange!.end.month}"),
+                    style: OutlinedButton.styleFrom(minimumSize: const Size(double.infinity, 50)),
+                  ),
+                  const SizedBox(height: 16),
+
+                  if (!isEdit) ...[
+                    SwitchListTile(
+                      title: const Text("Agenda Berulang?", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                      subtitle: const Text("Ulangi setiap bulan", style: TextStyle(fontSize: 11)),
+                      value: isRecurring,
+                      dense: true,
+                      onChanged: (val) => setDialogState(() => isRecurring = val),
+                    ),
+                    if (isRecurring)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: OutlinedButton.icon(
+                          onPressed: () async {
+                            final date = await showDatePicker(context: context, initialDate: selectedRange?.end.add(const Duration(days: 30)) ?? DateTime.now().add(const Duration(days: 30)), firstDate: DateTime.now(), lastDate: DateTime(2030));
+                            if (date != null) setDialogState(() => untilDate = date);
+                          },
+                          icon: const Icon(Icons.repeat, size: 18),
+                          label: Text(untilDate == null ? "Berulang Hingga Tanggal..." : "Hingga: ${untilDate!.day}/${untilDate!.month}/${untilDate!.year}"),
+                          style: OutlinedButton.styleFrom(minimumSize: const Size(double.infinity, 50)),
+                        ),
+                      ),
+                  ],
+
+                  _buildLabel("Status Hari"),
+                  DropdownButtonFormField<String>(
+                    // FIX: Dropdown menggunakan 'value' bukan 'initialValue'
+                    initialValue: status,
+                    items: const [
+                      DropdownMenuItem(value: 'EFEKTIF', child: Text("HARI EFEKTIF")),
+                      DropdownMenuItem(value: 'LIBUR', child: Text("HARI LIBUR")),
+                    ],
+                    onChanged: (val) => setDialogState(() => status = val!),
+                    decoration: _inputDecor(""),
+                  ),
+                  SwitchListTile(title: const Text("Siswa Libur", style: TextStyle(fontSize: 13)), value: isSiswaLibur, dense: true, onChanged: (val) => setDialogState(() => isSiswaLibur = val)),
+                  SwitchListTile(title: const Text("Guru Tetap Masuk", style: TextStyle(fontSize: 13)), value: isGuruMasuk, dense: true, onChanged: (val) => setDialogState(() => isGuruMasuk = val)),
+                ],
+              ),
             ),
-          ],
-        ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context), child: const Text("Batal")),
+              ElevatedButton(
+                onPressed: () async {
+                  if (nameController.text.isEmpty || selectedRange == null) return;
+                  if (isRecurring && untilDate == null) return;
+
+                  final lembagaId = ref.read(appContextProvider).lembaga?.id;
+
+                  // FIX: Memastikan mapping ke AgendaModel menggunakan data yang valid
+                  final updatedAgenda = AgendaModel(
+                    id: isEdit ? agenda.id : null,
+                    lembagaId: lembagaId ?? '',
+                    tahunAjaranId: activeTA?.id,
+                    namaAgenda: nameController.text.trim(),
+                    tanggalMulai: selectedRange!.start,
+                    tanggalBerakhir: selectedRange!.end,
+                    statusHariBelajar: status,
+                    scope: scope,
+                    programId: scope == 'PROG_SPESIFIK' ? targetProgramId : null,
+                    keterangan: keteranganController.text.trim(),
+                    isSiswaLibur: isSiswaLibur,
+                    isGuruMasuk: isGuruMasuk,
+                  );
+
+                  if (isEdit) {
+                    await ref.read(agendaNotifierProvider(tahunAjaranId: activeTA?.id ?? '', programId: _selectedProgramFilter).notifier).updateAgenda(updatedAgenda);
+                  } else {
+                    await ref.read(agendaNotifierProvider(tahunAjaranId: activeTA?.id ?? '', programId: _selectedProgramFilter).notifier).addAgenda(
+                      updatedAgenda,
+                      isRecurring: isRecurring,
+                      untilDate: untilDate,
+                    );
+                  }
+
+                  if (context.mounted) Navigator.pop(context);
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10B981)),
+                child: const Text("Simpan", style: TextStyle(color: Colors.white)),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -328,7 +391,7 @@ class _AgendaAkademikScreenState extends ConsumerState<AgendaAkademikScreen> {
           TextButton(onPressed: () => Navigator.pop(context), child: const Text("Batal")),
           TextButton(onPressed: () async {
             final activeTA = ref.read(appContextProvider).currentTahunAjaran;
-            await ref.read(agendaNotifierProvider(tahunAjaranId: activeTA?.id, programId: _selectedProgramFilter).notifier).deleteAgenda(id);
+            await ref.read(agendaNotifierProvider(tahunAjaranId: activeTA?.id ?? '', programId: _selectedProgramFilter).notifier).deleteAgenda(id);
             if (context.mounted) Navigator.pop(context);
           }, child: const Text("Hapus", style: TextStyle(color: Colors.red))),
         ],

@@ -1,101 +1,76 @@
+// Lokasi: lib/features/management_lembaga/providers/lembaga_provider.dart
+
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../core/providers/app_context_provider.dart';
 import '../models/cabang_model.dart';
-// Asumsi nama model: DivisiModel & JabatanModel
-// Jika nama file model Anda berbeda, silakan sesuaikan importnya
 import '../models/divisi_model.dart';
 import '../models/jabatan_model.dart';
+import '../services/lembaga_service.dart';
 
 part 'lembaga_provider.g.dart';
 
-final _supabase = Supabase.instance.client;
-
-// --- PROVIDER DAFTAR CABANG ---
 @riverpod
 class CabangList extends _$CabangList {
-  @override
-  Future<List<CabangModel>> build(String lembagaId) async {
-    final data = await _supabase
-        .from('cabang')
-        .select()
-        .eq('lembaga_id', lembagaId)
-        .order('nama_cabang');
+  final _service = LembagaService();
 
-    return (data as List).map((e) => CabangModel.fromJson(e)).toList();
+  @override
+  Future<List<CabangModel>> build() async {
+    final lembagaId = ref.watch(appContextProvider).lembaga?.id;
+    if (lembagaId == null) return [];
+    return _service.getCabang(ref, lembagaId);
   }
 
   Future<void> saveCabang(CabangModel cabang) async {
-    final data = Map<String, dynamic>.from(cabang.toJson());
-    if (cabang.id.isEmpty) data.remove('id'); // Pastikan ID tidak kosong saat insert baru
-    data['lembaga_id'] = lembagaId; // Suntikkan lembagaId agar data muncul di list
-
-    // FIX: Cegah error "invalid input syntax for type date: """ jika tanggal kosong
-    if (data['tanggal_berdiri'] == '') data['tanggal_berdiri'] = null;
-
-    await _supabase.from('cabang').upsert(data);
+    await _service.saveCabang(ref, cabang);
     ref.invalidateSelf();
   }
 
   Future<void> deleteCabang(String id) async {
-    await _supabase.from('cabang').delete().eq('id', id);
+    await _service.deleteCabang(id);
     ref.invalidateSelf();
   }
 }
 
-// --- PROVIDER DAFTAR DIVISI ---
 @riverpod
 class DivisiList extends _$DivisiList {
-  @override
-  Future<List<DivisiModel>> build(String lembagaId) async {
-    final data = await _supabase
-        .from('divisi')
-        .select()
-        .eq('lembaga_id', lembagaId)
-        .order('nama_divisi');
+  final _service = LembagaService();
 
-    return (data as List).map((e) => DivisiModel.fromJson(e)).toList();
+  @override
+  Future<List<DivisiModel>> build() async {
+    final lembagaId = ref.watch(appContextProvider).lembaga?.id;
+    if (lembagaId == null) return [];
+    return _service.getDivisi(ref, lembagaId);
   }
 
   Future<void> saveDivisi(DivisiModel divisi) async {
-    final data = Map<String, dynamic>.from(divisi.toJson());
-    if (divisi.id.isEmpty) data.remove('id'); // Pastikan ID tidak kosong saat insert baru
-    data['lembaga_id'] = lembagaId; // Suntikkan lembagaId agar data muncul di list
-    await _supabase.from('divisi').upsert(data);
+    await _service.saveDivisi(ref, divisi);
     ref.invalidateSelf();
   }
 
-  // --- TAMBAHKAN METHOD DELETE ---
   Future<void> deleteDivisi(String id) async {
-    await _supabase.from('divisi').delete().eq('id', id);
+    await _service.deleteDivisi(id);
     ref.invalidateSelf();
   }
 }
 
-// --- PROVIDER DAFTAR JABATAN ---
 @riverpod
 class JabatanList extends _$JabatanList {
-  @override
-  Future<List<JabatanModel>> build(String lembagaId) async {
-    final data = await _supabase
-        .from('jabatan')
-        .select()
-        .eq('lembaga_id', lembagaId)
-        .order('nama_jabatan');
+  final _service = LembagaService();
 
-    return (data as List).map((e) => JabatanModel.fromJson(e)).toList();
+  @override
+  Future<List<JabatanModel>> build() async {
+    final lembagaId = ref.watch(appContextProvider).lembaga?.id;
+    if (lembagaId == null) return [];
+    return _service.getJabatan(ref, lembagaId);
   }
 
   Future<void> saveJabatan(JabatanModel jabatan) async {
-    final data = Map<String, dynamic>.from(jabatan.toJson());
-    if (jabatan.id.isEmpty) data.remove('id'); // Pastikan ID tidak kosong saat insert baru
-    data['lembaga_id'] = lembagaId; // Suntikkan lembagaId agar data muncul di list
-    await _supabase.from('jabatan').upsert(data);
+    await _service.saveJabatan(ref, jabatan);
     ref.invalidateSelf();
   }
 
-  // --- TAMBAHKAN METHOD DELETE ---
   Future<void> deleteJabatan(String id) async {
-    await _supabase.from('jabatan').delete().eq('id', id);
+    await _service.deleteJabatan(id);
     ref.invalidateSelf();
   }
 }

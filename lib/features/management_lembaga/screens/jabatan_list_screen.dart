@@ -17,7 +17,8 @@ class _JabatanListScreenState extends ConsumerState<JabatanListScreen> {
 
   void _showJabatanDialog(String lembagaId, {JabatanModel? jabatan}) {
     // Ambil data divisi secara sinkron dari provider
-    final divisiList = ref.read(divisiListProvider(lembagaId)).value ?? [];
+    // FIX: divisiListProvider sekarang tidak menerima parameter
+    final divisiList = ref.read(divisiListProvider).value ?? [];
 
     if (divisiList.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -115,10 +116,12 @@ class _JabatanListScreenState extends ConsumerState<JabatanListScreen> {
                     status: jabatan?.status ?? 'aktif',
                   );
 
-                  await ref.read(jabatanListProvider(lembagaId).notifier).saveJabatan(updatedJabatan);
+                  // FIX: Akses notifier tanpa parameter (Auto AppContext)
+                  await ref.read(jabatanListProvider.notifier).saveJabatan(updatedJabatan);
 
                   // Refresh data agar list jabatan langsung muncul
-                  ref.invalidate(jabatanListProvider(lembagaId));
+                  // FIX: Invalidate tanpa parameter
+                  ref.invalidate(jabatanListProvider);
 
                   if (!mounted) return; // FIX: use_build_context_synchronously
                   navigator.pop();
@@ -148,8 +151,9 @@ class _JabatanListScreenState extends ConsumerState<JabatanListScreen> {
     if (lembaga == null) return const Center(child: CircularProgressIndicator());
 
     // Memantau data secara reaktif dari Provider
-    final jabatanAsync = ref.watch(jabatanListProvider(lembaga.id));
-    final divisiAsync = ref.watch(divisiListProvider(lembaga.id));
+    // FIX: Watch provider tanpa parameter (Auto AppContext)
+    final jabatanAsync = ref.watch(jabatanListProvider);
+    final divisiAsync = ref.watch(divisiListProvider);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -279,7 +283,8 @@ class _JabatanListScreenState extends ConsumerState<JabatanListScreen> {
                     ),
                   );
                   if (confirmed == true) {
-                    await ref.read(jabatanListProvider(lembagaId).notifier).deleteJabatan(j.id);
+                    // FIX: Akses notifier tanpa parameter
+                    await ref.read(jabatanListProvider.notifier).deleteJabatan(j.id);
                   }
                 }
               },

@@ -89,7 +89,8 @@ class _ImportSiswaDialogState extends ConsumerState<ImportSiswaDialog> {
 
     setState(() => _isProcessing = true);
 
-    final success = await ref.read(siswaProvider).bulkImportSiswa(_previewData);
+    // FIX: Menggunakan notifier dari siswaListProvider sesuai standar Riverpod Generator
+    final success = await ref.read(siswaListProvider.notifier).bulkImportSiswa(_previewData);
 
     if (mounted) {
       setState(() => _isProcessing = false);
@@ -104,7 +105,8 @@ class _ImportSiswaDialogState extends ConsumerState<ImportSiswaDialog> {
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text(ref.read(siswaProvider).errorMessage ?? 'Gagal impor'),
+            // FIX: Mengambil pesan error dari state AsyncValue
+              content: Text(ref.read(siswaListProvider).error?.toString() ?? 'Gagal impor'),
               backgroundColor: Colors.red
           ),
         );

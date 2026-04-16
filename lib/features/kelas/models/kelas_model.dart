@@ -6,10 +6,7 @@ import '../../program/models/program_model.dart'; // Sesuaikan foldernya
 class KelasModel {
   final String? id;
   final String? lembagaId; // FIX: Tambahkan lembagaId
-  final String? cabangId;  // FIX: Tambahkan cabangId
   final String name;
-  final String? level; // Untuk simpan teks level (opsional)
-  final String? levelId; // Relasi ke kurikulum_level_id
   final String? guruId; // PERBAIKAN: Label Guru (Sebelumnya teacherId)
   final String? programId; // Relasi ke program_id
   final String? waktuBelajar;
@@ -24,10 +21,7 @@ class KelasModel {
   KelasModel({
     this.id,
     this.lembagaId, // FIX: Inisialisasi lembagaId
-    this.cabangId,  // FIX: Inisialisasi cabangId
     required this.name,
-    this.level,
-    this.levelId,
     this.guruId,
     this.programId,
     this.waktuBelajar,
@@ -40,22 +34,19 @@ class KelasModel {
 
   factory KelasModel.fromJson(Map<String, dynamic> json) {
     return KelasModel(
-      id: json['id'] as String?,
-      lembagaId: json['lembaga_id'] as String?, // FIX: Ambil dari JSON
-      cabangId: json['cabang_id'] as String?,   // FIX: Ambil dari JSON
-      name: json['name'] as String? ?? '',
-      level: json['level'] as String?,
-      levelId: json['level_id'] as String?,
-      guruId: json['guru_id'] as String?, // PERBAIKAN: Sync dengan kolom guru_id
-      programId: json['program_id'] as String?,
-      waktuBelajar: json['waktu_belajar'] as String?,
-      ruangan: json['ruangan'] as String?,
-      kapasitas: json['kapasitas'] as int?,
+      id: json['id']?.toString(),
+      lembagaId: json['lembaga_id']?.toString(),
+      name: json['name']?.toString() ?? '',
+      guruId: json['guru_id']?.toString(),
+      programId: json['program_id']?.toString(),
+      waktuBelajar: json['waktu_belajar']?.toString(),
+      ruangan: json['ruangan']?.toString(),
+      kapasitas: json['kapasitas'] != null ? (json['kapasitas'] as num).toInt() : null,
       createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'].toString())
+          ? DateTime.tryParse(json['created_at'].toString())
           : null,
 
-      // Mapping JOIN query dari Supabase menggunakan alias 'guru'
+      // Relasi (Null check wajib sesuai protokol v2026.03.22)
       waliKelas: json['guru'] != null
           ? ProfileModel.fromJson(json['guru'] as Map<String, dynamic>)
           : null,
@@ -70,10 +61,7 @@ class KelasModel {
     return {
       if (id != null) 'id': id,
       'lembaga_id': lembagaId, // FIX: Simpan lembagaId
-      'cabang_id': cabangId,   // FIX: Simpan cabangId
       'name': name,
-      'level': level,
-      'level_id': levelId,
       'guru_id': guruId, // PERBAIKAN: Sync dengan kolom guru_id
       'program_id': programId,
       'waktu_belajar': waktuBelajar,
@@ -85,10 +73,7 @@ class KelasModel {
   KelasModel copyWith({
     String? id,
     String? lembagaId, // FIX: Parameter lembagaId
-    String? cabangId,  // FIX: Parameter cabangId
     String? name,
-    String? level,
-    String? levelId,
     String? guruId,
     String? programId,
     String? waktuBelajar,
@@ -101,10 +86,7 @@ class KelasModel {
     return KelasModel(
       id: id ?? this.id,
       lembagaId: lembagaId ?? this.lembagaId, // FIX: Update lembagaId
-      cabangId: cabangId ?? this.cabangId,   // FIX: Update cabangId
       name: name ?? this.name,
-      level: level ?? this.level,
-      levelId: levelId ?? this.levelId,
       guruId: guruId ?? this.guruId,
       programId: programId ?? this.programId,
       waktuBelajar: waktuBelajar ?? this.waktuBelajar,

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/app_context_provider.dart';
 import '../models/tahun_ajaran_model.dart';
-import '../providers/tahun_ajaran_notifier.dart'; // Baru: Import notifier
+import '../providers/tahun_ajaran_provider.dart'; // Baru: Import notifier
 
 class TahunAjaranScreen extends ConsumerStatefulWidget {
   const TahunAjaranScreen({super.key});
@@ -16,7 +16,7 @@ class _TahunAjaranScreenState extends ConsumerState<TahunAjaranScreen> {
   Future<void> _setActiveYear(String taId) async {
     final messenger = ScaffoldMessenger.of(context);
     try {
-      await ref.read(tahunAjaranNotifierProvider.notifier).setTahunAjaranAktif(taId);
+      await ref.read(tahunAjaranListProvider.notifier).setTahunAjaranAktif(taId);
       if (!mounted) return;
       messenger.showSnackBar(
         const SnackBar(content: Text("Tahun ajaran aktif berhasil diperbarui!")),
@@ -31,7 +31,7 @@ class _TahunAjaranScreenState extends ConsumerState<TahunAjaranScreen> {
 
   // --- FUNGSI DIALOG TAMBAH (SEMI-OTOMATIS) ---
   void _showAddTADialog() {
-    final notifier = ref.read(tahunAjaranNotifierProvider.notifier);
+    final notifier = ref.read(tahunAjaranListProvider.notifier);
     final controller = TextEditingController(text: notifier.sarankanLabelTahun()); // Saran Otomatis
     DateTimeRange? selectedRange;
     String selectedSemester = "Ganjil";
@@ -106,7 +106,7 @@ class _TahunAjaranScreenState extends ConsumerState<TahunAjaranScreen> {
                   isAktif: false,
                 );
 
-                await ref.read(tahunAjaranNotifierProvider.notifier).addTahunAjaran(newTA);
+                await ref.read(tahunAjaranListProvider.notifier).addTahunAjaran(newTA);
                 if (context.mounted) Navigator.pop(context);
               },
               child: const Text("Simpan"),
@@ -190,7 +190,7 @@ class _TahunAjaranScreenState extends ConsumerState<TahunAjaranScreen> {
                   isAktif: ta.isAktif,
                 );
 
-                await ref.read(tahunAjaranNotifierProvider.notifier).updateTahunAjaran(updatedTA);
+                await ref.read(tahunAjaranListProvider.notifier).updateTahunAjaran(updatedTA);
                 if (context.mounted) Navigator.pop(context);
               },
               child: const Text("Simpan Perubahan"),
@@ -218,13 +218,13 @@ class _TahunAjaranScreenState extends ConsumerState<TahunAjaranScreen> {
     );
 
     if (confirmed == true) {
-      await ref.read(tahunAjaranNotifierProvider.notifier).deleteTahunAjaran(taId);
+      await ref.read(tahunAjaranListProvider.notifier).deleteTahunAjaran(taId);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final taAsync = ref.watch(tahunAjaranNotifierProvider);
+    final taAsync = ref.watch(tahunAjaranListProvider);
     final currentActiveId = ref.watch(appContextProvider).lembaga?.tahunAjaranAktifId;
 
     return Scaffold(

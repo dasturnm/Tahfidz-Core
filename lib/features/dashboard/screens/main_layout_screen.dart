@@ -1,16 +1,10 @@
+// Lokasi: lib/features/dashboard/screens/main_layout_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/constants/app_routes.dart'; // FIX: Sinkronisasi dengan Konstanta Rute
 import '../../../core/providers/app_context_provider.dart';
-import '../../management_lembaga/screens/management_hub_screen.dart';
-import '../../program/screens/program_list_screen.dart';
-import '../../akademik/screens/akademik_hub_screen.dart';
-import '../../guru_staff/screens/staff_hub_screen.dart';
-import 'dashboard_admin_screen.dart';
-import '../../siswa/screens/Siswa_hub_screen.dart';
-import '../../mutabaah/screens/mutabaah_hub_screen.dart';
-import '../../mushaf/screens/mushaf_index_screen.dart';
-import '../../mushaf/screens/mushaf_screen.dart';
 
 class MainLayoutScreen extends ConsumerStatefulWidget {
   final Widget child;
@@ -22,9 +16,29 @@ class MainLayoutScreen extends ConsumerStatefulWidget {
 
 class _MainLayoutScreenState extends ConsumerState<MainLayoutScreen> {
   @override
+  void initState() {
+    super.initState();
+    // 🔥 FIX: Memaksa aplikasi mengambil data lembaga & profile saat pertama kali masuk
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // 🛡️ GUARD: Pastikan widget masih aktif sebelum menggunakan ref
+      if (!mounted) return;
+      ref.read(appContextProvider.notifier).initContext();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     // Watch context untuk mendapatkan programId yang aktif
     final contextState = ref.watch(appContextProvider);
+
+    // 🔄 FIX: Tampilkan loading screen jika context sedang inisialisasi agar data tidak null saat diakses child widget
+    if (contextState.isLoading) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(color: Color(0xFF10B981)),
+        ),
+      );
+    }
 
     final screenWidth = MediaQuery.of(context).size.width;
     final bool isMobile = screenWidth < 1000;
@@ -109,38 +123,48 @@ class _MainLayoutScreenState extends ConsumerState<MainLayoutScreen> {
               children: [
                 _buildMenuItem(0, Icons.dashboard_outlined, "Dashboard"),
 
-                const Divider(height: 16),
-                _buildSectionLabel("MANAJEMEN LEMBAGA"),
-                _buildMenuItem(1, Icons.business_outlined, "Profil Lembaga"),
-                _buildMenuItem(1, Icons.location_city_outlined, "Daftar Cabang"),
-                _buildMenuItem(1, Icons.calendar_today_outlined, "Tahun Ajaran"),
-                _buildMenuItem(1, Icons.account_tree_outlined, "Divisi & Jabatan"),
+                // MENU KHUSUS ADMIN & STAFF
+                if (contextState.role == 'admin' || contextState.role == 'staff') ...[
+                  const Divider(height: 16),
+                  _buildSectionLabel("MANAJEMEN LEMBAGA"),
+                  _buildMenuItem(1, Icons.business_outlined, "Profil Lembaga"),
+                  _buildMenuItem(1, Icons.location_city_outlined, "Daftar Cabang"),
+                  _buildMenuItem(1, Icons.calendar_today_outlined, "Tahun Ajaran"),
+                  _buildMenuItem(1, Icons.account_tree_outlined, "Divisi & Jabatan"),
+
+                  const Divider(height: 16),
+                  _buildSectionLabel("GURU & STAFF"),
+                  _buildMenuItem(2, Icons.badge_outlined, "SDM & Kepegawaian"),
+                ],
+
+                // MENU AKADEMIK (ADMIN, STAFF, GURU)
+                if (contextState.role != 'siswa' && contextState.role != 'wali') ...[
+                  const Divider(height: 16),
+                  _buildSectionLabel("KONTEKS AKADEMIK"),
+                  _buildMenuItem(3, Icons.assignment_outlined, "Program & Kalender"),
+                  _buildMenuItem(4, Icons.school_outlined, "Kurikulum & Level"),
+                ],
 
                 const Divider(height: 16),
-                _buildSectionLabel("GURU & STAFF"),
-                _buildMenuItem(2, Icons.badge_outlined, "SDM & Kepegawaian"),
-
-                const Divider(height: 16),
-                _buildSectionLabel("KONTEKS AKADEMIK"),
-                _buildMenuItem(3, Icons.assignment_outlined, "Program & Kalender"),
-                _buildMenuItem(4, Icons.school_outlined, "Kurikulum & Level"),
-
-                const Divider(height: 16),
-                _buildSectionLabel("KONTEKS TAHFIDZ"),
-                _buildMenuItem(5, Icons.face_outlined, "Daftar Siswa"),
-                _buildMenuItem(5, Icons.meeting_room_outlined, "Manajemen Kelas"),
-                _buildMenuItem(6, Icons.history_edu_rounded, "Mutabaah Siswa"),
+                _buildSectionLabel(contextState.role == 'siswa' || contextState.role == 'wali' ? "MENU UTAMA" : "KONTEKS TAHFIDZ"),
+                if (contextState.role != 'siswa' && contextState.role != 'wali') ...[
+                  _buildMenuItem(5, Icons.face_outlined, "Daftar Siswa"),
+                  _buildMenuItem(9, Icons.meeting_room_outlined, "Manajemen Kelas"),
+                ],
+                _buildMenuItem(6, contextState.role == 'siswa' || contextState.role == 'wali' ? Icons.history : Icons.history_edu_rounded, "Riwayat Mutabaah"),
                 _buildMenuItem(8, Icons.menu_book_outlined, "Mushaf Al-Qur'an"),
 
-                const Divider(height: 16),
-                _buildSectionLabel("ADMINISTRASI"),
-                _buildMenuItem(7, Icons.account_balance_wallet_outlined, "Keuangan"),
+                if (contextState.role == 'admin') ...[
+                  const Divider(height: 16),
+                  _buildSectionLabel("ADMINISTRASI"),
+                  _buildMenuItem(7, Icons.account_balance_wallet_outlined, "Keuangan"),
+                ],
               ],
             ),
           ),
 
           // 3. USER CARD AT THE BOTTOM
-          _buildUserCard(),
+          _buildUserCard(contextState),
         ],
       ),
     );
@@ -159,17 +183,23 @@ class _MainLayoutScreenState extends ConsumerState<MainLayoutScreen> {
   Widget _buildMenuItem(int index, IconData icon, String label) {
     final location = GoRouterState.of(context).matchedLocation;
 
-    // Sinkronisasi Indeks dengan URL GoRouter
+    // Sinkronisasi Indeks dengan URL GoRouter menggunakan AppRouteNames
     final Map<int, String> indexToPath = {
-      0: '/dashboard',
+      0: AppRouteNames.dashboard,
       1: '/setup-lembaga',
-      5: '/siswa',
-      6: '/mutabaah-input',
+      2: '/staf',
+      3: '/akademik/program',
+      4: AppRouteNames.kurikulum,
+      5: AppRouteNames.siswa,
+      6: AppRouteNames.mutabaahHub,
+      7: AppRouteNames.keuanganHub,
       8: '/mushaf-index',
+      9: '/kelas',
     };
 
     bool isSelected = indexToPath[index] == location;
-    if (index == 0 && (location == '/' || location == '/dashboard')) isSelected = true;
+    // FIX: Dashboard bisa berupa '/' (root) atau '/dashboard'
+    if (index == 0 && (location == AppRouteNames.dashboard || location == '/dashboard')) isSelected = true;
 
     return InkWell(
       onTap: () {
@@ -208,7 +238,10 @@ class _MainLayoutScreenState extends ConsumerState<MainLayoutScreen> {
     );
   }
 
-  Widget _buildUserCard() {
+  Widget _buildUserCard(AppContextState contextState) {
+    final profile = contextState.profile;
+    final initial = profile?.namaLengkap.isNotEmpty == true ? profile!.namaLengkap[0].toUpperCase() : "?";
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -216,17 +249,17 @@ class _MainLayoutScreenState extends ConsumerState<MainLayoutScreen> {
       ),
       child: Row(
         children: [
-          const CircleAvatar(
-            backgroundColor: Color(0xFFCCFBF1),
-            child: Text("A", style: TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.bold)),
+          CircleAvatar(
+            backgroundColor: const Color(0xFFCCFBF1),
+            child: Text(initial, style: const TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.bold)),
           ),
           const SizedBox(width: 12),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text("Ustadz Ahmad", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                Text("Administrator", style: TextStyle(color: Colors.grey, fontSize: 11)),
+                Text(profile?.namaLengkap ?? "User", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13), overflow: TextOverflow.ellipsis),
+                Text(contextState.role?.toUpperCase() ?? "GUEST", style: const TextStyle(color: Colors.grey, fontSize: 11)),
               ],
             ),
           ),

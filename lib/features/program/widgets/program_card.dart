@@ -4,9 +4,10 @@ import '../models/program_model.dart';
 import '../screens/program_detail_screen.dart';
 import '../screens/program_form_screen.dart'; // Baru
 import '../providers/agenda_provider.dart';
+import '../providers/program_provider.dart'; // Tambahan untuk fungsi hapus
 import '../services/effective_day_service.dart';
 import '../../../core/providers/app_context_provider.dart';
-import '../../akademik/kurikulum/providers/kurikulum_provider.dart'; // Baru
+// Baru
 
 class ProgramCard extends ConsumerWidget {
   final ProgramModel program;
@@ -68,8 +69,8 @@ class ProgramCard extends ConsumerWidget {
   }
 
   Widget _buildHeader(BuildContext context, WidgetRef ref, int effectiveDays) { // Signature diubah (tambah ref)
-    // Menonton status kurikulum secara realtime
-    final kurikulumAsync = ref.watch(kurikulumListProvider(program.id));
+    // 🔥 FIX: Menggunakan hasil relasi dari backend (hasKurikulum) tanpa perlu watch provider lain yang salah ID
+    final bool hasKurikulum = program.hasKurikulum;
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -93,30 +94,23 @@ class ProgramCard extends ConsumerWidget {
                 spacing: 8,
                 runSpacing: 4,
                 children: [
-                  // INDIKATOR STATUS KURIKULUM (Otomatis)
-                  kurikulumAsync.when(
-                    data: (list) {
-                      final bool hasKurikulum = list.isNotEmpty;
-                      return Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: hasKurikulum
-                              ? const Color(0xFF10B981).withValues(alpha: 0.1)
-                              : Colors.orange.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          hasKurikulum ? "KURIKULUM AKTIF" : "KURIKULUM BELUM DIATUR",
-                          style: TextStyle(
-                            color: hasKurikulum ? const Color(0xFF10B981) : Colors.orange,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      );
-                    },
-                    loading: () => const SizedBox.shrink(),
-                    error: (_, __) => const SizedBox.shrink(),
+                  // INDIKATOR STATUS KURIKULUM (Otomatis dari Database Relational)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: hasKurikulum
+                          ? const Color(0xFF10B981).withValues(alpha: 0.1)
+                          : Colors.orange.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      hasKurikulum ? "KURIKULUM AKTIF" : "KURIKULUM BELUM DIATUR",
+                      style: TextStyle(
+                        color: hasKurikulum ? const Color(0xFF10B981) : Colors.orange,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -149,7 +143,7 @@ class ProgramCard extends ConsumerWidget {
               color: Colors.transparent,
               child: InkWell(
                 borderRadius: BorderRadius.circular(20),
-                onTap: () => _showDeleteConfirmation(context),
+                onTap: () => _showDeleteConfirmation(context, ref),
                 child: const Padding(
                   padding: EdgeInsets.all(8.0),
                   child: Icon(Icons.delete_outline, color: Colors.grey, size: 20),
@@ -162,7 +156,7 @@ class ProgramCard extends ConsumerWidget {
     );
   }
 
-  void _showDeleteConfirmation(BuildContext context) {
+  void _showDeleteConfirmation(BuildContext context, WidgetRef ref) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -172,7 +166,24 @@ class ProgramCard extends ConsumerWidget {
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Batal", style: TextStyle(color: Colors.grey))),
           ElevatedButton(
-            onPressed: () => Navigator.pop(ctx),
+            onPressed: () async {
+              Navigator.pop(ctx);
+
+              final success = await ref
+                  .read(programNotifierProvider.notifier)
+                  .deleteProgram(program.id);
+
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(success
+                        ? 'Program berhasil dihapus'
+                        : 'Gagal menghapus program. Pastikan tidak ada data siswa atau kelas yang terhubung.'),
+                    backgroundColor: success ? Colors.green : Colors.red,
+                  ),
+                );
+              }
+            },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red, elevation: 0),
             child: const Text("Hapus", style: TextStyle(color: Colors.white)),
           ),
@@ -185,7 +196,7 @@ class ProgramCard extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text("INVESTASI", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 0.5)),
+        const Text("BIAYA PROGRAM", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 0.5)),
         const SizedBox(height: 12),
         _buildPriceRow("Pendaftaran", program.biayaPendaftaran),
         _buildPriceRow("SPP / Bulan", program.biayaSpp),

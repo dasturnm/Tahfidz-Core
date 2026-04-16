@@ -6,7 +6,7 @@ part of 'penugasan_staf_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$penugasanStafListHash() => r'633b1384f0774b1b659a8a77c42e83c90e987453';
+String _$penugasanStafListHash() => r'e9ae81f75ab5c376ad8816b5a1a1569104a5feec';
 
 /// Copied from Dart SDK
 class _SystemHash {
@@ -175,7 +175,7 @@ class _PenugasanStafListProviderElement
   String get lembagaId => (origin as PenugasanStafListProvider).lembagaId;
 }
 
-String _$penugasanStafHash() => r'ed92a9bfe56a9fded079715f754112bd4769ecd0';
+String _$penugasanStafHash() => r'3695366dcda24a68f275a8d98c5bf94646640ec5';
 
 /// See also [PenugasanStaf].
 @ProviderFor(PenugasanStaf)

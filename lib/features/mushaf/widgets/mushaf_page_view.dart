@@ -1,3 +1,5 @@
+// Lokasi: lib/features/mushaf/widgets/mushaf_page_view.dart
+
 import 'package:flutter/material.dart';
 import '../models/mushaf_model.dart';
 
@@ -168,24 +170,6 @@ class MushafPageView extends StatelessWidget {
     return const SizedBox(height: 12);
   }
 
-  Widget _buildTabButton(String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
-      decoration: BoxDecoration(
-        border: Border.all(color: const Color(0xFFD4AF37), width: 0.5),
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          fontSize: 10,
-          fontWeight: FontWeight.bold,
-          color: Color(0xFF8B4513),
-        ),
-      ),
-    );
-  }
-
   Widget _buildTopHeader(BoxConstraints constraints) {
     final double headerFontSize = constraints.maxWidth * 0.035;
     return Padding(
@@ -242,7 +226,8 @@ class MushafPageView extends StatelessWidget {
             borderRadius: BorderRadius.circular(6),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFFB8963E).withOpacity(0.2),
+                // FIX: Menggunakan .withValues() untuk menghindari deprecation withOpacity
+                color: const Color(0xFFB8963E).withValues(alpha: 0.2),
                 blurRadius: 2,
                 offset: const Offset(0, 2),
               )

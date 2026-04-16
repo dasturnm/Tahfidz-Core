@@ -2,10 +2,14 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import '../services/mutabaah_provider.dart';
+import '../../../core/constants/app_routes.dart';
+import '../providers/mutabaah_provider.dart';
 import '../models/mutabaah_model.dart';
+import '../../akademik/kurikulum/models/kurikulum_model.dart'; // FIX: Tambahkan import agar ModulModel dikenali
 import '../../siswa/providers/siswa_provider.dart';
+
 
 class MutabaahHubScreen extends ConsumerStatefulWidget {
   const MutabaahHubScreen({super.key});
@@ -278,14 +282,14 @@ class _MutabaahHubScreenState extends ConsumerState<MutabaahHubScreen> {
             Expanded(
               child: Consumer(
                 builder: (context, ref, child) {
-                  // PERBAIKAN: Menggunakan siswaProvider & logika state yang konsisten
-                  final state = ref.watch(siswaProvider);
+                  // FIX: Menggunakan siswaListProvider (AsyncValue) hasil generator
+                  final state = ref.watch(siswaListProvider);
+                  final list = state.value ?? [];
 
-                  if (state.isLoading && state.siswa.isEmpty) {
+                  if (state.isLoading && list.isEmpty) {
                     return Center(child: CircularProgressIndicator(color: _emerald));
                   }
 
-                  final list = state.siswa;
                   if (list.isEmpty) {
                     return const Center(child: Text("Gagal memuat daftar siswa"));
                   }
@@ -300,11 +304,23 @@ class _MutabaahHubScreenState extends ConsumerState<MutabaahHubScreen> {
                           child: Text(s.namaLengkap[0], style: TextStyle(color: _emerald, fontWeight: FontWeight.bold)),
                         ),
                         title: Text(s.namaLengkap, style: const TextStyle(fontWeight: FontWeight.bold)),
-                        subtitle: Text("Kelas: ${s.kelas?.name ?? '-'}"), // PERBAIKAN: levelId -> kelas.name
+                        subtitle: Text("Kelas: ${s.kelas?.name ?? '-'}"),
                         trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
                         onTap: () {
                           Navigator.pop(context);
-                          // Logika navigasi ke form input dengan membawa data siswa
+                          // FIX: Menambahkan parameter wajib levelId agar tidak error
+                          context.push(
+                            AppRouteNames.mutabaahInput,
+                            extra: {
+                              'siswa': s,
+                              'modul': ModulModel(
+                                id: 'default-hafalan',
+                                namaModul: 'Setoran Hafalan',
+                                tipe: 'HAFALAN',
+                                levelId: '', // FIX: Parameter wajib ditambahkan
+                              ),
+                            },
+                          );
                         },
                       );
                     },

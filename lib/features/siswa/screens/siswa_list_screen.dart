@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/siswa_provider.dart';
 import 'siswa_form_screen.dart';
 import '../widgets/enroll_kurikulum_dialog.dart';
-import 'package:tahfidz_core/shared/widgets/app_drawer.dart';
 
 class SiswaListScreen extends ConsumerWidget {
   const SiswaListScreen({super.key});
@@ -42,38 +41,35 @@ class SiswaListScreen extends ConsumerWidget {
       const Center(child: CircularProgressIndicator(color: Color(0xFF10B981))),
     );
 
-    const msg = "Fitur Import sedang dikembangkan";
+    // Simulasi proses async dengan safety check (Aturan 8)
+    await Future.delayed(const Duration(seconds: 1));
+    if (!context.mounted) return;
+    Navigator.pop(context); // Tutup loading dialog
 
-    if (context.mounted) {
-      Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text(msg),
-        backgroundColor: Color(0xFF10B981),
-      ));
-    }
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+      content: Text("Fitur Import sedang dikembangkan"),
+      backgroundColor: Color(0xFF10B981),
+    ));
   }
 
   void _handleExport(BuildContext context, WidgetRef ref) async {
     try {
       // Export logic here
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text("Fitur Export sedang disiapkan"),
+        backgroundColor: Colors.blue,
+      ));
     } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(e.toString()), backgroundColor: Colors.red));
-      }
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(e.toString()), backgroundColor: Colors.red));
     }
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(siswaProvider);
-
-    // FIX: Trigger pengambilan data secara otomatis saat layar pertama kali dibuka
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (state.siswa.isEmpty && !state.isLoading && state.errorMessage == null) {
-        ref.read(siswaProvider).fetchSiswa();
-      }
-    });
+    // REAKTIF: Watch data siswa (v2026.03.22)
+    final state = ref.watch(siswaListProvider);
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
@@ -109,106 +105,122 @@ class SiswaListScreen extends ConsumerWidget {
           ),
         ],
       ),
-      drawer: const AppDrawer(),
-      body: state.isLoading && state.siswa.isEmpty
-          ? const Center(
-          child: CircularProgressIndicator(color: Color(0xFF10B981)))
-          : state.siswa.isEmpty
-          ? const Center(child: Text("Belum ada data siswa"))
-          : RefreshIndicator(
-        onRefresh: () => ref.read(siswaProvider).fetchSiswa(),
-        child: ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: state.siswa.length,
-          itemBuilder: (context, index) {
-            final siswa = state.siswa[index];
-            final waliKelas = siswa.kelas?.waliKelas?.namaLengkap ??
-                'Belum ada wali kelas';
-            final namaKelas = siswa.kelas?.name ?? 'Tanpa Kelas';
-            final isLaki = siswa.jenisKelamin == 'L';
+      // Standard Emas UI: AsyncValue.when (Aturan v2026.03.22)
+      body: state.when(
+        loading: () => const Center(
+            child: CircularProgressIndicator(color: Color(0xFF10B981))),
+        error: (err, stack) => Center(
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Text(
+              err.toString(),
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.red),
+            ),
+          ),
+        ),
+        data: (data) {
+          if (data.isEmpty) {
+            return const Center(child: Text("Belum ada data siswa"));
+          }
+          return RefreshIndicator(
+            color: const Color(0xFF10B981),
+            onRefresh: () => ref.refresh(siswaListProvider.future),
+            child: ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: data.length,
+              itemBuilder: (context, index) {
+                final siswa = data[index];
+                // FIX: Menggunakan waliKelas sesuai properti di KelasModel (v2026.03.22)
+                final waliKelas = siswa.kelas?.waliKelas?.namaLengkap ??
+                    'Belum ada wali kelas';
+                final namaKelas = siswa.kelas?.name ?? 'Tanpa Kelas';
+                final isLaki = siswa.jenisKelamin == 'L';
 
-            return Card(
-              elevation: 0,
-              margin: const EdgeInsets.only(bottom: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-                side: BorderSide(color: Colors.grey.shade200),
-              ),
-              child: ListTile(
-                // MENGURANGI KEPADATAN UNTUK MENCEGAH OVERFLOW
-                visualDensity: VisualDensity.compact,
-                onTap: () {
-                  showDialog(
-                    context: context,
-                    builder: (context) =>
-                        EnrollKurikulumDialog(siswa: siswa),
-                  );
-                },
-                contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 12, vertical: 4),
-                leading: CircleAvatar(
-                  radius: 20, // Sedikit lebih kecil
-                  backgroundColor: isLaki
-                      ? Colors.blue.withAlpha(25)
-                      : Colors.pink.withAlpha(25),
-                  child: Icon(
-                    isLaki ? Icons.face : Icons.face_3,
-                    color: isLaki ? Colors.blue : Colors.pink,
-                    size: 20,
+                return Card(
+                  elevation: 0,
+                  margin: const EdgeInsets.only(bottom: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(color: Colors.grey.shade200),
                   ),
-                ),
-                title: Text(
-                  siswa.namaLengkap,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 15),
-                ),
-                subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      "Kelas: $namaKelas",
+                  child: ListTile(
+                    visualDensity: VisualDensity.compact,
+                    onTap: () {
+                      showDialog(
+                        context: context,
+                        builder: (context) =>
+                            EnrollKurikulumDialog(siswa: siswa),
+                      );
+                    },
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 4),
+                    leading: CircleAvatar(
+                      radius: 20,
+                      backgroundColor: isLaki
+                          ? Colors.blue.withValues(alpha: 0.1)
+                          : Colors.pink.withValues(alpha: 0.1),
+                      child: Icon(
+                        isLaki ? Icons.face : Icons.face_3,
+                        color: isLaki ? Colors.blue : Colors.pink,
+                        size: 20,
+                      ),
+                    ),
+                    title: Text(
+                      siswa.namaLengkap,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF10B981)),
+                          fontWeight: FontWeight.bold, fontSize: 15),
                     ),
-                    Text(
-                      "Wali: $waliKelas",
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                          fontSize: 12, color: Colors.grey[700]),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          "Kelas: $namaKelas",
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF10B981)),
+                        ),
+                        Text(
+                          "Wali: $waliKelas",
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              fontSize: 12, color: Colors.grey[700]),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-                // TRAILING DENGAN CONSTRAINTS KETAT
-                trailing: IconButton(
-                  constraints: const BoxConstraints(maxWidth: 32),
-                  padding: EdgeInsets.zero, // Hapus padding default
-                  icon: const Icon(Icons.edit, color: Colors.grey, size: 20),
-                  onPressed: () {
-                    Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => SiswaFormScreen(
-                              existingSiswa: siswa),
-                        ));
-                  },
-                ),
-              ),
-            );
-          },
-        ),
+                    trailing: IconButton(
+                      constraints: const BoxConstraints(maxWidth: 32),
+                      padding: EdgeInsets.zero,
+                      icon: const Icon(Icons.edit, color: Colors.grey, size: 20),
+                      onPressed: () {
+                        if (!context.mounted) return;
+                        Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => SiswaFormScreen(
+                                  existingSiswa: siswa),
+                            ));
+                      },
+                    ),
+                  ),
+                );
+              },
+            ),
+          );
+        },
       ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: const Color(0xFF10B981),
         child: const Icon(Icons.add, color: Colors.white),
         onPressed: () {
+          if (!context.mounted) return;
           Navigator.push(
               context,
               MaterialPageRoute(

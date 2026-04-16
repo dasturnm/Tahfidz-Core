@@ -3,7 +3,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/kurikulum_model.dart';
-import '../providers/kurikulum_provider.dart';
+// FIX: Update path import sesuai pemisahan provider
+import '../providers/level_provider.dart';
 import 'level_detail_screen.dart';
 // Import widget pendukung (Pastikan file ini dibuat/ada di folder widgets)
 import '../widgets/level_grid_view.dart';

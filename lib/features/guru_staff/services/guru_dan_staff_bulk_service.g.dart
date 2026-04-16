@@ -7,7 +7,7 @@ part of 'guru_dan_staff_bulk_service.dart';
 // **************************************************************************
 
 String _$guruDanStaffBulkServiceHash() =>
-    r'9f3023fe593664caac0a93127fad7d5dcde5fbe1';
+    r'a6968b9f7e40eb8215df5d176111fbd6f1638642';
 
 /// See also [guruDanStaffBulkService].
 @ProviderFor(guruDanStaffBulkService)

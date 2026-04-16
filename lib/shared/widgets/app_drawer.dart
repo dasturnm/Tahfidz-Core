@@ -1,14 +1,15 @@
+// Lokasi: lib/shared/widgets/app_drawer.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart'; // TAMBAHKAN INI
+import 'package:tahfidz_core/core/constants/app_routes.dart'; // TAMBAHKAN INI
 import '../../core/providers/app_context_provider.dart';
 // Import Screen yang sudah kita buat
 import '../../features/management_lembaga/screens/lembaga_profile_screen.dart';
 import '../../features/management_lembaga/screens/cabang_list_screen.dart';
 import '../../features/management_lembaga/screens/tahun_ajaran_screen.dart';
 import '../../features/management_lembaga/screens/divisi_list_screen.dart';
-import '../../features/guru_staff/screens/staff_list_screen.dart';
-import '../../features/siswa/screens/siswa_hub_screen.dart';
-import '../../features/program/screens/program_list_screen.dart';
 import '../../features/program/widgets/academic_calendar_tab.dart'; // Baru: Import Kalender
 import '../../features/program/screens/agenda_akademik_screen.dart'; // Baru: Import Agenda Screen
 
@@ -43,7 +44,7 @@ class AppDrawer extends ConsumerWidget {
                 _buildDrawerItem(
                   icon: Icons.dashboard_outlined,
                   label: "Dashboard",
-                  onTap: () => Navigator.pop(context),
+                  onTap: () => _navigatePath(context, AppRouteNames.dashboard),
                 ),
 
                 const Divider(),
@@ -74,7 +75,7 @@ class AppDrawer extends ConsumerWidget {
                 _buildDrawerItem(
                   icon: Icons.menu_book_outlined,
                   label: "Program Belajar",
-                  onTap: () => _navigate(context, const ProgramListScreen()),
+                  onTap: () => _navigatePath(context, '/akademik/program'),
                 ),
                 _buildDrawerItem( // Baru: Menu Agenda Akademik (List View)
                   icon: Icons.format_list_bulleted, // Ikon diperbarui
@@ -89,7 +90,7 @@ class AppDrawer extends ConsumerWidget {
                 _buildDrawerItem(
                   icon: Icons.assignment_outlined,
                   label: "Kurikulum & Level",
-                  onTap: () => _navigate(context, const ProgramListScreen()),
+                  onTap: () => _navigatePath(context, AppRouteNames.kurikulum),
                 ),
 
                 const Divider(),
@@ -97,7 +98,7 @@ class AppDrawer extends ConsumerWidget {
                 _buildDrawerItem(
                   icon: Icons.people_alt_outlined,
                   label: "Guru & Staff",
-                  onTap: () => _navigate(context, const StaffListScreen()),
+                  onTap: () => _navigatePath(context, '/staf'),
                 ),
 
                 const Divider(),
@@ -105,12 +106,26 @@ class AppDrawer extends ConsumerWidget {
                 _buildDrawerItem(
                   icon: Icons.face_outlined,
                   label: "Daftar Siswa",
-                  onTap: () => _navigate(context, const SiswaHubScreen()),
+                  onTap: () => _navigatePath(context, AppRouteNames.siswa),
                 ),
                 _buildDrawerItem(
                   icon: Icons.meeting_room_outlined,
                   label: "Manajemen Kelas",
-                  onTap: () => _navigate(context, const SiswaHubScreen()),
+                  onTap: () => _navigatePath(context, '/kelas'),
+                ),
+
+                // FIX: Tambahkan Section Mutabaah untuk menghilangkan silang merah
+                const Divider(),
+                _buildSectionHeader("AKTIVITAS & KEUANGAN"),
+                _buildDrawerItem(
+                  icon: Icons.edit_note_outlined,
+                  label: "Mutabaah Tahfidz",
+                  onTap: () => _navigatePath(context, AppRouteNames.mutabaahHub),
+                ),
+                _buildDrawerItem(
+                  icon: Icons.payments_outlined,
+                  label: "Keuangan",
+                  onTap: () => _navigatePath(context, AppRouteNames.keuanganHub),
                 ),
 
                 const SizedBox(height: 20),
@@ -130,9 +145,16 @@ class AppDrawer extends ConsumerWidget {
     );
   }
 
+  // Navigasi lama (menggunakan Widget)
   void _navigate(BuildContext context, Widget screen) {
     Navigator.pop(context);
     Navigator.push(context, MaterialPageRoute(builder: (context) => screen));
+  }
+
+  // SAFE UPDATE: Navigasi baru menggunakan GoRouter Path
+  void _navigatePath(BuildContext context, String path) {
+    Navigator.pop(context);
+    context.go(path);
   }
 
   Widget _buildSectionHeader(String title) {

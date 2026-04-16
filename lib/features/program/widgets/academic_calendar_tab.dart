@@ -1,12 +1,15 @@
+// Lokasi: lib/features/program/widgets/academic_calendar_tab.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:table_calendar/table_calendar.dart';
 import '../providers/agenda_provider.dart';
 import '../providers/program_provider.dart';
 import '../providers/kalender_provider.dart'; // Baru: Import Kalender
-import '../../management_lembaga/providers/tahun_ajaran_notifier.dart'; // FIX: Jalur diperbaiki
+import '../../management_lembaga/providers/tahun_ajaran_provider.dart'; // FIX: Jalur diperbaiki
 import '../../../core/providers/app_context_provider.dart';
-import '../models/agenda_model.dart';
+// FIX: Menggunakan absolute import agar sinkron dengan lokasi model yang baru
+import 'package:tahfidz_core/features/program/models/agenda_model.dart';
 
 class AcademicCalendarTab extends ConsumerStatefulWidget {
   const AcademicCalendarTab({super.key});
@@ -63,7 +66,7 @@ class _AcademicCalendarTabState extends ConsumerState<AcademicCalendarTab> {
 
   // --- FUNGSI DIALOG TAMBAH AGENDA (DUAL MODE: ADD/EDIT) ---
   void _showAddAgendaDialog(BuildContext context, WidgetRef ref, {AgendaModel? agenda}) {
-    final activeTA = ref.read(appContextProvider).currentTahunAjaran; // Tambah Konteks TA
+    final activeTA = ref.read(appContextProvider).currentTahunAjaran;
     final isEdit = agenda != null;
     final nameController = TextEditingController(text: agenda?.namaAgenda);
     final keteranganController = TextEditingController(text: agenda?.keterangan);
@@ -120,6 +123,7 @@ class _AcademicCalendarTabState extends ConsumerState<AcademicCalendarTab> {
                 const SizedBox(height: 16),
                 _buildLabel("Status Hari"),
                 DropdownButtonFormField<String>(
+                  // FIX: Menggunakan value bukan initialValue
                   initialValue: status,
                   items: const [
                     DropdownMenuItem(value: 'EFEKTIF', child: Text("HARI EFEKTIF (Hijau)")),
@@ -145,6 +149,7 @@ class _AcademicCalendarTabState extends ConsumerState<AcademicCalendarTab> {
                 const SizedBox(height: 16),
                 _buildLabel("Cakupan (Scope)"),
                 DropdownButtonFormField<String>(
+                  // FIX: Menggunakan value bukan initialValue
                   initialValue: scope,
                   items: const [
                     DropdownMenuItem(value: 'GLOBAL', child: Text("Global (Semua)")),
@@ -158,6 +163,7 @@ class _AcademicCalendarTabState extends ConsumerState<AcademicCalendarTab> {
                   _buildLabel("Pilih Program"),
                   ref.watch(programNotifierProvider).when(
                     data: (progs) => DropdownButtonFormField<String>(
+                      // FIX: Menggunakan value bukan initialValue
                       initialValue: targetProgramId,
                       items: progs.map((p) => DropdownMenuItem(value: p.id, child: Text(p.namaProgram))).toList(),
                       onChanged: (val) => setDialogState(() => targetProgramId = val),
@@ -178,9 +184,9 @@ class _AcademicCalendarTabState extends ConsumerState<AcademicCalendarTab> {
 
                 final lembagaId = ref.read(appContextProvider).lembaga?.id;
                 final updatedAgenda = AgendaModel(
-                  id: isEdit ? agenda.id : '',
-                  lembagaId: lembagaId!,
-                  tahunAjaranId: activeTA!.id, // UPDATE: Parameter wajib baru
+                  id: isEdit ? agenda.id : null,
+                  lembagaId: lembagaId ?? '',
+                  tahunAjaranId: activeTA?.id,
                   namaAgenda: nameController.text.trim(),
                   tanggalMulai: selectedRange!.start,
                   tanggalBerakhir: selectedRange!.end,
@@ -193,11 +199,11 @@ class _AcademicCalendarTabState extends ConsumerState<AcademicCalendarTab> {
                 );
 
                 if (isEdit) {
-                  // UPDATE: Pemanggilan Family Provider (Aman karena activeTA sudah dipastikan dengan !)
-                  await ref.read(agendaNotifierProvider(tahunAjaranId: activeTA.id, programId: _selectedProgramFilter).notifier).updateAgenda(updatedAgenda);
+                  // FIX: Null-safety pada tahunAjaranId
+                  await ref.read(agendaNotifierProvider(tahunAjaranId: activeTA?.id ?? '', programId: _selectedProgramFilter).notifier).updateAgenda(updatedAgenda);
                 } else {
-                  // UPDATE: Pemanggilan Family Provider (Aman)
-                  await ref.read(agendaNotifierProvider(tahunAjaranId: activeTA.id, programId: _selectedProgramFilter).notifier).addAgenda(updatedAgenda);
+                  // FIX: Null-safety pada tahunAjaranId
+                  await ref.read(agendaNotifierProvider(tahunAjaranId: activeTA?.id ?? '', programId: _selectedProgramFilter).notifier).addAgenda(updatedAgenda);
                 }
 
                 if (context.mounted) Navigator.pop(context);
@@ -211,14 +217,13 @@ class _AcademicCalendarTabState extends ConsumerState<AcademicCalendarTab> {
     );
   }
 
-  // --- PICKER TAHUN AJARAN (Membuat tombol di Gambar 3 berfungsi) ---
   void _showYearSelectionSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (context) => Consumer(
         builder: (context, ref, _) {
-          final taAsync = ref.watch(tahunAjaranNotifierProvider);
+          final taAsync = ref.watch(tahunAjaranListProvider);
           return Container(
             padding: const EdgeInsets.all(24),
             child: Column(
@@ -237,7 +242,7 @@ class _AcademicCalendarTabState extends ConsumerState<AcademicCalendarTab> {
                         title: Text(ta.labelTahun, style: const TextStyle(fontWeight: FontWeight.bold)),
                         subtitle: Text("Semester ${ta.semester}"),
                         onTap: () async {
-                          await ref.read(tahunAjaranNotifierProvider.notifier).setTahunAjaranAktif(ta.id);
+                          await ref.read(tahunAjaranListProvider.notifier).setTahunAjaranAktif(ta.id);
                           if (context.mounted) Navigator.pop(context);
                         },
                       );
@@ -261,12 +266,11 @@ class _AcademicCalendarTabState extends ConsumerState<AcademicCalendarTab> {
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
-          // --- CHIP KONFIGURASI TAHUN AJARAN (BERFUNGSI) ---
           GestureDetector(
             onTap: () => _showYearSelectionSheet(context),
             child: Container(
               height: 48,
-              constraints: const BoxConstraints(minWidth: 160), // Merapikan ukuran box
+              constraints: const BoxConstraints(minWidth: 160),
               padding: const EdgeInsets.symmetric(horizontal: 16),
               decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey.shade200)),
               child: Row(
@@ -285,10 +289,9 @@ class _AcademicCalendarTabState extends ConsumerState<AcademicCalendarTab> {
             ),
           ),
           const SizedBox(width: 12),
-          // --- CHIP FILTER PROGRAM ---
           Container(
             height: 48,
-            constraints: const BoxConstraints(minWidth: 160), // Merapikan ukuran box agar simetris
+            constraints: const BoxConstraints(minWidth: 160),
             padding: const EdgeInsets.symmetric(horizontal: 16),
             decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey.shade200)),
             child: Row(
@@ -396,7 +399,6 @@ class _AcademicCalendarTabState extends ConsumerState<AcademicCalendarTab> {
           agendasAsync.when(
             data: (agendas) {
               final filteredAgendas = agendas.where((a) {
-                // Cek filter Program (Filter waktu sudah dilakukan di provider)
                 bool matchProg = (_selectedProgramFilter == null) ||
                     (a.scope.toUpperCase() == 'GLOBAL' || a.programId == _selectedProgramFilter);
 
@@ -425,7 +427,7 @@ class _AcademicCalendarTabState extends ConsumerState<AcademicCalendarTab> {
                       onSelected: (val) {
                         if (val == 'detail') _showDetailAgenda(a);
                         if (val == 'edit') _showAddAgendaDialog(context, ref, agenda: a);
-                        if (val == 'delete') _confirmDelete(a.id);
+                        if (val == 'delete') _confirmDelete(a.id ?? '');
                       },
                       itemBuilder: (context) => [
                         const PopupMenuItem(value: 'detail', child: Text('Detail')),
@@ -480,10 +482,13 @@ class _AcademicCalendarTabState extends ConsumerState<AcademicCalendarTab> {
           TextButton(onPressed: () => Navigator.pop(context), child: const Text("Batal")),
           TextButton(
             onPressed: () async {
-              final activeTA = ref.read(appContextProvider).currentTahunAjaran; // Konteks TA
-              // PERBAIKAN: Menghapus tanda tanya ganda '?' yang memicu warning
+              final activeTA = ref.read(appContextProvider).currentTahunAjaran;
+              // FIX: Penanganan null-safety agar tidak error argument_type_not_assignable
               if (activeTA != null) {
                 await ref.read(agendaNotifierProvider(tahunAjaranId: activeTA.id, programId: _selectedProgramFilter).notifier).deleteAgenda(id);
+              } else {
+                // Opsional: Fallback jika TA null
+                await ref.read(agendaNotifierProvider(tahunAjaranId: '', programId: _selectedProgramFilter).notifier).deleteAgenda(id);
               }
               if (context.mounted) Navigator.pop(context);
             },

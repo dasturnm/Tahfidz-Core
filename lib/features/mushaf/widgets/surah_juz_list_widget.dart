@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-import '../../../routes/app_routes.dart';
+import '../../../core/routes/app_routes.dart';
 import '../providers/mushaf_provider.dart';
 
 /// Widget untuk menampilkan daftar 114 Surah

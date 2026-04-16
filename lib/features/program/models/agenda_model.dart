@@ -1,21 +1,23 @@
+// Lokasi: lib/features/program/models/agenda_model.dart
+
 class AgendaModel {
-  final String id;
+  final String? id; // FIX: Opsional untuk sinkronisasi insert DB
   final String lembagaId;
-  final String tahunAjaranId; // Baru: Untuk menghubungkan agenda dengan periode akademik
-  final String namaAgenda; // Input teks di modal agenda
-  final DateTime tanggalMulai; // Seleksi tanggal di modal
-  final DateTime tanggalBerakhir; // Seleksi tanggal di modal
-  final String statusHariBelajar; // EFEKTIF atau LIBUR (Hijau/Merah)
+  final String? tahunAjaranId; // FIX: Opsional sesuai skema DB
+  final String namaAgenda;
+  final DateTime tanggalMulai;
+  final DateTime tanggalBerakhir;
+  final String statusHariBelajar; // EFEKTIF atau LIBUR
   final String scope; // GLOBAL atau PROG_SPESIFIK
-  final String? programId; // Pilihan program jika scope spesifik
-  final String? keterangan; // Detail agenda (Opsional)
-  final bool isSiswaLibur; // Status libur siswa
-  final bool isGuruMasuk; // Status kehadiran guru/staff
+  final String? programId;
+  final String? keterangan;
+  final bool isSiswaLibur;
+  final bool isGuruMasuk;
 
   AgendaModel({
-    required this.id,
+    this.id, // FIX: Tidak lagi required
     required this.lembagaId,
-    required this.tahunAjaranId, // Baru
+    this.tahunAjaranId, // FIX: Tidak lagi required
     required this.namaAgenda,
     required this.tanggalMulai,
     required this.tanggalBerakhir,
@@ -23,36 +25,37 @@ class AgendaModel {
     required this.scope,
     this.programId,
     this.keterangan,
-    required this.isSiswaLibur,
-    required this.isGuruMasuk,
+    this.isSiswaLibur = false, // DEFAULT sesuai DB
+    this.isGuruMasuk = true, // DEFAULT sesuai DB
   });
 
   factory AgendaModel.fromJson(Map<String, dynamic> json) => AgendaModel(
-    id: json['id']?.toString() ?? '',
+    // FIX: Gunakan pengecekan string 'null' untuk UUID safety
+    id: (json['id'] == null || json['id'].toString() == 'null') ? null : json['id'].toString(),
     lembagaId: json['lembaga_id']?.toString() ?? '',
-    tahunAjaranId: json['tahun_ajaran_id']?.toString() ?? '', // Baru
-    namaAgenda: json['nama_agenda'] ?? '',
-    tanggalMulai: json['tanggal_mulai'] != null
-        ? DateTime.parse(json['tanggal_mulai'])
-        : DateTime.now(),
-    tanggalBerakhir: json['tanggal_berakhir'] != null
-        ? DateTime.parse(json['tanggal_berakhir'])
-        : DateTime.now(),
-    statusHariBelajar: json['status_hari_belajar'] ?? 'EFEKTIF',
-    scope: json['scope'] ?? 'GLOBAL',
+    tahunAjaranId: (json['tahun_ajaran_id'] == null || json['tahun_ajaran_id'].toString() == 'null')
+        ? null
+        : json['tahun_ajaran_id'].toString(),
+    namaAgenda: json['nama_agenda']?.toString() ?? '',
+    // Parsing tanggal aman
+    tanggalMulai: DateTime.tryParse(json['tanggal_mulai']?.toString() ?? '') ?? DateTime.now(),
+    tanggalBerakhir: DateTime.tryParse(json['tanggal_berakhir']?.toString() ?? '') ?? DateTime.now(),
+    statusHariBelajar: json['status_hari_belajar']?.toString() ?? 'EFEKTIF',
+    scope: json['scope']?.toString() ?? 'GLOBAL',
     programId: json['program_id']?.toString(),
-    keterangan: json['keterangan'],
-    isSiswaLibur: json['is_siswa_libur'] ?? false,
+    keterangan: json['keterangan']?.toString(),
+    isSiswaLibur: json['is_siswa_libur'] == true,
     isGuruMasuk: json['is_guru_masuk'] ?? true,
   );
 
   Map<String, dynamic> toJson() => {
-    'id': id,
+    if (id != null) 'id': id, // FIX: Kirim ID hanya jika tidak null
     'lembaga_id': lembagaId,
     'tahun_ajaran_id': tahunAjaranId,
     'nama_agenda': namaAgenda,
-    'tanggal_mulai': tanggalMulai.toIso8601String(),
-    'tanggal_berakhir': tanggalBerakhir.toIso8601String(),
+    // FIX: Format YYYY-MM-DD agar sinkron dengan tipe 'date' di DB
+    'tanggal_mulai': tanggalMulai.toIso8601String().split('T')[0],
+    'tanggal_berakhir': tanggalBerakhir.toIso8601String().split('T')[0],
     'status_hari_belajar': statusHariBelajar,
     'scope': scope,
     'program_id': programId,

@@ -24,10 +24,11 @@ class _AttendancePrintDialogState extends ConsumerState<AttendancePrintDialog> {
     if (_selectedClassId == null) return;
 
     final pdf = pw.Document();
-    // PERBAIKAN: classes -> kelas
-    final className = ref.read(kelasProvider).kelas.firstWhere((c) => c.id == _selectedClassId).name;
-    // PERBAIKAN: getsiswaInClass -> getSiswaInKelas
-    final siswa = ref.read(siswaProvider).getSiswaInKelas(_selectedClassId!);
+    // PERBAIKAN: Mengambil data dari value KelasListProvider (AsyncValue)
+    final className = (ref.read(kelasListProvider).value ?? []).firstWhere((c) => c.id == _selectedClassId).name;
+
+    // FIX: Menggunakan notifier dari siswaListProvider sesuai arsitektur modern
+    final siswa = ref.read(siswaListProvider.notifier).getSiswaInKelas(_selectedClassId!);
 
     pdf.addPage(
       pw.Page(
@@ -62,8 +63,8 @@ class _AttendancePrintDialogState extends ConsumerState<AttendancePrintDialog> {
 
   @override
   Widget build(BuildContext context) {
-    // PERBAIKAN: classes -> kelas
-    final classes = ref.watch(kelasProvider).kelas;
+    // PERBAIKAN: Menggunakan kelasListProvider (AsyncValue)
+    final kelasAsync = ref.watch(kelasListProvider);
 
     return AlertDialog(
       title: const Text("Cetak Absensi", style: TextStyle(fontWeight: FontWeight.bold)),
@@ -72,7 +73,8 @@ class _AttendancePrintDialogState extends ConsumerState<AttendancePrintDialog> {
         children: [
           DropdownButtonFormField<String>(
             decoration: const InputDecoration(labelText: "Pilih Kelas"),
-            items: classes.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))).toList(),
+            // FIX: Menangani data list dari AsyncValue
+            items: (kelasAsync.value ?? []).map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))).toList(),
             onChanged: (val) => setState(() => _selectedClassId = val),
           ),
         ],

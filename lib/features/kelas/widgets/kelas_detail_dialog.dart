@@ -84,8 +84,8 @@ class ClassDetailDialog extends ConsumerWidget {
   }
 
   Widget _buildSiswaTable(WidgetRef ref) {
-    // PERBAIKAN: Sync method name ke getSiswaInKelas
-    final siswas = ref.watch(siswaProvider).getSiswaInKelas(kelas.id ?? '');
+    // FIX: Menggunakan notifier dari siswaListProvider hasil generator sesuai arsitektur modern
+    final siswas = ref.watch(siswaListProvider.notifier).getSiswaInKelas(kelas.id ?? '');
 
     if (siswas.isEmpty) {
       return const Center(

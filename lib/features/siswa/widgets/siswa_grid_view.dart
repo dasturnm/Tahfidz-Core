@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart'; // Tambahan untuk integrasi WA
 import '../providers/siswa_provider.dart';
 // PERBAIKAN: Menghapus import '../screens/siswa_form_screen.dart'; yang tidak digunakan
 import '../screens/siswa_detail_screen.dart';
@@ -11,13 +12,16 @@ class SiswaGridView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(siswaProvider);
+    // FIX: Menggunakan siswaListProvider hasil generator
+    final state = ref.watch(siswaListProvider);
+    final siswaList = state.value ?? [];
 
-    if (state.isLoading && state.siswa.isEmpty) {
+    // FIX: Menyesuaikan pengecekan loading dan data dari AsyncValue
+    if (state.isLoading && siswaList.isEmpty) {
       return const Center(child: CircularProgressIndicator(color: Color(0xFF0D9488)));
     }
 
-    if (state.siswa.isEmpty) {
+    if (siswaList.isEmpty) {
       return const Center(child: Text("Belum ada data siswa"));
     }
 
@@ -29,9 +33,9 @@ class SiswaGridView extends ConsumerWidget {
         mainAxisSpacing: 16,
         mainAxisExtent: 240, // Tinggi kartu dikunci agar seragam
       ),
-      itemCount: state.siswa.length,
+      itemCount: siswaList.length,
       itemBuilder: (context, index) {
-        final siswa = state.siswa[index];
+        final siswa = siswaList[index];
         bool isLakiLaki = siswa.jenisKelamin == 'L';
         String inisial = siswa.namaLengkap.isNotEmpty ? siswa.namaLengkap[0].toUpperCase() : '?';
 
@@ -190,7 +194,42 @@ class SiswaGridView extends ConsumerWidget {
           // Tombol WhatsApp
           Expanded(
             child: InkWell(
-              onTap: () {}, // Tambahkan logic url_launcher nanti
+              onTap: () async {
+                // Ambil nomor HP dari model (asumsi field: noHp sesuai SiswaModel)
+                String phone = siswa.noHp ?? '';
+                if (phone.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Nomor WhatsApp tidak tersedia")),
+                  );
+                  return;
+                }
+
+                // 1. Bersihkan karakter non-digit
+                phone = phone.replaceAll(RegExp(r'\D'), '');
+
+                // 2. Format ke standar internasional (Indonesia: 62)
+                if (phone.startsWith('0')) {
+                  phone = '62${phone.substring(1)}';
+                }
+
+                // 3. Buat template pesan otomatis
+                final message = Uri.encodeComponent(
+                    "Assalamu'alaikum, Bapak/Ibu Wali dari ${siswa.namaLengkap}. "
+                        "Kami dari tim Tahfidz ingin menginfokan perkembangan hafalan..."
+                );
+
+                final uri = Uri.parse("https://wa.me/$phone?text=$message");
+
+                if (await canLaunchUrl(uri)) {
+                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                } else {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Tidak bisa membuka WhatsApp")),
+                    );
+                  }
+                }
+              },
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 alignment: Alignment.center,

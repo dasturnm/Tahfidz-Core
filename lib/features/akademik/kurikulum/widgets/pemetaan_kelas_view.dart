@@ -22,20 +22,16 @@ class PemetaanKelasView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Logic Mapping
+    // FIX: Karena KurikulumModel sekarang adalah Blueprint (Tanpa data Kelas),
+    // maka kita tidak bisa lagi melakukan mapping kelas dari sini.
+    // List ini akan dikosongkan untuk sementara agar kode bisa di-compile.
     var activeMappings = <Map<String, dynamic>>[];
-    for (var k in kurikulumList) {
-      for (var j in k.jenjang) { // PERBAIKAN: Singular jenjang
-        for (var l in j.level) {
-          if (l.kelasId != null) {
-            activeMappings.add({
-              'kelas_name': l.namaKelas,
-              'path': "${k.namaKurikulum} > ${j.namaJenjang} > ${l.namaLevel}",
-              'is_linear': k.isLinear,
-            });
-          }
-        }
-      }
-    }
+
+    /* CATATAN PARTNER CODING:
+    Logika di bawah ini dihapus karena LevelModel tidak lagi memiliki kelasId/namaKelas.
+    Untuk menampilkan pemetaan ini kembali, widget ini nantinya perlu di-refactor
+    untuk menerima List<KelasModel> sebagai input data utamanya.
+    */
 
     // PERBAIKAN: Sorting Global Kelas
     if (sortBy == "A-Z") {

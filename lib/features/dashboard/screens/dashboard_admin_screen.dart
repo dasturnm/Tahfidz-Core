@@ -1,11 +1,23 @@
-import 'package:flutter/material.dart';
+// Lokasi: lib/features/dashboard/screens/dashboard_admin_screen.dart
 
-class DashboardAdminScreen extends StatelessWidget {
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../siswa/providers/siswa_provider.dart';
+
+class DashboardAdminScreen extends ConsumerWidget {
   const DashboardAdminScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final screenWidth = MediaQuery.of(context).size.width;
+
+    // REAKTIF: Watch data siswa untuk statistik nyata (v2026.03.22)
+    final siswaState = ref.watch(siswaListProvider);
+    final totalSiswa = siswaState.value?.length.toString() ?? '...';
+
+    // Placeholder untuk statistik Mutabaah (Akan dihubungkan setelah MutabaahProvider siap)
+    const avgHafalan = "4.2 Juz";
+    const lulusUjian = "12";
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -21,10 +33,10 @@ class DashboardAdminScreen extends StatelessWidget {
               spacing: 20,
               runSpacing: 20,
               children: [
-                _buildStatCard(screenWidth, "TOTAL SISWA", "24", "+2 Siswa Baru", Icons.people_outline, Colors.blue),
-                _buildStatCard(screenWidth, "RATA-RATA HAFALAN", "4.2 Juz", "On Track Target", Icons.book_outlined, const Color(0xFF10B981)),
-                _buildStatCard(screenWidth, "SISWA LULUS UJIAN", "12", "Bulan Februari", Icons.workspace_premium_outlined, Colors.purple),
-                _buildStatCard(screenWidth, "DURASI kelas", "2.5 Jam", "Harian Efektif", Icons.timer_outlined, Colors.orange),
+                _buildStatCard(screenWidth, "TOTAL SISWA", totalSiswa, "+2 Siswa Baru", Icons.people_outline, Colors.blue),
+                _buildStatCard(screenWidth, "RATA-RATA HAFALAN", avgHafalan, "On Track Target", Icons.book_outlined, const Color(0xFF10B981)),
+                _buildStatCard(screenWidth, "SISWA LULUS UJIAN", lulusUjian, "Bulan Februari", Icons.workspace_premium_outlined, Colors.purple),
+                _buildStatCard(screenWidth, "DURASI KELAS", "2.5 Jam", "Harian Efektif", Icons.timer_outlined, Colors.orange),
               ],
             ),
 
@@ -36,14 +48,14 @@ class DashboardAdminScreen extends StatelessWidget {
               children: [
                 Expanded(flex: 2, child: _buildActivityChart()),
                 const SizedBox(width: 32),
-                Expanded(flex: 1, child: _buildTopSiswaList()),
+                Expanded(flex: 1, child: _buildTopSiswaList(ref)),
               ],
             )
                 : Column(
               children: [
                 _buildActivityChart(),
                 const SizedBox(height: 32),
-                _buildTopSiswaList(),
+                _buildTopSiswaList(ref),
               ],
             ),
           ],
@@ -124,7 +136,7 @@ class DashboardAdminScreen extends StatelessWidget {
           ),
           const SizedBox(height: 20),
           Text(
-            title,
+            title.toUpperCase(),
             style: const TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.5),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -158,7 +170,9 @@ class DashboardAdminScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTopSiswaList() {
+  Widget _buildTopSiswaList(WidgetRef ref) {
+    final siswaState = ref.watch(siswaListProvider);
+
     return Container(
       padding: const EdgeInsets.all(24),
       height: 400,
@@ -168,16 +182,34 @@ class DashboardAdminScreen extends StatelessWidget {
         children: [
           const Text("Top Siswa", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 24),
-          _buildSiswaItem("1", "Abdurrahman Al-Fatih", "12 JUZ", "95%"),
-          _buildSiswaItem("2", "Siti Maryam", "8 JUZ", "88%"),
-          _buildSiswaItem("3", "Muhammad Ali", "5 JUZ", "82%"),
-          _buildSiswaItem("4", "Zaid bin Tsabit", "15 JUZ", "78%"),
+          siswaState.when(
+            loading: () => const Center(child: CircularProgressIndicator(color: Color(0xFF10B981))),
+            error: (err, _) => Text("Gagal memuat: $err", style: const TextStyle(color: Colors.red, fontSize: 10)),
+            data: (data) {
+              if (data.isEmpty) return const Text("Belum ada data siswa", style: TextStyle(color: Colors.grey));
+
+              // Menampilkan 4 siswa teratas (Limit UI)
+              final topSiswa = data.take(4).toList();
+
+              return Column(
+                children: List.generate(topSiswa.length, (index) {
+                  final s = topSiswa[index];
+                  return _buildSiswaItem(
+                    (index + 1).toString(),
+                    s.namaLengkap,
+                    s.kelas?.name ?? "Tanpa Kelas",
+                    "100%", // Placeholder progress
+                  );
+                }),
+              );
+            },
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildSiswaItem(String rank, String name, String juz, String percent) {
+  Widget _buildSiswaItem(String rank, String name, String sub, String percent) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 20),
       child: Row(
@@ -189,7 +221,7 @@ class DashboardAdminScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13), overflow: TextOverflow.ellipsis),
-                Text(juz, style: const TextStyle(color: Colors.grey, fontSize: 11)),
+                Text(sub, style: const TextStyle(color: Colors.grey, fontSize: 11)),
               ],
             ),
           ),

@@ -1,33 +1,49 @@
+// Lokasi: lib/core/services/base_service.dart
+
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../providers/app_context_provider.dart';
+import 'package:tahfidz_core/core/providers/app_context_provider.dart';
 
 class BaseService {
   final SupabaseClient supabase = Supabase.instance.client;
 
   /// 🔥 WAJIB: ambil context otomatis
-  AppContext getContext(Ref ref) {
-    return ref.read(appContextNotifierProvider);
+  AppContextState getContext(Ref ref) {
+    // FIX: Mengembalikan AppContextState (Data), bukan AppContext (Notifier)
+    return ref.read(appContextProvider);
   }
 
   /// 🔒 AUTO lembagaId
   String getLembagaId(Ref ref) {
-    return getContext(ref).lembagaId;
+    // OPTIMIZED: Proteksi throw agar error terdeteksi dini jika sesi hilang
+    final id = getContext(ref).lembaga?.id;
+    if (id == null || id.isEmpty) {
+      throw Exception("Sesi lembaga tidak ditemukan. Silakan masuk kembali.");
+    }
+    return id;
   }
 
   /// 🔒 AUTO userId
   String getUserId(Ref ref) {
-    return getContext(ref).userId;
+    // UPDATED: Mengakses property id langsung dari ProfileModel (v2026.03.22)
+    return getContext(ref).profile?.id ?? supabase.auth.currentUser?.id ?? '';
   }
 
   /// 🔒 AUTO role
   String getUserRole(Ref ref) {
-    return getContext(ref).role;
+    // UPDATED: Menghubungkan langsung ke data role di AppContextState
+    return getContext(ref).role ?? '';
   }
 
   /// 🔒 AUTO tahun ajaran
   String? getTahunAjaranId(Ref ref) {
-    return getContext(ref).tahunAjaranId;
+    return getContext(ref).currentTahunAjaran?.id;
+  }
+
+  /// 🔒 AUTO siswaId (v2026.04.16)
+  /// Digunakan oleh MurojaahTaskService untuk identifikasi santri aktif
+  String? getSiswaId(Ref ref) {
+    return getContext(ref).profile?.id;
   }
 
   /// 🔒 FILTER LEMBAGA
@@ -35,7 +51,11 @@ class BaseService {
     required PostgrestFilterBuilder query,
     required String lembagaId,
   }) {
-    return query.eq('lembaga_id', lembagaId);
+    // FIX: Gunakan toSafeId untuk mencegah hang jika ID bernilai 'null' atau kosong
+    final safeId = toSafeId(lembagaId);
+    if (safeId == null) return query;
+
+    return query.eq('lembaga_id', safeId);
   }
 
   /// 🔒 FILTER TAHUN AJARAN
@@ -43,8 +63,11 @@ class BaseService {
     required PostgrestFilterBuilder query,
     String? tahunAjaranId,
   }) {
-    if (tahunAjaranId == null) return query;
-    return query.eq('tahun_ajaran_id', tahunAjaranId);
+    // FIX: Gunakan toSafeId untuk validasi UUID tahun ajaran
+    final safeId = toSafeId(tahunAjaranId);
+    if (safeId == null) return query;
+
+    return query.eq('tahun_ajaran_id', safeId);
   }
 
   /// 🔍 SEARCH
@@ -58,7 +81,7 @@ class BaseService {
   }
 
   /// 📄 PAGINATION
-  PostgrestFilterBuilder applyPagination({
+  PostgrestTransformBuilder applyPagination({
     required PostgrestFilterBuilder query,
     int limit = 10,
     int offset = 0,
@@ -67,7 +90,7 @@ class BaseService {
   }
 
   /// 🔽 SORTING
-  PostgrestFilterBuilder applyOrder({
+  PostgrestTransformBuilder applyOrder({
     required PostgrestFilterBuilder query,
     String field = 'created_at',
     bool ascending = false,
@@ -80,8 +103,10 @@ class BaseService {
     final cleaned = <String, dynamic>{};
 
     data.forEach((key, value) {
-      if (value == '' || value == 'null') {
-        cleaned[key] = null;
+      if (value is String) {
+        // OPTIMIZED: Membersihkan spasi dan menangani string 'null' secara case-insensitive
+        final v = value.trim();
+        cleaned[key] = (v == '' || v.toLowerCase() == 'null') ? null : v;
       } else {
         cleaned[key] = value;
       }
@@ -134,5 +159,13 @@ class BaseService {
   DateTime? toSafeDate(dynamic value) {
     if (value == null) return null;
     return DateTime.tryParse(value.toString());
+  }
+
+  /// 🚨 ERROR HANDLER (SaaS Ready)
+  String handleError(dynamic error) {
+    if (error is PostgrestException) {
+      return error.message;
+    }
+    return error.toString();
   }
 }

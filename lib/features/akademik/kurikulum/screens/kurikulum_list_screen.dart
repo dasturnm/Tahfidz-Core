@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/kurikulum_provider.dart';
 import '../models/kurikulum_model.dart';
 import '../widgets/kurikulum_card.dart';
+import '../widgets/add_kurikulum_sheet.dart'; // FIX: Import sheet terpusat
 
 class KurikulumListScreen extends ConsumerWidget {
   final String lembagaId;
@@ -42,7 +43,12 @@ class KurikulumListScreen extends ConsumerWidget {
         error: (err, _) => Center(child: Text("Error: $err")),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddKurikulumSheet(context, ref),
+        onPressed: () => AddKurikulumSheet.show(
+          context: context,
+          ref: ref,
+          lembagaId: lembagaId,
+          slate: _slate,
+        ), // FIX: Menggunakan form standar yang mendukung pilihan Program
         backgroundColor: _slate,
         child: const Icon(Icons.add, color: Colors.white),
       ),
@@ -146,7 +152,7 @@ class KurikulumListScreen extends ConsumerWidget {
         return KurikulumCard(
           kurikulum: k,
           onTap: () => onSelect(k),
-          onDelete: () => ref.read(kurikulumListProvider(lembagaId).notifier).deleteKurikulum(k.id!),
+          onDelete: () => ref.read(kurikulumListProvider(lembagaId, search: searchQuery).notifier).deleteKurikulum(k.id!),
         );
       },
     );
@@ -166,81 +172,6 @@ class KurikulumListScreen extends ConsumerWidget {
             style: const TextStyle(color: Colors.grey),
           ),
         ],
-      ),
-    );
-  }
-
-  void _showAddKurikulumSheet(BuildContext context, WidgetRef ref) {
-    final nameController = TextEditingController();
-    bool isLinear = false; // State awal untuk mode kurikulum
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setState) => Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
-          ),
-          padding: EdgeInsets.only(
-              bottom: MediaQuery.of(ctx).viewInsets.bottom + 32,
-              left: 32, right: 32, top: 32
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text("Buat Kurikulum Baru", style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900)),
-              const SizedBox(height: 8),
-              const Text("Tentukan blueprint dasar untuk jenjang pendidikan.", style: TextStyle(color: Colors.grey)),
-              const SizedBox(height: 32),
-              TextField(
-                controller: nameController,
-                decoration: InputDecoration(
-                  labelText: "NAMA KURIKULUM",
-                  filled: true,
-                  fillColor: const Color(0xFFF8FAFC),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-                ),
-              ),
-              const SizedBox(height: 24),
-              // PERBAIKAN POIN 4: Toggle untuk Mode Linear
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text("Mode Linear (Tingkatan Tunggal)", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-                subtitle: const Text("Jenjang pendidikan akan langsung berisi daftar modul tanpa melalui tingkatan/level.", style: TextStyle(fontSize: 12)),
-                value: isLinear,
-                activeThumbColor: _emerald,
-                onChanged: (val) => setState(() => isLinear = val),
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                height: 60,
-                child: ElevatedButton(
-                  onPressed: () {
-                    if (nameController.text.isNotEmpty) {
-                      final newK = KurikulumModel(
-                        lembagaId: lembagaId,
-                        namaKurikulum: nameController.text.trim(),
-                        isLinear: isLinear, // Mengirim state linear
-                      );
-                      ref.read(kurikulumListProvider(lembagaId).notifier).addKurikulum(newK);
-                      Navigator.pop(ctx);
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _slate,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  ),
-                  child: const Text("SIMPAN KURIKULUM", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900)),
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

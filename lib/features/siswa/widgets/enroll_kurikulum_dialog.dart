@@ -1,7 +1,12 @@
+// Lokasi: lib/features/siswa/widgets/enroll_kurikulum_dialog.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../program/providers/program_provider.dart';
 import '../../akademik/kurikulum/providers/kurikulum_provider.dart';
+// FIX: Tambahkan import untuk provider jenjang dan level yang sudah dipisah
+import '../../akademik/kurikulum/providers/jenjang_provider.dart';
+import '../../akademik/kurikulum/providers/level_provider.dart';
 import '../providers/siswa_provider.dart';
 import '../models/siswa_model.dart';
 
@@ -132,8 +137,8 @@ class _EnrollKurikulumDialogState extends ConsumerState<EnrollKurikulumDialog> {
     );
 
     try {
-      // Menggunakan siswaProvider (ChangeNotifier) untuk update data kurikulum
-      await ref.read(siswaProvider).updateSiswa(
+      // FIX: Menggunakan siswaListProvider.notifier (AsyncNotifier) untuk update data kurikulum
+      await ref.read(siswaListProvider.notifier).updateSiswa(
         widget.siswa.copyWith(
           programId: _selectedProgramId,
         ),

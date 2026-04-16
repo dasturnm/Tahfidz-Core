@@ -21,7 +21,7 @@ final staffSearchProvider =
 );
 
 typedef _$StaffSearch = AutoDisposeNotifier<String>;
-String _$staffListHash() => r'6e11343ecb5e3fdb478c4713630cf333f3bbe805';
+String _$staffListHash() => r'50e2a3628a70ee19584eb30212d42652953e6a86';
 
 /// See also [StaffList].
 @ProviderFor(StaffList)

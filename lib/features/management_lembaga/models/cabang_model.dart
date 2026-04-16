@@ -78,6 +78,7 @@ class CabangModel {
   );
 
   Map<String, dynamic> toJson() => {
+    if (id.isNotEmpty) 'id': id,
     'lembaga_id': lembagaId,
     'nama_cabang': namaCabang,
     'kode_cabang': kodeCabang,

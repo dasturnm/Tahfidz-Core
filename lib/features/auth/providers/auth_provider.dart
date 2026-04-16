@@ -1,13 +1,14 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:tahfidz_core/features/auth/services/auth_service.dart';
+import 'package:tahfidz_core/shared/models/profile_model.dart';
 
 part 'auth_provider.g.dart';
 
 // State Class
 class AuthState {
   final User? user;
-  final Map<String, dynamic>? profile;
+  final ProfileModel? profile;
   final bool isLoading;
   final String? errorMessage;
 
@@ -19,7 +20,7 @@ class AuthState {
   });
 
   bool get isAuthenticated => user != null;
-  String get userRole => profile?['role'] ?? 'guru';
+  String get userRole => profile?.role ?? 'guru';
 }
 
 @riverpod
@@ -39,10 +40,13 @@ class Auth extends _$Auth {
       // 1. Panggil fungsi signIn (Hybrid: Email atau No HP)
       final response = await service.signIn(identity, password);
 
-      // 2. Ambil Profile (Role) dari tabel public.profiles
-      Map<String, dynamic>? profile;
+      // 2. Ambil Profile (Role) dari tabel public.profiles (Standardized Model)
+      ProfileModel? profile;
       if (response.user != null) {
-        profile = await service.getUserProfile(response.user!.id);
+        final profileData = await service.getUserProfile(response.user!.id);
+        if (profileData != null) {
+          profile = ProfileModel.fromJson(profileData);
+        }
       }
 
       state = AuthState(

@@ -1,15 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:tahfidz_core/features/auth/screens/login_screen.dart';
-import 'package:tahfidz_core/features/dashboard/screens/main_layout_screen.dart';
 import 'package:tahfidz_core/features/auth/providers/auth_provider.dart';
 import 'package:tahfidz_core/core/providers/app_context_provider.dart';
-import 'package:tahfidz_core/features/management_lembaga/screens/lembaga_profile_screen.dart';
-import 'package:tahfidz_core/routes/app_routes.dart'; // TAMBAHKAN INI
-
-// Import halaman update password
-import 'package:tahfidz_core/features/auth/screens/update_password_screen.dart';
+import 'package:tahfidz_core/core/routes/app_routes.dart';
 import 'package:device_preview/device_preview.dart';
 
 // Navigator key diperlukan untuk pindah halaman dari listener auth
@@ -60,7 +54,16 @@ class _MyAppState extends ConsumerState<MyApp> {
     // Watch routerProvider agar mesin GoRouter tersambung ke UI
     final router = ref.watch(routerProvider);
 
-    // Listener untuk memicu initContext saat login berhasil
+    // --- FIX: Proactive Context Initialization ---
+    // Memastikan initContext dijalankan jika user sudah login saat aplikasi dibuka (Cold Start)
+    final authState = ref.watch(authProvider);
+    final appContext = ref.watch(appContextProvider);
+
+    if (authState.isAuthenticated && appContext.lembaga == null && !appContext.isLoading) {
+      Future.microtask(() => ref.read(appContextProvider.notifier).initContext());
+    }
+
+    // Listener untuk memicu initContext saat login berhasil (Transisi)
     ref.listen(authProvider, (previous, next) {
       if (next.isAuthenticated && !(previous?.isAuthenticated ?? false)) {
         Future.microtask(() => ref.read(appContextProvider.notifier).initContext());

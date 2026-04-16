@@ -11,7 +11,7 @@ class AppContextHelper {
       throw Exception('Lembaga belum dipilih / belum dibuat');
     }
 
-    return state.lembaga!.id!;
+    return state.lembaga!.id;
   }
 
   /// 🔒 cabangId

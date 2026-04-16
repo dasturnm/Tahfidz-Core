@@ -1,70 +1,51 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/penugasan_staf_model.dart';
+import '../services/penugasan_staf_service.dart';
 
 part 'penugasan_staf_provider.g.dart';
 
 @riverpod
 class PenugasanStafList extends _$PenugasanStafList {
-  final _supabase = Supabase.instance.client;
+  final _service = PenugasanStafService();
 
   @override
   Future<List<PenugasanStafModel>> build(String lembagaId) async {
-    return _fetchPenugasan(lembagaId);
-  }
-
-  Future<List<PenugasanStafModel>> _fetchPenugasan(String lembagaId) async {
-    // JOIN data dari tabel profiles, jabatan, dan cabang sekaligus
-    final response = await _supabase
-        .from('penugasan_staf')
-        .select('''
-          *,
-          profiles:profile_id(nama_lengkap, email),
-          jabatan:jabatan_id(nama_jabatan),
-          cabang:cabang_id(nama_cabang)
-        ''')
-        .eq('lembaga_id', lembagaId)
-        .order('created_at', ascending: false);
-
-    return (response as List)
-        .map((json) => PenugasanStafModel.fromJson(json))
-        .toList();
+    // FIX: Memanggil service (Worker) untuk ambil data
+    return _service.fetchPenugasan(lembagaId: lembagaId);
   }
 
   Future<void> savePenugasan(PenugasanStafModel penugasan) async {
     try {
-      if (penugasan.id.isEmpty) {
-        // Insert Baru
-        await _supabase.from('penugasan_staf').insert(penugasan.toJson());
-      } else {
-        // Update
-        await _supabase
-            .from('penugasan_staf')
-            .update(penugasan.toJson())
-            .eq('id', penugasan.id);
-      }
-
-      // Refresh state agar UI otomatis update
       state = const AsyncValue.loading();
-      state = AsyncValue.data(await _fetchPenugasan(lembagaId));
-    } catch (e) {
-      throw Exception("Gagal menyimpan penugasan: $e");
+
+      // FIX: Logika simpan dipindah ke service
+      await _service.savePenugasan(penugasan);
+
+      // Refresh data agar UI otomatis update
+      state = AsyncValue.data(await _service.fetchPenugasan(lembagaId: lembagaId));
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
     }
   }
 
   Future<void> hapusPenugasan(String id) async {
     try {
-      await _supabase.from('penugasan_staf').delete().eq('id', id);
       state = const AsyncValue.loading();
-      state = AsyncValue.data(await _fetchPenugasan(lembagaId));
-    } catch (e) {
-      throw Exception("Gagal menghapus penugasan: $e");
+
+      // FIX: Logika hapus dipindah ke service
+      await _service.deletePenugasan(id);
+
+      state = AsyncValue.data(await _service.fetchPenugasan(lembagaId: lembagaId));
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
     }
   }
 }
 
 @riverpod
 class PenugasanStaf extends _$PenugasanStaf {
+  final _service = PenugasanStafService();
+
   @override
   FutureOr<void> build() {
     // Inisialisasi awal (kosong)
@@ -80,40 +61,20 @@ class PenugasanStaf extends _$PenugasanStaf {
     bool deactivatePrevious = false, // Tambahan: Opsi Mutasi (Ganti) atau Rangkap (Tambah)
   }) async {
     try {
-      final supabase = Supabase.instance.client;
-      final today = DateTime.now().toIso8601String().split('T')[0];
+      state = const AsyncValue.loading();
 
-      // 1. Jika diminta mutasi (bukan rangkap), nonaktifkan penugasan lama
-      if (deactivatePrevious) {
-        await supabase
-            .from('penugasan_staf')
-            .update({
-          'status': 'selesai',
-          'tanggal_selesai': today,
-          'is_utama': false,
-        })
-            .eq('profile_id', stafId)
-            .eq('status', 'aktif');
-      }
+      // FIX: Pindahkan seluruh logika bisnis mutasi & rangkap ke Service
+      await _service.tambahPenugasan(
+        stafId: stafId,
+        jabatanId: jabatanId,
+        cabangId: cabangId,
+        isUtama: isUtama,
+        deactivatePrevious: deactivatePrevious,
+      );
 
-      // 2. Jika ini jabatan utama, set jabatan lain milik staf ini menjadi false dulu
-      if (isUtama) {
-        await supabase
-            .from('penugasan_staf')
-            .update({'is_utama': false})
-            .eq('profile_id', stafId);
-      }
-
-      // 3. Proses insert ke tabel penugasan_staf
-      await supabase.from('penugasan_staf').insert({
-        'profile_id': stafId,
-        'cabang_id': cabangId,
-        'jabatan_id': jabatanId,
-        'tanggal_mulai': today,
-        'is_utama': isUtama,
-        'status': 'aktif',
-      });
-    } catch (e) {
+      state = const AsyncValue.data(null);
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
       // Lempar error ke UI jika proses gagal agar bisa ditangkap oleh blok catch di form
       rethrow;
     }

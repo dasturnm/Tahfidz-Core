@@ -1,3 +1,5 @@
+// Lokasi: lib/features/management_lembaga/screens/management_hub_screen.dart
+
 import 'package:flutter/material.dart';
 import 'lembaga_profile_screen.dart';
 import 'cabang_list_screen.dart';
@@ -20,7 +22,7 @@ class ManagementHubScreen extends StatelessWidget {
         elevation: 0,
       ),
       body: DefaultTabController(
-        length: 5, // Diubah dari 4 menjadi 5
+        length: 5, // FIX: Sinkron dengan jumlah Tab & View
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -61,6 +63,7 @@ class ManagementHubScreen extends StatelessWidget {
               ),
             ),
 
+            // FIX: Menggunakan Expanded agar TabBarView memiliki ruang
             const Expanded(
               child: TabBarView(
                 children: [

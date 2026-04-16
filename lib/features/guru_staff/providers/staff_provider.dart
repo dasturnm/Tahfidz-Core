@@ -1,6 +1,8 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:tahfidz_core/core/providers/app_context_provider.dart';
 import 'package:tahfidz_core/shared/models/profile_model.dart';
+// FIX: Menggunakan penamaan 'staff' (dua 'f') sesuai instruksi
+import '../services/staff_service.dart';
 
 part 'staff_provider.g.dart';
 
@@ -14,139 +16,67 @@ class StaffSearch extends _$StaffSearch {
 
 @riverpod
 class StaffList extends _$StaffList {
-  final _supabase = Supabase.instance.client;
+  // FIX: Sinkronisasi ke class StaffService
+  final _service = StaffService();
 
   @override
   Future<List<ProfileModel>> build() async {
-    // 1. Ambil user yang sedang login
-    final user = _supabase.auth.currentUser;
-    if (user == null) return [];
+    // 1. Ambil lembaga_id langsung dari context global (The Brain)
+    final lembagaId = ref.watch(appContextProvider).lembaga?.id;
+    if (lembagaId == null) return [];
 
-    // 2. Ambil lembaga_id dari profile user tersebut
-    final profile = await _supabase
-        .from('profiles')
-        .select('lembaga_id')
-        .eq('id', user.id)
-        .maybeSingle();
-
-    if (profile == null) return [];
-
-    // 3. Ambil semua data personil (Termasuk data absensi hari ini)
-    // UPDATE: Menambahkan jenis_kelamin ke dalam select
-    final response = await _supabase
-        .from('profiles')
-        .select('*, jenis_kelamin, divisi:divisi_id(nama_divisi), penugasan_staf(status, is_utama, cabang:cabang_id(nama_cabang), jabatan:jabatan_id(nama_jabatan)), absensi(status, tanggal)')
-        .eq('lembaga_id', profile['lembaga_id'])
-        .order('nama_lengkap', ascending: true);
-
-    // 4. Mapping data Map dari Supabase ke ProfileModel
-    final today = DateTime.now().toIso8601String().split('T')[0];
-
-    return (response as List).map((json) {
-      // Cari penugasan yang statusnya aktif dan is_utama = true
-      // Jika tidak ada is_utama, ambil yang pertama dari yang aktif
-      final listPenugasan = (json['penugasan_staf'] as List?) ?? [];
-
-      final penugasanActive = listPenugasan.firstWhere(
-            (ps) => ps['status'] == 'aktif' && ps['is_utama'] == true,
-        orElse: () => listPenugasan.firstWhere(
-              (ps) => ps['status'] == 'aktif',
-          orElse: () => listPenugasan.isNotEmpty ? listPenugasan[0] : null,
-        ),
-      );
-
-      // Ambil status absen hari ini
-      final lastAttendance = (json['absensi'] as List?)?.firstWhere(
-            (a) => a['tanggal'] == today,
-        orElse: () => null,
-      );
-
-      return ProfileModel.fromJson({
-        ...json,
-        'nama': json['nama_lengkap'], // Sinkronisasi nama kolom
-        'namaDivisi': json['divisi']?['nama_divisi'] ?? '-', // Fallback jika null
-        'namaCabang': penugasanActive?['cabang']?['nama_cabang'] ?? '-', // Fallback jika null
-        'namaJabatan': penugasanActive?['jabatan']?['nama_jabatan'] ?? '-', // Fallback jika null
-        'assignments': listPenugasan, // Melemparkan raw list untuk deteksi Hybrid
-        'last_attendance': lastAttendance, // Status kehadiran untuk UI
-      });
-    }).toList();
+    // 2. Delegate penarikan data ke Service (The Worker)
+    return _service.fetchStaffList(lembagaId: lembagaId);
   }
-
-  // --- Fungsi yang sudah kamu buat sebelumnya tetap terjaga ---
 
   // Fungsi untuk Menambah/Edit Staff (Universal)
   Future<void> upsertStaff(Map<String, dynamic> data) async {
-    // FIX: Data cleaning untuk mencegah error "invalid input syntax" pada tipe data DATE atau UUID
-    final cleanData = Map<String, dynamic>.from(data);
-    cleanData.forEach((key, value) {
-      if (value == '') cleanData[key] = null;
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() async {
+      await _service.upsertStaff(data);
+      final lembagaId = ref.read(appContextProvider).lembaga?.id;
+      return _service.fetchStaffList(lembagaId: lembagaId!);
     });
-
-    await _supabase.from('profiles').upsert(cleanData);
-    ref.invalidateSelf(); // Refresh data otomatis
   }
 
   // Fungsi untuk Nonaktifkan Staff (Soft Delete)
   Future<void> toggleStatus(String id, String currentStatus) async {
+    state = const AsyncValue.loading();
     final newStatus = currentStatus == 'aktif' ? 'nonaktif' : 'aktif';
-    await _supabase.from('profiles').update({'status': newStatus}).eq('id', id);
-    ref.invalidateSelf();
+
+    state = await AsyncValue.guard(() async {
+      await _service.updateStaffStatus(id, newStatus);
+      final lembagaId = ref.read(appContextProvider).lembaga?.id;
+      return _service.fetchStaffList(lembagaId: lembagaId!);
+    });
   }
 
-  // --- FUNGSI BARU: AMBIL RIWAYAT PENUGASAN PER STAF ---
+  // --- FUNGSI AMBIL RIWAYAT PENUGASAN PER STAFF ---
   Future<List<Map<String, dynamic>>> fetchHistory(String staffId) async {
-    // 1. Ambil Penugasan yang sedang AKTIF sekarang (dari penugasan_staf)
-    final activeResponse = await _supabase
-        .from('penugasan_staf')
-        .select('*, cabang:cabang_id(nama_cabang), jabatan:jabatan_id(nama_jabatan)')
-        .eq('profile_id', staffId)
-        .eq('status', 'aktif');
-
-    // 2. Ambil data dari tabel RIWAYAT masa lalu
-    final historyResponse = await _supabase
-        .from('riwayat_penugasan')
-        .select('*, cabang:cabang_id(nama_cabang), jabatan:jabatan_id(nama_jabatan)')
-        .eq('staf_id', staffId);
-
-    // 3. Gabungkan keduanya menjadi satu Timeline
-    List<Map<String, dynamic>> fullTimeline = [];
-
-    for (var item in activeResponse) {
-      fullTimeline.add({
-        ...item,
-        'keterangan': item['is_utama'] == true ? 'Jabatan Utama (Aktif)' : 'Jabatan Tambahan (Aktif)',
-        'is_current': true,
-      });
-    }
-
-    fullTimeline.addAll(historyResponse.map((e) => {...e, 'is_current': false}));
-    fullTimeline.sort((a, b) => (b['tanggal_mulai'] ?? '').compareTo(a['tanggal_mulai'] ?? ''));
-
-    return fullTimeline;
+    // Service handle semua join dan sort timeline
+    return _service.fetchStaffHistory(staffId);
   }
 
-  // --- FUNGSI BARU: UPDATE ROLE OTOMATIS ---
+  // --- FUNGSI UPDATE ROLE OTOMATIS ---
   Future<void> updateRole(String staffId, String role) async {
-    await _supabase.from('profiles').update({'role': role}).eq('id', staffId);
-    ref.invalidateSelf();
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() async {
+      await _service.updateStaffRole(staffId, role);
+      final lembagaId = ref.read(appContextProvider).lembaga?.id;
+      return _service.fetchStaffList(lembagaId: lembagaId!);
+    });
   }
 
-  // --- PULIHKAN SEMENTARA AGAR TIDAK ERROR BUILD ---
+  // --- SUBMIT ABSENSI ---
   Future<void> submitAbsensi({
     required String staffId,
     required String status, // H, I, S, A
   }) async {
-    final today = DateTime.now().toIso8601String().split('T')[0];
-
-    // Menggunakan upsert agar data hari yang sama bisa diperbarui jika ada perubahan
-    await _supabase.from('absensi').upsert({
-      'staf_id': staffId,
-      'tanggal': today,
-      'status': status,
-      'waktu_catat': DateTime.now().toIso8601String(),
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() async {
+      await _service.upsertAbsensi(staffId, status);
+      final lembagaId = ref.read(appContextProvider).lembaga?.id;
+      return _service.fetchStaffList(lembagaId: lembagaId!);
     });
-
-    ref.invalidateSelf(); // Refresh data agar status di UI berubah
   }
 }

@@ -22,18 +22,21 @@ class _BulkPlottingDialogState extends ConsumerState<BulkPlottingDialog> {
     super.initState();
     // Pastikan data kelas dan siswa terbaru sudah dimuat
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(kelasProvider).fetchKelas(); // PERBAIKAN: Label Kelas
-      ref.read(siswaProvider).fetchSiswa();
+      // FIX: Menggunakan notifier dari siswaListProvider sesuai arsitektur modern
+      ref.read(siswaListProvider.notifier).fetchSiswa();
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final siswaState = ref.watch(siswaProvider); // PERBAIKAN: CamelCase & Konsistensi
-    final kelasState = ref.watch(kelasProvider); // PERBAIKAN: Label Kelas
+    // FIX: Menggunakan siswaListProvider (AsyncValue) hasil generator
+    final siswaState = ref.watch(siswaListProvider);
+    // FIX: Menggunakan kelasListProvider (AsyncValue)
+    final kelasAsync = ref.watch(kelasListProvider);
 
     // Filter siswa berdasarkan pencarian
-    final filteredSiswa = siswaState.siswa.where((s) {
+    // FIX: Mengakses list data melalui siswaState.value
+    final filteredSiswa = (siswaState.value ?? []).where((s) {
       return s.namaLengkap.toLowerCase().contains(_searchQuery.toLowerCase());
     }).toList();
 
@@ -65,7 +68,8 @@ class _BulkPlottingDialogState extends ConsumerState<BulkPlottingDialog> {
                   value: _selectedKelasId,
                   hint: const Text("Pilih UNIT KELAS"),
                   isExpanded: true,
-                  items: kelasState.kelas.map((c) { // PERBAIKAN: Label Kelas Singular
+                  // FIX: Menangani data list dari AsyncValue (kelasListProvider)
+                  items: (kelasAsync.value ?? []).map((c) {
                     return DropdownMenuItem(value: c.id, child: Text(c.name));
                   }).toList(),
                   onChanged: (val) => setState(() => _selectedKelasId = val),
@@ -164,7 +168,7 @@ class _BulkPlottingDialogState extends ConsumerState<BulkPlottingDialog> {
             backgroundColor: const Color(0xFF4F46E5),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
-          child: siswaState.isLoading // PERBAIKAN: Case-sensitive fix
+          child: siswaState.isLoading
               ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
               : const Text('SIMPAN PLOTTING', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         ),
@@ -173,7 +177,8 @@ class _BulkPlottingDialogState extends ConsumerState<BulkPlottingDialog> {
   }
 
   void _handleBulkPlotting() async {
-    final success = await ref.read(siswaProvider).bulkAssignToKelas( // PERBAIKAN: Label Kelas
+    // FIX: Memanggil aksi melalui notifier siswaListProvider
+    final success = await ref.read(siswaListProvider.notifier).bulkAssignToKelas(
       _selectedSiswaIds,
       _selectedKelasId,
     );
@@ -186,7 +191,8 @@ class _BulkPlottingDialogState extends ConsumerState<BulkPlottingDialog> {
         Navigator.pop(context);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Gagal: ${ref.read(siswaProvider).errorMessage}"), backgroundColor: Colors.red),
+          // FIX: Mengambil pesan error dari state AsyncValue
+          SnackBar(content: Text("Gagal: ${ref.read(siswaListProvider).error}"), backgroundColor: Colors.red),
         );
       }
     }

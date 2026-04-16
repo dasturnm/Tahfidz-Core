@@ -13,23 +13,20 @@ class SiswaTableView extends ConsumerStatefulWidget {
 }
 
 class _SiswaTableViewState extends ConsumerState<SiswaTableView> {
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(siswaProvider).fetchSiswa();
-    });
-  }
+  // FIX: Blok initState dihapus untuk mencegah looping state (Skipped 208 frames).
+  // AsyncNotifier (siswaListProvider) sudah otomatis memanggil build() saat pertama kali di-watch.
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(siswaProvider);
+    // FIX: Menggunakan siswaListProvider (AsyncValue) untuk reaktivitas modern
+    final state = ref.watch(siswaListProvider);
+    final siswaList = state.value ?? [];
 
-    if (state.isLoading && state.siswa.isEmpty) {
+    if (state.isLoading && siswaList.isEmpty) {
       return const Center(child: CircularProgressIndicator(color: Color(0xFF0D9488)));
     }
 
-    if (state.siswa.isEmpty) {
+    if (siswaList.isEmpty) {
       return _buildEmptyState();
     }
 
@@ -63,10 +60,11 @@ class _SiswaTableViewState extends ConsumerState<SiswaTableView> {
                 Expanded(
                   child: ListView.separated(
                     padding: EdgeInsets.zero,
-                    itemCount: state.siswa.length,
+                    // FIX: Menggunakan list data dari AsyncValue
+                    itemCount: siswaList.length,
                     separatorBuilder: (context, index) => Divider(height: 1, color: Colors.grey.withValues(alpha: 0.05)),
                     itemBuilder: (context, index) {
-                      final siswa = state.siswa[index];
+                      final siswa = siswaList[index];
                       bool isLakiLaki = siswa.jenisKelamin == 'L';
                       String inisial = siswa.namaLengkap.isNotEmpty ? siswa.namaLengkap[0].toUpperCase() : '?';
 
@@ -126,7 +124,7 @@ class _SiswaTableViewState extends ConsumerState<SiswaTableView> {
                                     children: [
                                       Text('${siswa.totalJuzHafalan.toStringAsFixed(1)} ',
                                           style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF1E293B))),
-                                      const Text('Juz', style: TextStyle(fontSize: 8, color: Color(0xFF94A3B8))), // PERBAIKAN: redundant const removed
+                                      const Text('Juz', style: TextStyle(fontSize: 8, color: Color(0xFF94A3B8))),
                                       const Spacer(),
                                       if (siswa.lastSurah != null)
                                         Expanded(
@@ -144,7 +142,7 @@ class _SiswaTableViewState extends ConsumerState<SiswaTableView> {
                                     backgroundColor: const Color(0xFFF1F5F9),
                                     color: const Color(0xFF0D9488),
                                     minHeight: 4,
-                                    borderRadius: const BorderRadius.all(Radius.circular(2)), // PERBAIKAN: prefer_const_constructors
+                                    borderRadius: const BorderRadius.all(Radius.circular(2)),
                                   ),
                                 ],
                               ),
@@ -160,7 +158,7 @@ class _SiswaTableViewState extends ConsumerState<SiswaTableView> {
                                 children: [
                                   _buildStatusBadge(siswa.status),
                                   PopupMenuButton<String>(
-                                    padding: const EdgeInsets.all(0), // PERBAIKAN: prefer_const_constructors
+                                    padding: const EdgeInsets.all(0),
                                     icon: const Icon(Icons.more_vert_rounded, color: Color(0xFF94A3B8), size: 20),
                                     onSelected: (value) {
                                       if (value == 'wa') {
@@ -176,9 +174,9 @@ class _SiswaTableViewState extends ConsumerState<SiswaTableView> {
                                         value: 'wa',
                                         child: Row(
                                           children: [
-                                            Icon(Icons.chat_bubble_outline_rounded, color: Colors.green, size: 18), // PERBAIKAN: redundant const removed
-                                            SizedBox(width: 10), // PERBAIKAN: redundant const removed
-                                            Text("WhatsApp", style: TextStyle(fontSize: 13)), // PERBAIKAN: redundant const removed
+                                            Icon(Icons.chat_bubble_outline_rounded, color: Colors.green, size: 18),
+                                            SizedBox(width: 10),
+                                            Text("WhatsApp", style: TextStyle(fontSize: 13)),
                                           ],
                                         ),
                                       ),
@@ -186,9 +184,9 @@ class _SiswaTableViewState extends ConsumerState<SiswaTableView> {
                                         value: 'edit',
                                         child: Row(
                                           children: [
-                                            Icon(Icons.edit_outlined, color: Colors.grey, size: 18), // PERBAIKAN: redundant const removed
-                                            SizedBox(width: 10), // PERBAIKAN: redundant const removed
-                                            Text("Edit Data", style: TextStyle(fontSize: 13)), // PERBAIKAN: redundant const removed
+                                            Icon(Icons.edit_outlined, color: Colors.grey, size: 18),
+                                            SizedBox(width: 10),
+                                            Text("Edit Data", style: TextStyle(fontSize: 13)),
                                           ],
                                         ),
                                       ),
@@ -196,9 +194,9 @@ class _SiswaTableViewState extends ConsumerState<SiswaTableView> {
                                         value: 'detail',
                                         child: Row(
                                           children: [
-                                            Icon(Icons.info_outline_rounded, color: Color(0xFF6366F1), size: 18), // PERBAIKAN: redundant const removed
-                                            SizedBox(width: 10), // PERBAIKAN: redundant const removed
-                                            Text("Detail", style: TextStyle(fontSize: 13)), // PERBAIKAN: redundant const removed
+                                            Icon(Icons.info_outline_rounded, color: Color(0xFF6366F1), size: 18),
+                                            SizedBox(width: 10),
+                                            Text("Detail", style: TextStyle(fontSize: 13)),
                                           ],
                                         ),
                                       ),
@@ -284,7 +282,7 @@ class _SiswaTableViewState extends ConsumerState<SiswaTableView> {
         children: [
           Icon(Icons.group_off_rounded, size: 48, color: Colors.grey.shade300),
           const SizedBox(height: 12),
-          const Text('BELUM ADA DATA SISWA', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF94A3B8), letterSpacing: 1.0)), // PERBAIKAN: redundant const removed
+          const Text('BELUM ADA DATA SISWA', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF94A3B8), letterSpacing: 1.0)),
         ],
       ),
     );

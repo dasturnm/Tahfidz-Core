@@ -1,3 +1,5 @@
+// Lokasi: lib/features/guru_staff/screens/staff_assignment_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/staff_provider.dart';
@@ -97,7 +99,7 @@ class _StaffAssignmentScreenState extends ConsumerState<StaffAssignmentScreen> {
   void _prosesSimpan() async {
     if (_selectedJabatanId == null) return;
 
-    final lembagaId = ref.read(appContextProvider).lembaga?.id ?? '';
+    // FIX: Menghapus variabel lembagaId yang tidak terpakai (unused_local_variable)
 
     // 1. Jalankan proses penugasan (Mutasi/Hybrid)
     await ref.read(penugasanStafProvider.notifier).tambahPenugasan(
@@ -109,7 +111,8 @@ class _StaffAssignmentScreenState extends ConsumerState<StaffAssignmentScreen> {
     );
 
     // 2. DETEKSI ROLE OTOMATIS: Update Role di Profile berdasarkan Jabatan baru
-    final jabatans = ref.read(jabatanListProvider(lembagaId)).value ?? [];
+    // FIX: jabatanListProvider sekarang tidak menerima parameter
+    final jabatans = ref.read(jabatanListProvider).value ?? [];
     final selectedJabatan = jabatans.firstWhere((j) => j.id.toString() == _selectedJabatanId);
 
     // Jika nama jabatan mengandung kata 'guru' atau 'pengajar', set role 'guru'
@@ -149,7 +152,8 @@ class _StaffAssignmentScreenState extends ConsumerState<StaffAssignmentScreen> {
   Widget _buildLabel(String text) => Padding(padding: const EdgeInsets.only(bottom: 8), child: Text(text, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)));
 
   Widget _buildDropdownCabang(String lembagaId) {
-    final cabangs = ref.watch(cabangListProvider(lembagaId)).value ?? [];
+    // FIX: cabangListProvider sekarang tidak menerima parameter (Auto AppContext)
+    final cabangs = ref.watch(cabangListProvider).value ?? [];
     return DropdownButtonFormField<String?>(
       decoration: _inputDecor("Pilih Cabang", Icons.business),
       initialValue: _selectedCabangId,
@@ -162,7 +166,8 @@ class _StaffAssignmentScreenState extends ConsumerState<StaffAssignmentScreen> {
   }
 
   Widget _buildDropdownJabatan(String lembagaId) {
-    final jabatans = ref.watch(jabatanListProvider(lembagaId)).value ?? [];
+    // FIX: jabatanListProvider sekarang tidak menerima parameter (Auto AppContext)
+    final jabatans = ref.watch(jabatanListProvider).value ?? [];
     return DropdownButtonFormField<String>(
       decoration: _inputDecor("Pilih Jabatan Baru", Icons.work),
       items: jabatans.map((j) => DropdownMenuItem(value: j.id, child: Text(j.namaJabatan))).toList(),

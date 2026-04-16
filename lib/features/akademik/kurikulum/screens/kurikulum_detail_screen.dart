@@ -2,7 +2,9 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../providers/kurikulum_provider.dart';
+// FIX: Update path import sesuai pemisahan provider
+import '../providers/jenjang_provider.dart';
+import '../providers/level_provider.dart';
 import '../models/kurikulum_model.dart';
 import 'level_list_screen.dart';
 import 'modul_detail_screen.dart';

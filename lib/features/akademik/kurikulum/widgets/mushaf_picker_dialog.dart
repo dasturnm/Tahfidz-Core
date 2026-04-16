@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../providers/quran_provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../../features/mushaf/providers/mushaf_provider.dart';
 
 // Provider lokal untuk pencarian agar MushafPickerDialog tetap ConsumerWidget
 final quranSearchProvider = StateProvider.autoDispose<String>((ref) => "");
@@ -8,9 +9,36 @@ final quranSearchProvider = StateProvider.autoDispose<String>((ref) => "");
 class MushafPickerDialog extends ConsumerWidget {
   const MushafPickerDialog({super.key});
 
+  // Helper lokal untuk query bounds halaman/juz langsung ke tabel data_mushaf
+  Future<Map<String, String>> _getMushafBounds({int? halaman, int? juz}) async {
+    try {
+      final supabase = Supabase.instance.client;
+      // FIX: Tambahkan 'id' ke dalam select agar bisa dilakukan ordering
+      var query = supabase.from('data_mushaf').select('id, surah_number, ayah_number');
+
+      if (halaman != null) query = query.eq('page_number', halaman);
+      if (juz != null) query = query.eq('juz_number', juz);
+
+      final res = await query.order('id', ascending: true);
+
+      if (res.isEmpty) return {'mulai': '', 'akhir': ''};
+
+      final first = res.first;
+      final last = res.last;
+
+      return {
+        'mulai': "${first['surah_number']}:${first['ayah_number']}",
+        'akhir': "${last['surah_number']}:${last['ayah_number']}",
+      };
+    } catch (e) {
+      debugPrint("❌ Error fetching bounds: $e");
+      return {'mulai': '', 'akhir': ''};
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final surahAsync = ref.watch(quranSurahListProvider);
+    final surahAsync = ref.watch(surahListProvider);
     final search = ref.watch(quranSearchProvider).toLowerCase();
     const Color emerald = Color(0xFF10B981);
 
@@ -61,30 +89,28 @@ class MushafPickerDialog extends ConsumerWidget {
                 children: [
                   surahAsync.when(
                     data: (list) {
-                      // Filter Surah (Poin 3)
+                      // Filter Surah (Poin 3) menggunakan kolom data_mushaf
                       final filtered = list.where((s) =>
-                      (s['name_id'] ?? '').toString().toLowerCase().contains(search) ||
-                          (s['nama_latin'] ?? '').toString().toLowerCase().contains(search) ||
-                          (s['namaLatin'] ?? '').toString().toLowerCase().contains(search) ||
-                          (s['name'] ?? '').toString().toLowerCase().contains(search)
+                      (s['surah_name'] ?? '').toString().toLowerCase().contains(search) ||
+                          (s['surah_number'] ?? '').toString().contains(search)
                       ).toList();
 
                       return ListView.builder(
                         itemCount: filtered.length,
                         itemBuilder: (context, index) {
                           final s = filtered[index];
-                          // PERBAIKAN: Handle variasi key API agar nama surah pasti muncul (Poin 1 & 3)
-                          final String surahName = s['name_id'] ?? s['nama_latin'] ?? s['namaLatin'] ?? s['nama'] ?? s['name'] ?? 'Surah';
+                          // PERBAIKAN: Menggunakan kolom tabel data_mushaf (surah_name)
+                          final String surahName = s['surah_name'] ?? 'Surah';
 
                           return ListTile(
                             // FIX KLIK: Memastikan Material behavior dan padding yang nyaman
                             contentPadding: const EdgeInsets.symmetric(horizontal: 8),
                             title: Text(surahName, style: const TextStyle(fontWeight: FontWeight.bold)),
-                            subtitle: Text("${s['total_ayah']} Ayat"),
+                            subtitle: Text("${s['total_ayah'] ?? 0} Ayat"),
                             onTap: () => Navigator.pop(context, {
                               'nama': "Surah $surahName",
-                              'mulai': "${s['id']}:1",
-                              'akhir': "${s['id']}:${s['total_ayah']}",
+                              'mulai': "${s['surah_number']}:1",
+                              'akhir': "${s['surah_number']}:${s['total_ayah'] ?? 0}",
                             }),
                           );
                         },
@@ -121,7 +147,8 @@ class MushafPickerDialog extends ConsumerWidget {
             // FIX KLIK: Menambahkan Loading indicator saat fetch bounds
             showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator(color: Color(0xFF10B981))));
 
-            final bounds = await ref.read(getMushafBoundsProvider(halaman: hal).future);
+            // Menggunakan helper lokal
+            final bounds = await _getMushafBounds(halaman: hal);
 
             if (context.mounted) {
               Navigator.pop(context); // Tutup loading
@@ -154,7 +181,8 @@ class MushafPickerDialog extends ConsumerWidget {
             // FIX KLIK: Menambahkan Loading indicator saat fetch bounds
             showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator(color: Color(0xFF10B981))));
 
-            final bounds = await ref.read(getMushafBoundsProvider(juz: juz).future);
+            // Menggunakan helper lokal
+            final bounds = await _getMushafBounds(juz: juz);
 
             if (context.mounted) {
               Navigator.pop(context); // Tutup loading

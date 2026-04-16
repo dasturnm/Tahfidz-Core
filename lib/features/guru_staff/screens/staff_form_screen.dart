@@ -415,7 +415,8 @@ class _StaffFormScreenState extends ConsumerState<StaffFormScreen> {
       );
     }
 
-    final cabangs = ref.watch(cabangListProvider(lembagaId)).value ?? [];
+    // FIX: cabangListProvider sekarang tidak menerima parameter (Auto AppContext)
+    final cabangs = ref.watch(cabangListProvider).value ?? [];
 
     return DropdownButtonFormField<String?>( // FIX: String?
       decoration: _inputDecoration("Pilih Cabang / Lokasi Tugas", Icons.business),
@@ -442,7 +443,8 @@ class _StaffFormScreenState extends ConsumerState<StaffFormScreen> {
       return const SizedBox.shrink();
     }
 
-    final jabatans = ref.watch(jabatanListProvider(lembagaId)).value ?? [];
+    // FIX: jabatanListProvider sekarang tidak menerima parameter (Auto AppContext)
+    final jabatans = ref.watch(jabatanListProvider).value ?? [];
     return DropdownButtonFormField<String>(
       decoration: _inputDecoration("Pilih Jabatan", Icons.work),
       initialValue: _selectedJabatanId, // FIX: Menggunakan initialValue

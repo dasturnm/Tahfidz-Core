@@ -1,3 +1,5 @@
+// Lokasi: lib/features/guru_staff/screens/staff_list_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/staff_provider.dart';
@@ -76,8 +78,9 @@ class StaffListScreen extends ConsumerWidget {
           // Filter diperluas agar Admin/Owner masuk ke tab Staf Administrasi & Dukung Pencarian
           final listStaff = listAll.where((s) {
             final bool matchesRole = showAdminOnly ? s.role != 'guru' : s.role == 'guru';
+            // FIX: Hapus null-aware check (?? false) karena s.id adalah String non-nullable
             final bool matchesSearch = s.nama.toLowerCase().contains(searchQuery) ||
-                (s.id.toLowerCase().contains(searchQuery) ?? false);
+                s.id.toLowerCase().contains(searchQuery);
             return matchesRole && matchesSearch;
           }).toList();
 
@@ -115,6 +118,3 @@ class StaffListScreen extends ConsumerWidget {
     );
   }
 }
-
-// FUNGSI _buildSmallBadge DIHAPUS KARENA SUDAH ADA DI AllStaffGridView
-// FUNGSI _buildActionButtons DIHAPUS KARENA SUDAH ADA DI AllStaffGridView

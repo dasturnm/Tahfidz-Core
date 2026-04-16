@@ -25,7 +25,10 @@ class Sidebar extends ConsumerWidget {
           if (userRole == 'admin') ...[
             const Divider(),
             _buildItem(context, 'Data Siswa', AppRouteNames.siswa, Icons.people_outline),
-            _buildItem(context, 'Input Mutabaah', AppRouteNames.mutabaahInput, Icons.menu_book_outlined),
+            // FIX: Mengarahkan ke Hub agar user bisa mengakses Monitoring & Ranking, bukan hanya Input
+            _buildItem(context, 'Mutabaah Tahfidz', AppRouteNames.mutabaahHub, Icons.history_edu_rounded),
+            // FIX: Menampilkan menu Keuangan yang sebelumnya belum terdaftar
+            _buildItem(context, 'Manajemen Keuangan', AppRouteNames.keuanganHub, Icons.payments_outlined),
           ],
         ],
       ),

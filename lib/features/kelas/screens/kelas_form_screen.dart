@@ -6,7 +6,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/kelas_model.dart';
 import '../providers/kelas_provider.dart';
-import '../../akademik/providers/akademik_provider.dart';
+import '../../program/providers/program_provider.dart'; // FIX: Gunakan programNotifierProvider
+import '../../../core/providers/app_context_provider.dart';
 
 class KelasFormScreen extends ConsumerStatefulWidget {
   final KelasModel? existingKelas; // PERBAIKAN: Label Kelas
@@ -29,7 +30,6 @@ class _KelasFormScreenState extends ConsumerState<KelasFormScreen> {
   String _endTime = "--:--";
 
   String? _selectedProgramId;
-  String? _selectedLevelId;
   String? _selectedTeacherId;
 
   bool _isSaving = false;
@@ -42,9 +42,8 @@ class _KelasFormScreenState extends ConsumerState<KelasFormScreen> {
   void initState() {
     super.initState();
 
-    // Ambil data Program & Level dari Provider
+    // Data Program ditarik otomatis oleh programNotifierProvider
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(akademikProvider).fetchMasterData();
       _fetchGuru(); // Ambil daftar guru
     });
 
@@ -53,7 +52,6 @@ class _KelasFormScreenState extends ConsumerState<KelasFormScreen> {
       final c = widget.existingKelas!;
       _nameController.text = c.name;
       _selectedProgramId = c.programId;
-      _selectedLevelId = c.levelId;
       _selectedTeacherId = c.guruId; // PERBAIKAN: Label Guru
       _waktuController.text = c.waktuBelajar ?? '';
       _ruanganController.text = c.ruangan ?? '';
@@ -63,7 +61,7 @@ class _KelasFormScreenState extends ConsumerState<KelasFormScreen> {
       if (c.waktuBelajar != null && c.waktuBelajar!.contains(" - ")) {
         final parts = c.waktuBelajar!.split(" - ");
         _startTime = parts[0];
-        _endTime = parts[1];
+        _endTime = parts[1]; // FIX: Menggunakan hasil split indeks ke-1
       }
     }
   }
@@ -85,7 +83,7 @@ class _KelasFormScreenState extends ConsumerState<KelasFormScreen> {
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(primary: Color(0xFF0D9488)),
+            colorScheme: const ColorScheme.light(primary: Color(0xFF3B82F6)),
           ),
           child: child!,
         );
@@ -108,20 +106,27 @@ class _KelasFormScreenState extends ConsumerState<KelasFormScreen> {
   Future<void> _fetchGuru() async {
     setState(() => _isLoadingGuru = true);
     try {
-      // FIX: Query disesuaikan skema (Tabel 'guru' kolom 'nama')
+      // FIX: Ambil lembagaId dari context (Aturan 4 - Anti Data Leak)
+      final lembagaId = ref.read(appContextProvider).lembaga?.id;
+      if (lembagaId == null) return;
+
+      // FIX: Query disesuaikan skema (Tabel 'profiles' kolom 'nama_lengkap') - Aturan 5.1
       final response = await Supabase.instance.client
-          .from('guru')
-          .select('id, nama');
+          .from('profiles')
+          .select('id, nama_lengkap')
+          .eq('lembaga_id', lembagaId)
+          .eq('role', 'guru');
 
       debugPrint('DEBUG GURU: $response');
 
+      if (!mounted) return;
       setState(() {
         _guru = List<Map<String, dynamic>>.from(response);
       });
     } catch (e) {
       debugPrint('ERROR AMBIL GURU: $e');
     } finally {
-      setState(() => _isLoadingGuru = false);
+      if (mounted) setState(() => _isLoadingGuru = false);
     }
   }
 
@@ -130,11 +135,10 @@ class _KelasFormScreenState extends ConsumerState<KelasFormScreen> {
 
     setState(() => _isSaving = true);
 
-    // Merakit data kelas
+    // Merakit data kelas (cabangId diabaikan karena redundan)
     final classData = KelasModel(
       id: widget.existingKelas?.id,
       name: _nameController.text.trim(),
-      levelId: _selectedLevelId,
       programId: _selectedProgramId,
       guruId: _selectedTeacherId, // PERBAIKAN: Label Guru
       waktuBelajar: _waktuController.text.trim(),
@@ -142,41 +146,50 @@ class _KelasFormScreenState extends ConsumerState<KelasFormScreen> {
       kapasitas: int.tryParse(_kapasitasController.text),
     );
 
-    bool success;
-    if (widget.existingKelas == null) {
-      success = await ref.read(kelasProvider).addKelas(classData);
-    } else {
-      success = await ref.read(kelasProvider).updateKelas(classData);
+    bool success = false;
+    try {
+      if (widget.existingKelas == null) {
+        // FIX: Menggunakan kelasListProvider.notifier
+        await ref.read(kelasListProvider.notifier).addKelas(classData);
+      } else {
+        // FIX: Menggunakan kelasListProvider.notifier
+        await ref.read(kelasListProvider.notifier).updateKelas(classData);
+      }
+      success = !ref.read(kelasListProvider).hasError;
+    } catch (_) {
+      success = false;
     }
 
+    if (!mounted) return;
     setState(() => _isSaving = false);
 
     if (success) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(widget.existingKelas == null ? 'Kelas berhasil dibuat!' : 'Kelas diperbarui!'),
-            backgroundColor: const Color(0xFF0D9488),
-          ),
-        );
-        Navigator.pop(context); // Kembali ke halaman sebelumnya
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(widget.existingKelas == null ? 'Kelas berhasil dibuat!' : 'Kelas diperbarui!'),
+          backgroundColor: const Color(0xFF3B82F6),
+        ),
+      );
+      Navigator.pop(context); // Kembali ke halaman sebelumnya
     } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(ref.read(kelasProvider).errorMessage ?? 'Terjadi kesalahan'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          // FIX: Mengambil error dari AsyncValue state
+          content: Text(ref.read(kelasListProvider).error?.toString() ?? 'Terjadi kesalahan'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final isEditing = widget.existingKelas != null;
-    final akademikState = ref.watch(akademikProvider);
+
+    // FIX (Aturan 7): Menggunakan programNotifierProvider (AsyncValue)
+    final programsAsync = ref.watch(programNotifierProvider);
+
+    const academicColor = Color(0xFF3B82F6); // Biru Akademik (Aturan 8)
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -216,29 +229,16 @@ class _KelasFormScreenState extends ConsumerState<KelasFormScreen> {
                 _buildDropdown(
                   label: 'Program Akademik',
                   value: _selectedProgramId,
-                  hint: akademikState.isLoading ? 'Memuat program...' : 'Pilih Program (Opsional)',
+                  isLoading: programsAsync.isLoading,
+                  hint: programsAsync.isLoading ? 'Memuat program...' : 'Pilih Program (Opsional)',
                   items: [
                     const DropdownMenuItem(value: null, child: Text('Tidak Terikat Program')),
-                    ...akademikState.program.map((p) {
-                      return DropdownMenuItem(value: p.id, child: Text(p.namaProgram));
-                    }),
+                    ...programsAsync.maybeWhen(
+                      data: (list) => list.map((p) => DropdownMenuItem(value: p.id, child: Text(p.namaProgram))).toList(),
+                      orElse: () => [],
+                    ),
                   ],
                   onChanged: (val) => setState(() => _selectedProgramId = val?.toString()),
-                ),
-                const SizedBox(height: 16),
-
-                // Level Kurikulum
-                _buildDropdown(
-                  label: 'Level Target',
-                  value: _selectedLevelId,
-                  hint: akademikState.isLoading ? 'Memuat level...' : 'Pilih Level (Opsional)',
-                  items: [
-                    const DropdownMenuItem(value: null, child: Text('Tanpa Level Khusus')),
-                    ...akademikState.level.map((l) {
-                      return DropdownMenuItem(value: l.id, child: Text(l.namaLevel));
-                    }),
-                  ],
-                  onChanged: (val) => setState(() => _selectedLevelId = val?.toString()),
                 ),
                 const SizedBox(height: 16),
 
@@ -246,13 +246,14 @@ class _KelasFormScreenState extends ConsumerState<KelasFormScreen> {
                 _buildDropdown(
                   label: 'Guru/Wali Kelas',
                   value: _selectedTeacherId,
+                  isLoading: _isLoadingGuru,
                   hint: _isLoadingGuru ? 'Memuat data guru...' : 'Pilih Guru',
                   items: [
                     const DropdownMenuItem(value: null, child: Text('Belum Ditentukan')),
                     ..._guru.map((t) {
-                      // AMBIL NAMA DARI TABEL GURU SESUAI SKEMA
-                      final String nama = t['nama'] ?? 'Tanpa Nama';
-                      return DropdownMenuItem(value: t['id'].toString(), child: Text(nama));
+                      // AMBIL NAMA DARI TABEL PROFILES (Aturan 5.1)
+                      final String nama = t['nama_lengkap']?.toString() ?? 'Tanpa Nama';
+                      return DropdownMenuItem(value: t['id']?.toString(), child: Text(nama));
                     }),
                   ],
                   onChanged: (val) => setState(() => _selectedTeacherId = val?.toString()),
@@ -313,7 +314,7 @@ class _KelasFormScreenState extends ConsumerState<KelasFormScreen> {
                   child: ElevatedButton(
                     onPressed: _isSaving ? null : _saveData,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0D9488), // Teal
+                      backgroundColor: academicColor, // Biru Akademik (Aturan 8)
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       elevation: 0,
                     ),
@@ -357,7 +358,7 @@ class _KelasFormScreenState extends ConsumerState<KelasFormScreen> {
             const SizedBox(height: 4),
             Row(
               children: [
-                const Icon(Icons.access_time_filled_rounded, size: 16, color: Color(0xFF0D9488)),
+                const Icon(Icons.access_time_filled_rounded, size: 16, color: Color(0xFF3B82F6)),
                 const SizedBox(width: 8),
                 Text(time, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: Color(0xFF1E293B))),
               ],
@@ -409,7 +410,7 @@ class _KelasFormScreenState extends ConsumerState<KelasFormScreen> {
             filled: true,
             fillColor: const Color(0xFFF8FAFC),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF0D9488), width: 2)),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF3B82F6), width: 2)),
             errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Colors.red, width: 2)),
           ),
         ),
@@ -423,6 +424,7 @@ class _KelasFormScreenState extends ConsumerState<KelasFormScreen> {
     required List<DropdownMenuItem<Object>> items,
     required void Function(Object?) onChanged,
     String? hint,
+    bool isLoading = false,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -433,10 +435,13 @@ class _KelasFormScreenState extends ConsumerState<KelasFormScreen> {
         ),
         const SizedBox(height: 8),
         DropdownButtonFormField<Object>(
-          initialValue: value,
+          // FIX: Menggunakan value agar reaktif terhadap perubahan state AsyncNotifier
+          initialValue: items.any((item) => item.value == value) ? value : null,
           items: items,
           onChanged: onChanged,
-          icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF94A3B8)),
+          icon: isLoading
+              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF3B82F6)))
+              : const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF94A3B8)),
           style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1E293B), fontSize: 14),
           decoration: InputDecoration(
             hintText: hint,
@@ -445,7 +450,7 @@ class _KelasFormScreenState extends ConsumerState<KelasFormScreen> {
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
             focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
-                borderSide: const BorderSide(color: Color(0xFF0D9488), width: 2)
+                borderSide: const BorderSide(color: Color(0xFF3B82F6), width: 2)
             ),
           ),
         ),

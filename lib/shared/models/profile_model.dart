@@ -1,4 +1,3 @@
-
 class ProfileModel {
   final String id;
   final String? lembagaId;
@@ -44,25 +43,27 @@ class ProfileModel {
 
   factory ProfileModel.fromJson(Map<String, dynamic> json) {
     return ProfileModel(
-      id: json['id'] as String,
-      lembagaId: json['lembaga_id'] as String?,
-      namaLengkap: json['nama_lengkap'] as String? ?? 'Tanpa Nama',
-      email: json['email'] as String?,
-      noHp: json['no_hp'] as String?,
-      nip: json['nip'] as String?,
-      role: json['role'] as String? ?? 'staff',
-      isNewUser: json['is_new_user'] as bool? ?? true,
-      status: json['status'] as String?,
-      cabangId: json['cabang_id'] as String?,
-      divisiId: json['divisi_id'] as String?,
-      jenisKelamin: json['jenis_kelamin'] as String?,
-      alamat: json['alamat'] as String?,
+      id: json['id']?.toString() ?? '',
+      lembagaId: json['lembaga_id']?.toString(),
+      namaLengkap: json['nama_lengkap']?.toString() ?? 'Tanpa Nama',
+      email: json['email']?.toString(),
+      noHp: json['no_hp']?.toString(),
+      nip: json['nip']?.toString(),
+      role: json['role']?.toString() ?? 'staff',
+      isNewUser: json['is_new_user'] is bool ? (json['is_new_user'] as bool) : true,
+      status: json['status']?.toString(),
+      cabangId: json['cabang_id']?.toString(),
+      divisiId: json['divisi_id']?.toString(),
+      jenisKelamin: json['jenis_kelamin']?.toString(),
+      alamat: json['alamat']?.toString(),
       tanggalBergabung: json['tanggal_bergabung'] != null
           ? DateTime.tryParse(json['tanggal_bergabung'].toString())
           : null,
-      lastAttendance: json['last_attendance'] as Map<String, dynamic>?,
+      lastAttendance: json['last_attendance'] != null
+          ? Map<String, dynamic>.from(json['last_attendance'] as Map)
+          : null,
 
-      // Relasi handling
+      // Relasi handling (Protokol v2026.03.22 - Null check wajib)
       namaCabang: json['cabang'] != null ? json['cabang']['nama_cabang']?.toString() : null,
       namaJabatan: json['jabatan'] != null ? json['jabatan']['nama_jabatan']?.toString() : null,
       namaLembaga: json['lembaga'] != null ? json['lembaga']['nama_lembaga']?.toString() : null,

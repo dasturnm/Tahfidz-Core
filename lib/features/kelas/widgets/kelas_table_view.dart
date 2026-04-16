@@ -16,9 +16,7 @@ class _ClassTableViewState extends ConsumerState<ClassTableView> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(kelasProvider).fetchKelas();
-    });
+    // FIX: fetchKelas() dihapus karena KelasListProvider (AsyncNotifier) otomatis fetch data
   }
 
   // --- LOGIKA HAPUS DENGAN PASSWORD ---
@@ -54,13 +52,16 @@ class _ClassTableViewState extends ConsumerState<ClassTableView> {
           ElevatedButton(
             onPressed: () async {
               if (passwordController.text == "admin123") {
-                final success = await ref.read(kelasProvider).deleteKelas(kelas.id);
-                if (mounted) {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(success ? "Kelas dihapus" : "Gagal menghapus")),
-                  );
-                }
+                // FIX: Memanggil notifier untuk aksi delete
+                await ref.read(kelasListProvider.notifier).deleteKelas(kelas.id);
+                final success = !ref.read(kelasListProvider).hasError;
+
+                // FIX: Menggunakan context.mounted check untuk menghindari async gap (use_build_context_synchronously)
+                if (!context.mounted) return;
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(success ? "Kelas dihapus" : "Gagal menghapus")),
+                );
               } else {
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Password Salah!")));
               }
@@ -75,9 +76,11 @@ class _ClassTableViewState extends ConsumerState<ClassTableView> {
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(kelasProvider);
+    // FIX: Menggunakan kelasListProvider (AsyncValue)
+    final state = ref.watch(kelasListProvider);
+    final classes = state.value ?? [];
 
-    if (state.isLoading && state.kelas.isEmpty) {
+    if (state.isLoading && classes.isEmpty) {
       return const Center(child: CircularProgressIndicator(color: Color(0xFF0D9488)));
     }
 
@@ -107,10 +110,10 @@ class _ClassTableViewState extends ConsumerState<ClassTableView> {
                 Expanded(
                   child: ListView.separated(
                     padding: EdgeInsets.zero,
-                    itemCount: state.kelas.length,
+                    itemCount: classes.length,
                     separatorBuilder: (context, index) => const Divider(height: 1, color: Color(0xFFF8FAFC)),
                     itemBuilder: (context, index) {
-                      final kelas = state.kelas[index];
+                      final kelas = classes[index];
                       return Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                         child: Row(

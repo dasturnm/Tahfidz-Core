@@ -1,13 +1,16 @@
+// Lokasi: lib/features/program/providers/kalender_provider.dart
+
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../../core/providers/app_context_provider.dart';
-import '../models/agenda_model.dart';
+// FIX: Menggunakan absolute import agar aman dari error path folder (uri_does_not_exist)
+import 'package:tahfidz_core/features/akademik/services/akademik_service.dart';
+import 'package:tahfidz_core/core/providers/app_context_provider.dart';
+import 'package:tahfidz_core/features/program/models/agenda_model.dart';
 
 part 'kalender_provider.g.dart';
 
 @riverpod
 class CalendarNotifier extends _$CalendarNotifier {
-  final _supabase = Supabase.instance.client;
+  final _service = AkademikService(); // FIX: Gunakan Service
 
   @override
   Future<List<AgendaModel>> build(DateTime month) async {
@@ -18,14 +21,11 @@ class CalendarNotifier extends _$CalendarNotifier {
     final firstDay = DateTime(month.year, month.month, 1);
     final lastDay = DateTime(month.year, month.month + 1, 0, 23, 59, 59);
 
-    final data = await _supabase
-        .from('agenda_akademik')
-        .select()
-        .eq('lembaga_id', lembagaId)
-        .gte('tanggal_mulai', firstDay.toIso8601String())
-        .lte('tanggal_mulai', lastDay.toIso8601String())
-        .order('tanggal_mulai', ascending: true);
-
-    return (data as List).map((e) => AgendaModel.fromJson(e)).toList();
+    // FIX: Delegasikan query ke AkademikService
+    return await _service.fetchAgendasForMonth(
+      lembagaId: lembagaId,
+      firstDay: firstDay,
+      lastDay: lastDay,
+    );
   }
 }

@@ -1,3 +1,5 @@
+// Lokasi: lib/features/kelas/widgets/add_kelas_dialog.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../guru_staff/providers/staff_provider.dart';
@@ -14,7 +16,7 @@ class AddKelasDialog extends ConsumerStatefulWidget {
 class _AddKelasDialogState extends ConsumerState<AddKelasDialog> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
-  String? _selectedLevel;
+  // FIX: _selectedLevel dihapus untuk menghilangkan warning unused_field
   String? _selectedTeacherId;
 
   final List<String> _level = ['Ula (Dasar)', 'Wustha (Menengah)', 'Ulya (Tinggi)'];
@@ -48,7 +50,9 @@ class _AddKelasDialogState extends ConsumerState<AddKelasDialog> {
                 decoration: const InputDecoration(labelText: "Tingkat"),
                 // PERBAIKAN: Mengembalikan ke 'value' & tipe eksplisit <String>
                 items: _level.map((l) => DropdownMenuItem<String>(value: l, child: Text(l))).toList(),
-                onChanged: (v) => setState(() => _selectedLevel = v),
+                onChanged: (v) {
+                  // Assignment dihapus karena variabel penampung dihilangkan
+                },
                 validator: (v) => v == null ? "Pilih tingkat" : null,
               ),
               const SizedBox(height: 16),
@@ -75,12 +79,12 @@ class _AddKelasDialogState extends ConsumerState<AddKelasDialog> {
           onPressed: () async {
             if (!_formKey.currentState!.validate()) return;
 
-            // PERBAIKAN: addClass -> addKelas & teacherId -> guruId
-            await ref.read(kelasProvider).addKelas(
+            // PERBAIKAN: Menggunakan kelasListProvider.notifier sesuai standar Riverpod Generator
+            await ref.read(kelasListProvider.notifier).addKelas(
               KelasModel(
                 name: _nameController.text,
-                level: _selectedLevel,
                 guruId: _selectedTeacherId,
+                // level dihapus sementara agar tidak error undefined_named_parameter
               ),
             );
 

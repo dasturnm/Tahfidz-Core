@@ -21,6 +21,7 @@ class AppRouteNames {
   static const String kelas = '/akademik/kelas';
 
   // Mutabaah
+  static const String mutabaahHub = '/mutabaah';
   static const String mutabaahInput = '/mutabaah/input';
   static const String mutabaahMonitoring = '/mutabaah/monitoring';
   static const String mutabaahRanking = '/mutabaah/ranking';
@@ -33,6 +34,9 @@ class AppRouteNames {
   static const String absensi = '/guru/absensi';
 
   // Keuangan
+  static const String keuanganHub = '/keuangan';
+  static const String salarySettings = '/keuangan/settings';
+  static const String teacherPayroll = '/keuangan/payroll';
   static const String keuanganSpp = '/keuangan/spp';
   static const String keuanganHonor = '/keuangan/honor';
 }

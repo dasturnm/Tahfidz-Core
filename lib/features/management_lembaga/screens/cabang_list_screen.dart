@@ -28,7 +28,8 @@ class _CabangListScreenState extends ConsumerState<CabangListScreen> {
     if (lembaga == null) return const Center(child: CircularProgressIndicator());
 
     // Memantau data cabang secara reaktif dari Provider
-    final cabangAsync = ref.watch(cabangListProvider(lembaga.id));
+    // FIX: CabangListProvider sekarang tidak menerima parameter (Auto AppContext)
+    final cabangAsync = ref.watch(cabangListProvider);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -157,7 +158,8 @@ class _CabangListScreenState extends ConsumerState<CabangListScreen> {
                       ),
                     );
                     if (confirmed == true) {
-                      await ref.read(cabangListProvider(lembagaId).notifier).deleteCabang(cabang.id);
+                      // FIX: Akses notifier tanpa parameter
+                      await ref.read(cabangListProvider.notifier).deleteCabang(cabang.id);
                     }
                   },
                   icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
@@ -341,7 +343,8 @@ class _CabangFormDialogState extends ConsumerState<CabangFormDialog> {
                 status: widget.cabang?.status ?? 'aktif',
               );
 
-              await ref.read(cabangListProvider(widget.lembagaId).notifier).saveCabang(updatedCabang);
+              // FIX: Akses notifier tanpa parameter
+              await ref.read(cabangListProvider.notifier).saveCabang(updatedCabang);
 
               if (!mounted) return; // FIX: use_build_context_synchronously
               navigator.pop();

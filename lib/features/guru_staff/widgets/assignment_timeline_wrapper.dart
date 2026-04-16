@@ -1,3 +1,5 @@
+// Lokasi: lib/features/guru_staff/widgets/assignment_timeline_wrapper.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/staff_provider.dart';
@@ -64,7 +66,8 @@ class _AssignmentTimelineWrapperState extends ConsumerState<AssignmentTimelineWr
       data: (allStaff) {
         final filteredStaff = allStaff.where((s) =>
         s.nama.toLowerCase().contains(searchQuery) ||
-            (s.id.toLowerCase().contains(searchQuery) ?? false)
+            // FIX: Hapus null-aware check (?? false) karena s.id adalah String non-nullable
+            s.id.toLowerCase().contains(searchQuery)
         ).toList();
 
         if (filteredStaff.isEmpty) {

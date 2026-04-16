@@ -117,16 +117,27 @@ class _ProgramFormScreenState extends ConsumerState<ProgramFormScreen> {
               ),
               const SizedBox(height: 20),
 
-              // DIUBAH: Mengganti Tag Kurikulum dengan Pilihan Cabang
-              _buildLabel("Pilih Cabang (Opsional)"),
+              // DIUBAH: Mengganti label menjadi pertanyaan informatif
+              _buildLabel("Di mana program ini akan berjalan?"),
+              const Text(
+                "Pilih 'Lembaga Pusat' jika program ini berlaku untuk seluruh cabang, atau pilih cabang spesifik.",
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+              const SizedBox(height: 8),
               cabangAsync.when(
-                data: (list) => DropdownButtonFormField<String>(
+                data: (list) => DropdownButtonFormField<String?>(
                   initialValue: _selectedCabangId,
-                  decoration: _inputDecor("Pilih lokasi operasional"),
-                  items: list.map((c) => DropdownMenuItem(
-                    value: c.id,
-                    child: Text(c.namaCabang),
-                  )).toList(),
+                  decoration: _inputDecor("Pilih Cakupan Wilayah"),
+                  items: [
+                    const DropdownMenuItem(
+                      value: null,
+                      child: Text("🏢 Lembaga Pusat (Global)"),
+                    ),
+                    ...list.map((c) => DropdownMenuItem(
+                      value: c.id,
+                      child: Text("📍 ${c.namaCabang}"),
+                    )),
+                  ],
                   onChanged: (val) => setState(() => _selectedCabangId = val),
                 ),
                 loading: () => const LinearProgressIndicator(),
@@ -142,7 +153,7 @@ class _ProgramFormScreenState extends ConsumerState<ProgramFormScreen> {
               ),
               const SizedBox(height: 40),
 
-              _buildSectionHeader("INVESTASI"),
+              _buildSectionHeader("BIAYA PROGRAM"),
               const SizedBox(height: 16),
               Row(
                 children: [

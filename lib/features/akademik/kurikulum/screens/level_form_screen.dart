@@ -1,7 +1,10 @@
+// Lokasi: lib/features/akademik/kurikulum/screens/level_form_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/kurikulum_model.dart';
-import '../providers/kurikulum_provider.dart';
+// FIX: Update path import sesuai pemisahan provider
+import '../providers/level_provider.dart';
 
 class LevelFormScreen extends ConsumerStatefulWidget {
   final JenjangModel jenjang; // Sesuai Hierarki: Jenjang -> Level

@@ -22,7 +22,8 @@ class _ClassDetailScreenState extends ConsumerState<ClassDetailScreen> {
     super.initState();
     // Memastikan data siswa terbaru ditarik saat masuk ke halaman ini
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(siswaProvider).fetchSiswa();
+      // FIX: Menggunakan notifier dari siswaListProvider sesuai arsitektur modern
+      ref.read(siswaListProvider.notifier).fetchSiswa();
     });
   }
 
@@ -45,7 +46,8 @@ class _ClassDetailScreenState extends ConsumerState<ClassDetailScreen> {
 
     if (confirm == true) {
       // Set kelasId menjadi null untuk mengeluarkan
-      await ref.read(siswaProvider).assignSiswaToKelas(siswa.id!, null);
+      // FIX: Menggunakan notifier dari siswaListProvider
+      await ref.read(siswaListProvider.notifier).assignSiswaToKelas(siswa.id!, null);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('${siswa.namaLengkap} berhasil dikeluarkan'), backgroundColor: const Color(0xFF4F46E5)),
@@ -66,10 +68,12 @@ class _ClassDetailScreenState extends ConsumerState<ClassDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final siswaState = ref.watch(siswaProvider);
+    // FIX: Menggunakan siswaListProvider (AsyncValue) hasil generator
+    final siswaState = ref.watch(siswaListProvider);
 
     // Memfilter hanya siswa yang kelasId-nya sama dengan ID kelas ini
-    final siswaInClass = siswaState.getSiswaInKelas(widget.kelas.id!);
+    // FIX: Mengambil helper filter dari notifier
+    final siswaInClass = ref.watch(siswaListProvider.notifier).getSiswaInKelas(widget.kelas.id!);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -194,11 +198,12 @@ class _PlottingModalState extends ConsumerState<_PlottingModal> {
     if (_selectedSiswaIds.isEmpty) return;
 
     setState(() => _isProcessing = true);
-    final provider = ref.read(siswaProvider);
+    // FIX: Menggunakan notifier dari siswaListProvider
+    final notifier = ref.read(siswaListProvider.notifier);
 
     // Proses plotting satu per satu
     for (String id in _selectedSiswaIds) {
-      await provider.assignSiswaToKelas(id, widget.kelas.id);
+      await notifier.assignSiswaToKelas(id, widget.kelas.id);
     }
 
     setState(() => _isProcessing = false);
@@ -213,7 +218,8 @@ class _PlottingModalState extends ConsumerState<_PlottingModal> {
   @override
   Widget build(BuildContext context) {
     // Ambil daftar siswa yang BELUM punya kelas dari provider
-    final unassignedSiswa = ref.watch(siswaProvider).unassignedSiswa;
+    // FIX: Mengakses getter unassignedSiswa dari notifier siswaListProvider
+    final unassignedSiswa = ref.watch(siswaListProvider.notifier).unassignedSiswa;
 
     return Container(
       height: MediaQuery.of(context).size.height * 0.85, // 85% tinggi layar

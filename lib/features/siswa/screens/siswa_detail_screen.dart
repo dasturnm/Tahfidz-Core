@@ -45,7 +45,8 @@ class SiswaDetailScreen extends StatelessWidget {
                 children: [
                   CircleAvatar(
                     radius: 50,
-                    backgroundColor: isLaki ? const Color(0xFF0D9488).withOpacity(0.1) : const Color(0xFFFB7185).withOpacity(0.1),
+                    // FIX: Mengganti withOpacity menjadi withValues untuk standar Flutter terbaru
+                    backgroundColor: isLaki ? const Color(0xFF0D9488).withValues(alpha: 0.1) : const Color(0xFFFB7185).withValues(alpha: 0.1),
                     child: Text(
                       siswa.namaLengkap[0].toUpperCase(),
                       style: TextStyle(fontSize: 40, fontWeight: FontWeight.w900, color: isLaki ? const Color(0xFF0D9488) : const Color(0xFFFB7185)),
@@ -98,7 +99,8 @@ class SiswaDetailScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey.withOpacity(0.1)),
+        // FIX: Mengganti withOpacity menjadi withValues
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

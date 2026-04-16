@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/program_model.dart';
+import 'program_form_screen.dart';
 
 class ProgramDetailScreen extends StatelessWidget {
   final ProgramModel program;
@@ -18,7 +19,12 @@ class ProgramDetailScreen extends StatelessWidget {
         actions: [
           IconButton(
             onPressed: () {
-              // TODO: Hubungkan navigasi ke form edit program
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ProgramFormScreen(program: program),
+                ),
+              );
             },
             icon: const Icon(Icons.edit_outlined, color: Color(0xFF10B981)),
           ),
@@ -106,7 +112,7 @@ class ProgramDetailScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text("RINCIAN INVESTASI", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey, fontSize: 12, letterSpacing: 1)),
+          const Text("BIAYA PROGRAM", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey, fontSize: 12, letterSpacing: 1)),
           const Divider(height: 32),
           _buildInfoRow(Icons.account_balance_wallet_outlined, "Biaya Pendaftaran", "Rp ${program.biayaPendaftaran.toInt()}"),
           const SizedBox(height: 20),

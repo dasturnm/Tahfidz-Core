@@ -19,7 +19,8 @@ class _SiswaCardPrintDialogState extends ConsumerState<SiswaCardPrintDialog> {
 
   Future<void> _generateCards() async {
     final pdf = pw.Document();
-    final allSiswa = ref.read(siswaProvider).siswa;
+    // FIX: Mengambil data dari value siswaListProvider (AsyncValue)
+    final allSiswa = ref.read(siswaListProvider).value ?? [];
     final selectedSiswa = allSiswa.where((s) => _selectedIds.contains(s.id)).toList();
 
     pdf.addPage(
@@ -68,7 +69,8 @@ class _SiswaCardPrintDialogState extends ConsumerState<SiswaCardPrintDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final siswa = ref.watch(siswaProvider).siswa;
+    // FIX: Mengambil data dari value siswaListProvider (AsyncValue)
+    final siswa = ref.watch(siswaListProvider).value ?? [];
 
     return AlertDialog(
       title: const Text("Cetak Kartu Siswa", style: TextStyle(fontWeight: FontWeight.bold)),

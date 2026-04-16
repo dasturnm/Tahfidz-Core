@@ -6,7 +6,7 @@ part of 'cabang_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$cabangListHash() => r'526a47be7be9265f99570819d29e29566418bce6';
+String _$cabangListHash() => r'0b010814c7ee72e80be1247af85ded30d5d09f43';
 
 /// See also [CabangList].
 @ProviderFor(CabangList)

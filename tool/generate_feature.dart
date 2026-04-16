@@ -1,9 +1,12 @@
+// Lokasi: tool/generate_feature.dart
+
 import 'dart:io';
 
 void main(List<String> args) {
   if (args.isEmpty) {
-    print('❌ Masukkan nama fitur!');
-    print('Contoh: dart run tool/generate_feature.dart siswa');
+    // FIX: Mengganti print ke stdout.writeln untuk mematuhi standar avoid_print
+    stdout.writeln('❌ Masukkan nama fitur!');
+    stdout.writeln('Contoh: dart run tool/generate_feature.dart siswa');
     return;
   }
 
@@ -39,7 +42,8 @@ void main(List<String> args) {
   File('$basePath/widgets/${featureName}_card.dart')
       .writeAsStringSync(_widgetTemplate(featureName));
 
-  print('✅ Feature "$featureName" berhasil dibuat!');
+  // FIX: Mengganti print ke stdout.writeln untuk mematuhi standar avoid_print
+  stdout.writeln('✅ Feature "$featureName" berhasil dibuat!');
 }
 
 String _modelTemplate(String name) {

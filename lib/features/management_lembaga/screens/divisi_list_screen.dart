@@ -71,7 +71,8 @@ class _DivisiListScreenState extends ConsumerState<DivisiListScreen> {
                   status: divisi?.status ?? 'aktif',
                 );
 
-                await ref.read(divisiListProvider(lembagaId).notifier).saveDivisi(updatedDivisi);
+                // FIX: Akses notifier tanpa parameter (Auto AppContext)
+                await ref.read(divisiListProvider.notifier).saveDivisi(updatedDivisi);
 
                 if (!mounted) return; // FIX: use_build_context_synchronously
                 navigator.pop();
@@ -100,7 +101,8 @@ class _DivisiListScreenState extends ConsumerState<DivisiListScreen> {
     if (lembaga == null) return const Center(child: CircularProgressIndicator());
 
     // Memantau data divisi secara reaktif
-    final divisiAsync = ref.watch(divisiListProvider(lembaga.id));
+    // FIX: DivisiListProvider sekarang tidak menerima parameter
+    final divisiAsync = ref.watch(divisiListProvider);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -186,8 +188,8 @@ class _DivisiListScreenState extends ConsumerState<DivisiListScreen> {
                   ),
                 );
                 if (confirmed == true) {
-                  final lembagaId = ref.read(appContextProvider).lembaga!.id;
-                  await ref.read(divisiListProvider(lembagaId).notifier).deleteDivisi(d.id);
+                  // FIX: Akses notifier tanpa parameter
+                  await ref.read(divisiListProvider.notifier).deleteDivisi(d.id);
                 }
               },
               icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),

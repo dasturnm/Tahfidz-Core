@@ -1,7 +1,10 @@
+// Lokasi: lib/features/akademik/kurikulum/screens/level_detail_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/kurikulum_model.dart';
-import '../providers/kurikulum_provider.dart';
+// FIX: Update path import sesuai pemisahan provider
+import '../providers/modul_provider.dart';
 import 'modul_detail_screen.dart'; // Ditambahkan: Import navigasi detail
 // Import widget pendukung (Pastikan file ini dibuat di folder widgets)
 import '../widgets/modul_grid_view.dart';

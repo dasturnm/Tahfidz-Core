@@ -17,9 +17,7 @@ class _ClassCardGridState extends ConsumerState<ClassCardGrid> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(kelasProvider).fetchKelas();
-    });
+    // FIX: fetchKelas() dihapus karena KelasListProvider (AsyncNotifier) otomatis fetch data
   }
 
   // --- LOGIKA HAPUS DENGAN PASSWORD ---
@@ -56,13 +54,16 @@ class _ClassCardGridState extends ConsumerState<ClassCardGrid> {
             onPressed: () async {
               // Contoh validasi sederhana, ganti dengan logic password yang benar
               if (passwordController.text == "admin123") {
-                final success = await ref.read(kelasProvider).deleteKelas(kelas.id);
-                if (mounted) {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(success ? "Kelas dihapus" : "Gagal menghapus")),
-                  );
-                }
+                // FIX: Memanggil notifier untuk aksi delete
+                await ref.read(kelasListProvider.notifier).deleteKelas(kelas.id);
+                final success = !ref.read(kelasListProvider).hasError;
+
+                // FIX: Menggunakan context.mounted check untuk menghindari async gap (use_build_context_synchronously)
+                if (!context.mounted) return;
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(success ? "Kelas dihapus" : "Gagal menghapus")),
+                );
               } else {
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Password Salah!")));
               }
@@ -77,26 +78,33 @@ class _ClassCardGridState extends ConsumerState<ClassCardGrid> {
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(kelasProvider);
+    // Standard Emas UI: AsyncValue.when (Aturan v2026.03.22)
+    final state = ref.watch(kelasListProvider);
+    const academicColor = Color(0xFF3B82F6); // Biru Akademik (Aturan 8)
 
-    if (state.isLoading && state.kelas.isEmpty) {
-      return const Center(child: CircularProgressIndicator(color: Color(0xFF0D9488)));
-    }
-
-    return GridView.builder(
-      padding: const EdgeInsets.only(bottom: 32),
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: MediaQuery.of(context).size.width > 800 ? 3 : (MediaQuery.of(context).size.width > 500 ? 2 : 1),
-        crossAxisSpacing: 24,
-        mainAxisSpacing: 24,
-        mainAxisExtent: 280, // Ukuran tetap agar rapi
+    return state.when(
+      loading: () => const Center(child: CircularProgressIndicator(color: academicColor)),
+      error: (err, stack) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Text(err.toString(), style: const TextStyle(color: Colors.red)),
+        ),
       ),
-      itemCount: state.kelas.length + 1,
-      itemBuilder: (context, index) {
-        if (index == state.kelas.length) return _buildAddClassCard();
-        final kelas = state.kelas[index];
-        return _buildClassCard(kelas);
-      },
+      data: (classes) => GridView.builder(
+        padding: const EdgeInsets.only(bottom: 32),
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: MediaQuery.of(context).size.width > 800 ? 3 : (MediaQuery.of(context).size.width > 500 ? 2 : 1),
+          crossAxisSpacing: 24,
+          mainAxisSpacing: 24,
+          mainAxisExtent: 280, // Ukuran tetap agar rapi
+        ),
+        itemCount: classes.length + 1,
+        itemBuilder: (context, index) {
+          if (index == classes.length) return _buildAddClassCard();
+          final kelas = classes[index];
+          return _buildClassCard(kelas);
+        },
+      ),
     );
   }
 
@@ -160,8 +168,8 @@ class _ClassCardGridState extends ConsumerState<ClassCardGrid> {
   Widget _buildIconBox() {
     return Container(
       padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(color: const Color(0xFFF0FDF4), borderRadius: BorderRadius.circular(12)),
-      child: const Icon(Icons.home_work_rounded, color: Color(0xFF0D9488), size: 22),
+      decoration: BoxDecoration(color: const Color(0xFFEFF6FF), borderRadius: BorderRadius.circular(12)),
+      child: const Icon(Icons.home_work_rounded, color: Color(0xFF3B82F6), size: 22),
     );
   }
 
@@ -170,7 +178,7 @@ class _ClassCardGridState extends ConsumerState<ClassCardGrid> {
       padding: const EdgeInsets.only(top: 4),
       child: Row(
         children: [
-          Container(width: 6, height: 6, decoration: const BoxDecoration(color: Color(0xFF0D9488), shape: BoxShape.circle)),
+          Container(width: 6, height: 6, decoration: const BoxDecoration(color: Color(0xFF3B82F6), shape: BoxShape.circle)),
           const SizedBox(width: 6),
           Text(text.toUpperCase(), style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Colors.grey)),
         ],
@@ -185,7 +193,7 @@ class _ClassCardGridState extends ConsumerState<ClassCardGrid> {
         children: [
           Text(label, style: const TextStyle(fontSize: 8, fontWeight: FontWeight.w900, color: Color(0xFF94A3B8))),
           const Spacer(),
-          Icon(icon, size: 12, color: isTeal ? const Color(0xFF0D9488) : const Color(0xFF94A3B8)),
+          Icon(icon, size: 12, color: isTeal ? const Color(0xFF3B82F6) : const Color(0xFF94A3B8)),
           const SizedBox(width: 4),
           Text(value, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF334155))),
         ],
