@@ -1,3 +1,5 @@
+// Lokasi: lib/features/akademik/kurikulum/providers/kurikulum_provider.dart
+
 import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../models/kurikulum_model.dart';
@@ -5,10 +7,18 @@ import '../services/kurikulum_service.dart';
 
 part 'kurikulum_provider.g.dart';
 
+// =============================================================================
+// PROVIDER: KurikulumList
+// Mengelola state daftar kurikulum dan aksi terkait (Save/Delete)
+// =============================================================================
+
 @riverpod
 class KurikulumList extends _$KurikulumList {
   final _service = KurikulumService();
 
+  // ---------------------------------------------------------------------------
+  // 1. BUILD & FETCH LOGIC
+  // ---------------------------------------------------------------------------
   @override
   Future<List<KurikulumModel>> build(
       String lembagaId, {
@@ -32,6 +42,11 @@ class KurikulumList extends _$KurikulumList {
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // 2. MUTATION LOGIC (SAVE & DELETE)
+  // ---------------------------------------------------------------------------
+
+  /// Menyimpan data kurikulum baru atau memperbarui yang lama
   Future<void> saveKurikulum(KurikulumModel kurikulum) async {
     try {
       await _service.saveKurikulum(kurikulum);
@@ -41,6 +56,7 @@ class KurikulumList extends _$KurikulumList {
     }
   }
 
+  /// Menghapus kurikulum berdasarkan ID
   Future<void> deleteKurikulum(String id) async {
     try {
       await _service.deleteKurikulum(id);

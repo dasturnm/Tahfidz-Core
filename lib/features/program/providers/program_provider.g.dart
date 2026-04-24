@@ -7,7 +7,7 @@ part of 'program_provider.dart';
 // **************************************************************************
 
 String _$programHariEfektifHash() =>
-    r'24a9baf1ae07d6e95d080db8b6c2f358776572ca';
+    r'd2e66265602d00a50540075f18b59278fd8d9adf';
 
 /// Copied from Dart SDK
 class _SystemHash {
@@ -177,7 +177,7 @@ class _ProgramHariEfektifProviderElement
   String get programId => (origin as ProgramHariEfektifProvider).programId;
 }
 
-String _$programNotifierHash() => r'1d3373a52406875c4ab909943f1c43625e2d968d';
+String _$programNotifierHash() => r'98c42e9bf765b69d4fa3a45a07ff2c4a0581a0e0';
 
 /// See also [ProgramNotifier].
 @ProviderFor(ProgramNotifier)

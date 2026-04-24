@@ -29,6 +29,7 @@ class ModulList extends _$ModulList {
       ref.invalidateSelf();
     } catch (e) {
       debugPrint("Error saveModul: $e");
+      rethrow; // Tambahkan rethrow agar UI bisa menangkap error
     }
   }
 
@@ -39,6 +40,7 @@ class ModulList extends _$ModulList {
       ref.invalidateSelf();
     } catch (e) {
       debugPrint("Error deleteModul: $e");
+      rethrow; // Tambahkan rethrow agar UI bisa menampilkan pesan gagal
     }
   }
 }

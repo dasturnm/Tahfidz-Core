@@ -31,7 +31,8 @@ class KelasService extends BaseService {
       // 🛡️ KEAMANAN: Menggunakan helper filter dari BaseService
       query = applyLembagaFilter(query: query, lembagaId: lembagaId);
 
-      final response = await query.order('name', ascending: true);
+      // FIX: Menggunakan nama kolom yang benar (nama_kelas) sesuai standar table lain
+      final response = await query.order('nama_kelas', ascending: true);
 
       return (response as List)
           .map((json) => KelasModel.fromJson(json))

@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../models/kurikulum_model.dart';
 import '../services/level_service.dart'; // FIX: Mengarah ke service spesifik
+import '../services/kurikulum_service.dart'; // TAMBAHAN: Untuk filter program
 
 part 'level_provider.g.dart';
 
@@ -29,6 +30,7 @@ class LevelList extends _$LevelList {
       ref.invalidateSelf();
     } catch (e) {
       debugPrint('Error saveLevel: $e');
+      rethrow; // Tambahkan rethrow agar UI bisa menangkap error dan menampilkan SnackBar
     }
   }
 
@@ -39,6 +41,28 @@ class LevelList extends _$LevelList {
       ref.invalidateSelf();
     } catch (e) {
       debugPrint("Error deleteLevel: $e");
+      rethrow; // Tambahkan rethrow agar UI bisa menampilkan pesan gagal hapus
+    }
+  }
+}
+
+// =============================================================================
+// PROVIDER: LevelsByProgram
+// Provider khusus untuk mengambil level berdasarkan Program ID (digunakan di Form Siswa)
+// =============================================================================
+@riverpod
+class LevelsByProgram extends _$LevelsByProgram {
+  final _kurikulumService = KurikulumService();
+
+  @override
+  Future<List<LevelModel>> build(String? programId) async {
+    if (programId == null || programId.isEmpty || programId == 'null') return [];
+
+    try {
+      return _kurikulumService.getLevelsByProgram(programId);
+    } catch (e) {
+      debugPrint("Error build LevelsByProgram: $e");
+      return [];
     }
   }
 }

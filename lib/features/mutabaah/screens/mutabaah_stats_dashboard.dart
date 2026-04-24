@@ -20,6 +20,14 @@ class MutabaahStatsDashboard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final stats = ref.watch(mutabaahStatsProvider(siswa.id!));
+
+    // DETEKSI STATUS KANTONG (Hutang vs Berjalan)
+    final activeModulsAsync = ref.watch(activeModulsBySiswaProvider(siswa.id!));
+    final bool isDelayed = activeModulsAsync.maybeWhen(
+      data: (moduls) => moduls.any((m) => m.levelId == currentLevel.id) && moduls.length > 1 && moduls.last.levelId != currentLevel.id,
+      orElse: () => false,
+    );
+
     const Color emerald = Color(0xFF10B981);
     const Color slate = Color(0xFF1E293B);
 
@@ -54,11 +62,11 @@ class MutabaahStatsDashboard extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildHeader(emerald),
+            _buildHeader(emerald, isDelayed),
             const SizedBox(height: 24),
 
             // CARD UTAMA: Progres Hafalan
-            _buildMainProgressCard(emerald, stats['monthly_pages'], targetTotal, progressPercent),
+            _buildMainProgressCard(emerald, stats['monthly_pages'], targetTotal, progressPercent, isDelayed),
 
             const SizedBox(height: 16),
 
@@ -88,7 +96,7 @@ class MutabaahStatsDashboard extends ConsumerWidget {
             const SizedBox(height: 32),
             const Text("ANALISA GURU", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 11, color: Colors.grey, letterSpacing: 1.2)),
             const SizedBox(height: 12),
-            _buildInsightCard(progressPercent),
+            _buildInsightCard(progressPercent, isDelayed),
             const SizedBox(height: 32),
             SizedBox(
               width: double.infinity,
@@ -116,7 +124,7 @@ class MutabaahStatsDashboard extends ConsumerWidget {
     );
   }
 
-  Widget _buildHeader(Color color) {
+  Widget _buildHeader(Color color, bool isDelayed) {
     return Row(
       children: [
         CircleAvatar(
@@ -129,14 +137,38 @@ class MutabaahStatsDashboard extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(siswa.namaLengkap, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-            Text("Level: ${currentLevel.namaLevel}", style: const TextStyle(color: Colors.grey, fontSize: 13)),
+            Row(
+              children: [
+                Text("Level: ${currentLevel.namaLevel}", style: const TextStyle(color: Colors.grey, fontSize: 13)),
+                const SizedBox(width: 8),
+                _buildStatusBadge(isDelayed),
+              ],
+            ),
           ],
         ),
       ],
     );
   }
 
-  Widget _buildMainProgressCard(Color color, double current, double target, double percent) {
+  Widget _buildStatusBadge(bool isDelayed) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: isDelayed ? Colors.orange.withValues(alpha: 0.1) : Colors.blue.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        isDelayed ? "KANTONG HUTANG" : "KANTONG BERJALAN",
+        style: TextStyle(
+          color: isDelayed ? Colors.orange : Colors.blue,
+          fontSize: 8,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMainProgressCard(Color color, double current, double target, double percent, bool isDelayed) {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -150,10 +182,13 @@ class MutabaahStatsDashboard extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text("Target Level Bulan Ini", style: TextStyle(color: Colors.white70, fontSize: 13)),
+              Text(
+                isDelayed ? "Target Pelunasan Hutang" : "Target Level Bulan Ini",
+                style: TextStyle(color: isDelayed ? Colors.orange[200] : Colors.white70, fontSize: 13, fontWeight: isDelayed ? FontWeight.bold : FontWeight.normal),
+              ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(20)),
+                decoration: BoxDecoration(color: isDelayed ? Colors.orange : color, borderRadius: BorderRadius.circular(20)),
                 child: Text("${(percent * 100).toInt()}%", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10)),
               ),
             ],
@@ -167,11 +202,16 @@ class MutabaahStatsDashboard extends ConsumerWidget {
               value: percent,
               minHeight: 10,
               backgroundColor: Colors.white.withValues(alpha: 0.1),
-              valueColor: AlwaysStoppedAnimation<Color>(color),
+              valueColor: AlwaysStoppedAnimation<Color>(isDelayed ? Colors.orange : color),
             ),
           ),
           const SizedBox(height: 16),
-          const Text("Tetap istiqomah untuk mencapai target level tepat waktu.", style: TextStyle(color: Colors.white54, fontSize: 11, fontStyle: FontStyle.italic)),
+          Text(
+            isDelayed
+                ? "Fokus menyelesaikan sisa materi yang tertunda secepat mungkin."
+                : "Tetap istiqomah untuk mencapai target level tepat waktu.",
+            style: const TextStyle(color: Colors.white54, fontSize: 11, fontStyle: FontStyle.italic),
+          ),
         ],
       ),
     );
@@ -198,9 +238,13 @@ class MutabaahStatsDashboard extends ConsumerWidget {
     );
   }
 
-  Widget _buildInsightCard(double percent) {
-    String message = percent > 0.7 ? "Performa Luar Biasa!" : "Pertahankan Semangat!";
-    IconData icon = percent > 0.7 ? Icons.workspace_premium_rounded : Icons.tips_and_updates_rounded;
+  Widget _buildInsightCard(double percent, bool isDelayed) {
+    String message = isDelayed
+        ? "Butuh Perhatian Khusus!"
+        : (percent > 0.7 ? "Performa Luar Biasa!" : "Pertahankan Semangat!");
+    IconData icon = isDelayed
+        ? Icons.warning_amber_rounded
+        : (percent > 0.7 ? Icons.workspace_premium_rounded : Icons.tips_and_updates_rounded);
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -210,11 +254,13 @@ class MutabaahStatsDashboard extends ConsumerWidget {
       ),
       child: Row(
         children: [
-          Icon(icon, color: Colors.amber, size: 32),
+          Icon(icon, color: isDelayed ? Colors.orange : Colors.amber, size: 32),
           const SizedBox(width: 16),
           Expanded(
             child: Text(
-              "$message Santri menunjukkan konsistensi yang baik dalam setoran harian.",
+              isDelayed
+                  ? "Siswa memiliki hutang materi dari periode sebelumnya. Disarankan menambah durasi bimbingan."
+                  : "$message Santri menunjukkan konsistensi yang baik dalam setoran harian.",
               style: const TextStyle(fontSize: 13, color: Color(0xFF475569)),
             ),
           ),

@@ -19,6 +19,7 @@ class AppContextState {
   final String? programId;
   final List<CabangModel> availableCabang;
   final bool isLoading;
+  final bool isInitialized; // FIX: Menandakan inisialisasi sudah pernah dicoba
   final ProfileModel? profile;
   final String? role;
 
@@ -29,6 +30,7 @@ class AppContextState {
     this.programId,
     this.availableCabang = const [],
     this.isLoading = false,
+    this.isInitialized = false,
     this.profile,
     this.role,
   });
@@ -40,6 +42,7 @@ class AppContextState {
     String? programId,
     List<CabangModel>? availableCabang,
     bool? isLoading,
+    bool? isInitialized,
     ProfileModel? profile,
     String? role,
   }) {
@@ -50,6 +53,7 @@ class AppContextState {
       programId: programId ?? this.programId,
       availableCabang: availableCabang ?? this.availableCabang,
       isLoading: isLoading ?? this.isLoading,
+      isInitialized: isInitialized ?? this.isInitialized,
       profile: profile ?? this.profile,
       role: role ?? this.role,
     );
@@ -184,15 +188,15 @@ class AppContext extends _$AppContext {
 
   // --- FUNGSI INISIALISASI SAAT LOGIN ---
   Future<void> initContext({bool forceRefresh = false}) async {
-    // 🛡️ GUARD: Hentikan jika sedang loading atau data sudah ada (kecuali dipaksa refresh)
-    if (state.isLoading || (state.lembaga != null && !forceRefresh)) return;
+    // 🛡️ GUARD: Gunakan isInitialized agar tidak loop jika profil/lembaga memang kosong
+    if (state.isLoading || (state.isInitialized && !forceRefresh)) return;
 
     state = state.copyWith(isLoading: true);
     debugPrint("🚀 AppContext: Menjalankan inisialisasi...");
     try {
       final user = _supabase.auth.currentUser;
       if (user == null) {
-        state = AppContextState(); // Reset state jika user null
+        state = AppContextState(isInitialized: true); // Selesai mencoba
         return;
       }
 
@@ -201,7 +205,13 @@ class AppContext extends _$AppContext {
           .from('profiles')
           .select('*, lembaga:lembaga_id(*)')
           .eq('id', user.id)
-          .single();
+          .maybeSingle();
+
+      if (profileData == null) {
+        debugPrint("⚠️ AppContext: Profil tidak ditemukan di database.");
+        state = state.copyWith(isLoading: false, isInitialized: true);
+        return;
+      }
 
       if (profileData['lembaga'] == null) {
         debugPrint("⚠️ AppContext: User belum tertaut ke lembaga.");
@@ -212,6 +222,7 @@ class AppContext extends _$AppContext {
           currentCabang: null,
           currentTahunAjaran: null,
           isLoading: false,
+          isInitialized: true,
         );
         return;
       }
@@ -258,15 +269,15 @@ class AppContext extends _$AppContext {
               .from('tahun_ajaran')
               .select()
               .eq('id', lembaga.tahunAjaranAktifId!)
-              .single();
-          tahunAktif = TahunAjaranModel.fromJson(taData);
+              .maybeSingle();
+          if (taData != null) {
+            tahunAktif = TahunAjaranModel.fromJson(taData);
+          }
         } catch (taErr) {
-          // Abaikan jika tahun ajaran aktif tidak ditemukan
           tahunAktif = null;
         }
       }
 
-      // FIX: Gunakan order by untuk memastikan kita ambil yang paling relevan jika fallback
       if (tahunAktif == null) {
         final taFallback = await _supabase
             .from('tahun_ajaran')
@@ -282,7 +293,7 @@ class AppContext extends _$AppContext {
       }
       debugPrint("✅ AppContext: Tahun Ajaran Terdeteksi -> ${tahunAktif?.labelTahun}");
 
-      // 4. Update State Akhir (Standardized Profile Model)
+      // 4. Update State Akhir
       state = state.copyWith(
         lembaga: lembaga,
         profile: ProfileModel.fromJson(profileData),
@@ -291,12 +302,12 @@ class AppContext extends _$AppContext {
         currentCabang: branches.isNotEmpty ? branches.first : null,
         currentTahunAjaran: tahunAktif,
         isLoading: false,
+        isInitialized: true,
       );
       debugPrint("🏁 AppContext: Inisialisasi Selesai.");
     } catch (e) {
       debugPrint("❌ AppContext Error: $e");
-      state = state.copyWith(isLoading: false);
-      rethrow;
+      state = state.copyWith(isLoading: false, isInitialized: true);
     }
   }
 

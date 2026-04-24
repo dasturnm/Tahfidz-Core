@@ -250,10 +250,13 @@ class _LevelListScreenState extends ConsumerState<LevelListScreen> {
                     id: levelToEdit?.id,
                     kurikulumId: widget.jenjang.kurikulumId,
                     jenjangId: widget.jenjang.id!,
+                    programId: levelToEdit?.programId,
                     namaLevel: nameController.text.trim(),
                     targetTotal: levelToEdit?.targetTotal ?? 0,
                     metrik: levelToEdit?.metrik ?? 'Juz',
                     urutan: levelToEdit?.urutan ?? 0,
+                    isExamRequired: levelToEdit?.isExamRequired ?? false,
+                    examConfig: levelToEdit?.examConfig,
                   );
 
                   await ref.read(levelListProvider(widget.jenjang.id!).notifier).saveLevel(levelData);

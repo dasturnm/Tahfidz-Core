@@ -24,23 +24,29 @@ class AuthService extends BaseService {
     required String nama,
     required String email,
     required String noHp,
+    String? jenisKelamin, // TAMBAHAN: Menangkap input gender
+    String? nip, // TAMBAHAN: Sinkronisasi metadata
+    String? cabangId, // TAMBAHAN: Menangkap input cabang
+    String? devisiId, // TAMBAHAN: Menangkap input divisi
+    String? jabatanId, // TAMBAHAN: Menangkap input jabatan
     required String password,
     required String lembagaId,
   }) async {
     try {
-      // FIX: Menarik konfigurasi dari Environment Variables (Tanpa Hardcoded Key)
-      // Pastikan untuk menambahkan --dart-define=SUPABASE_URL="..." dan --dart-define=SUPABASE_ANON_KEY="..." saat build/run
-      const supabaseUrl = String.fromEnvironment('SUPABASE_URL');
-      const supabaseKey = String.fromEnvironment('SUPABASE_ANON_KEY');
+      // LOGIKA FALLBACK JANGKA PANJANG:
+      // Ambil dari environment (Hasil build), jika kosong gunakan data cadangan.
+      final String effectiveUrl = const String.fromEnvironment('SUPABASE_URL').isNotEmpty
+          ? const String.fromEnvironment('SUPABASE_URL')
+          : 'https://mrxtnwmyqfmfdncdvssh.supabase.co';
 
-      if (supabaseUrl.isEmpty || supabaseKey.isEmpty) {
-        throw 'Gagal mendaftarkan guru. Kredensial Supabase (URL/Key) tidak ditemukan di Environment.';
-      }
+      final String effectiveKey = const String.fromEnvironment('SUPABASE_ANON_KEY').isNotEmpty
+          ? const String.fromEnvironment('SUPABASE_ANON_KEY')
+          : 'sb_publishable_OAPUWnbXxiDjKDFMkgvIng_xUKs67lg';
 
       // Membuat client terisolasi agar sesi Admin TIDAK tertimpa/logout
       final tempClient = SupabaseClient(
-        supabaseUrl,
-        supabaseKey,
+        effectiveUrl,
+        effectiveKey,
         authOptions: const AuthClientOptions(authFlowType: AuthFlowType.implicit),
       );
 
@@ -50,7 +56,15 @@ class AuthService extends BaseService {
         password: password,
         data: {
           'nama_lengkap': nama.trim(),
-          'role': 'guru',
+          'no_hp': noHp.trim(), // FIX: Masukkan no_hp ke metadata agar tidak null
+          'jenis_kelamin': jenisKelamin, // FIX: Masukkan gender ke metadata agar tidak null
+          'role': 'guru', // Role awal default
+          // FIX: Pastikan semua ID dikirim sebagai NULL (bukan "") agar casting UUID di Postgres tidak Error 500
+          'lembaga_id': (lembagaId.isEmpty || lembagaId == 'null') ? null : lembagaId,
+          'nip': (nip == null || nip.isEmpty) ? null : nip,
+          'cabang_id': (cabangId == null || cabangId.isEmpty) ? null : cabangId,
+          'devisi_id': (devisiId == null || devisiId.isEmpty) ? null : devisiId,
+          'jabatan_id': (jabatanId == null || jabatanId.isEmpty) ? null : jabatanId,
         },
       );
 
@@ -62,6 +76,9 @@ class AuthService extends BaseService {
       final newUserId = user.id;
 
       // 2. Simpan ke tabel profiles menggunakan client utama (supabase) - Protokol cleanData
+      // DIKOMENTARI: Karena Supabase sudah menggunakan Trigger (otomatis insert profil)
+      // saat signUp diperanggil, agar tidak terjadi "Duplicate Key" pada profiles_pkey.
+      /*
       await supabase.from('profiles').insert(cleanData({
         'id': newUserId,
         'lembaga_id': lembagaId,
@@ -71,6 +88,7 @@ class AuthService extends BaseService {
         'status': 'aktif',
         'is_new_user': true,
       }));
+      */
 
       return newUserId;
     } catch (e) {
@@ -118,7 +136,6 @@ class AuthService extends BaseService {
     try {
       final cleanEmail = emailAdmin.trim().toLowerCase();
       final cleanNamaLembaga = namaLembaga.trim();
-      final cleanNamaAdmin = namaAdmin.trim();
 
       // A. Buat Akun Auth
       final authRes = await supabase.auth.signUp(
@@ -131,16 +148,17 @@ class AuthService extends BaseService {
         throw 'Gagal mendaftarkan akun auth.';
       }
 
-      final userId = user.id;
-
       // B. Simpan Lembaga - Protokol cleanData
-      final lembagaData = await supabase
+      await supabase
           .from('lembaga')
           .insert(cleanData({'nama_lembaga': cleanNamaLembaga}))
           .select()
           .single();
 
       // C. Simpan Profile Admin - Protokol cleanData
+      // DIKOMENTARI: Karena Supabase sudah menggunakan Trigger (otomatis insert profil)
+      // saat signUp dipanggil, agar tidak terjadi "Duplicate Key" pada profiles_pkey.
+      /*
       await supabase.from('profiles').insert(cleanData({
         'id': userId,
         'lembaga_id': lembagaData['id'],
@@ -149,6 +167,7 @@ class AuthService extends BaseService {
         'status': 'aktif',
         'is_new_user': false,
       }));
+      */
 
     } catch (e) {
       throw Exception(handleError(e));

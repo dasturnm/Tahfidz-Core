@@ -1,3 +1,5 @@
+// Lokasi: lib/features/management_lembaga/screens/jabatan_list_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/app_context_provider.dart';
@@ -29,7 +31,8 @@ class _JabatanListScreenState extends ConsumerState<JabatanListScreen> {
 
     final isEdit = jabatan != null;
     final nameController = TextEditingController(text: jabatan?.namaJabatan ?? '');
-    final levelController = TextEditingController(text: jabatan?.levelJabatan?.toString() ?? '1');
+    // FIX: Mengganti controller angka menjadi state integer untuk Dropdown Level
+    int selectedLevel = jabatan?.levelJabatan ?? 4;
     final catatanController = TextEditingController(text: jabatan?.catatanJabatan ?? '');
     String? selectedDivisiId = jabatan?.divisiId ?? divisiList.first.id;
     String selectedRole = jabatan?.defaultRole ?? 'GURU';
@@ -75,10 +78,50 @@ class _JabatanListScreenState extends ConsumerState<JabatanListScreen> {
                     onChanged: (val) => setDialogState(() => selectedRole = val!),
                   ),
                   const SizedBox(height: 20),
-                  TextFormField(
-                    controller: levelController,
-                    decoration: const InputDecoration(labelText: "Level Jabatan (Angka)", hintText: "cth: 1 untuk Guru, 2 untuk Koordinator"),
-                    keyboardType: TextInputType.number,
+                  // FIX: Dropdown Level Jabatan Deskriptif + Ikon Info
+                  Row(
+                    children: [
+                      Expanded(
+                        child: DropdownButtonFormField<int>(
+                          isExpanded: true, // FIX: Mencegah overflow teks ke samping
+                          initialValue: selectedLevel,
+                          decoration: const InputDecoration(labelText: "Hierarki / Level Jabatan"),
+                          items: const [
+                            DropdownMenuItem(value: 1, child: Text("Level 1 (Pimpinan Pusat)")),
+                            DropdownMenuItem(value: 2, child: Text("Level 2 (Pimpinan Unit/Cabang)")),
+                            DropdownMenuItem(value: 3, child: Text("Level 3 (Staf Ahli/Koordinator)")),
+                            DropdownMenuItem(value: 4, child: Text("Level 4 (Pelaksana Teknis)")),
+                            DropdownMenuItem(value: 5, child: Text("Level 5 (Staf Pendukung)")),
+                          ],
+                          onChanged: (val) => setDialogState(() => selectedLevel = val!),
+                        ),
+                      ),
+                      const SizedBox(width: 8), // Memberikan sedikit jarak
+                      IconButton(
+                        padding: EdgeInsets.zero, // FIX: Hilangkan padding bawaan yang menyebabkan overflow
+                        constraints: const BoxConstraints(), // FIX: Hilangkan minimum hit area 48px
+                        icon: const Icon(Icons.info_outline, color: Colors.blue),
+                        onPressed: () {
+                          showDialog(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              title: const Text("Keterangan Level Jabatan"),
+                              content: const Text(
+                                "• Level 1: Direktur, Ketua Yayasan, Mudir\n"
+                                    "• Level 2: Kepala Cabang, Kepala Sekolah\n"
+                                    "• Level 3: Kurikulum, Bendahara, Koordinator Guru\n"
+                                    "• Level 4: Guru, Pengajar, Administrasi\n"
+                                    "• Level 5: Keamanan, Kebersihan, Driver",
+                                style: TextStyle(fontSize: 13, height: 1.5),
+                              ),
+                              actions: [
+                                TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Mengerti")),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 20),
                   TextFormField(
@@ -111,7 +154,7 @@ class _JabatanListScreenState extends ConsumerState<JabatanListScreen> {
                     divisiId: selectedDivisiId!,
                     namaJabatan: nameController.text.trim(),
                     defaultRole: selectedRole,
-                    levelJabatan: int.tryParse(levelController.text),
+                    levelJabatan: selectedLevel, // FIX: Menggunakan hasil pilihan dropdown
                     catatanJabatan: catatanController.text.trim(),
                     status: jabatan?.status ?? 'aktif',
                   );
@@ -224,16 +267,24 @@ class _JabatanListScreenState extends ConsumerState<JabatanListScreen> {
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      Text(
-                        namaDivisi,
-                        style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                      Flexible( // FIX: Menghindari overflow divisi yang panjang
+                        child: Text(
+                          namaDivisi,
+                          style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                       const SizedBox(width: 8),
                       const Icon(Icons.circle, size: 4, color: Colors.grey),
                       const SizedBox(width: 8),
-                      Text(
-                        j.defaultRole,
-                        style: const TextStyle(color: Color(0xFF10B981), fontSize: 12, fontWeight: FontWeight.w600),
+                      Flexible( // FIX: Menghindari overflow role (seperti ADMIN_PUSAT) yang panjang
+                        child: Text(
+                          j.defaultRole,
+                          style: const TextStyle(color: Color(0xFF10B981), fontSize: 12, fontWeight: FontWeight.w600),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ],
                   ),

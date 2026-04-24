@@ -17,6 +17,7 @@ class AddKurikulumSheet {
   }) {
     final nameController = TextEditingController(text: kurikulum?.namaKurikulum);
     bool isLinear = kurikulum?.isLinear ?? false;
+    String promotionPolicy = kurikulum?.promotionPolicy ?? 'flexible';
     String? selectedProgramId = kurikulum?.programId;
 
     showModalBottomSheet(
@@ -130,6 +131,14 @@ class AddKurikulumSheet {
                     value: isLinear,
                     onChanged: (val) => setState(() => isLinear = val),
                   ),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text("Mode Sekuensial",
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: const Text("Modul terkunci sampai modul sebelumnya lulus."),
+                    value: promotionPolicy == 'strict',
+                    onChanged: (val) => setState(() => promotionPolicy = val ? 'strict' : 'flexible'),
+                  ),
                   const SizedBox(height: 32),
                   SizedBox(
                     width: double.infinity,
@@ -145,6 +154,7 @@ class AddKurikulumSheet {
                           programId: selectedProgramId, // Menggunakan pilihan dari dropdown
                           namaKurikulum: nameController.text.trim(),
                           isLinear: isLinear,
+                          promotionPolicy: promotionPolicy,
                           jenjang: kurikulum?.jenjang ?? [],
                         );
 

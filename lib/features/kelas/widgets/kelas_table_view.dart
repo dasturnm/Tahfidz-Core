@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/kelas_provider.dart';
 import '../screens/kelas_form_screen.dart';
+import '../../siswa/providers/siswa_provider.dart'; // TAMBAHAN: Import provider siswa
 
 class ClassTableView extends ConsumerStatefulWidget {
   const ClassTableView({super.key});
@@ -31,7 +32,8 @@ class _ClassTableViewState extends ConsumerState<ClassTableView> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("Apakah Anda yakin ingin menghapus kelas '${kelas.name}'?"),
+            // FIX: Menggunakan namaKelas sesuai standarisasi model terbaru
+            Text("Apakah Anda yakin ingin menghapus kelas '${kelas.namaKelas}'?"),
             const SizedBox(height: 16),
             const Text("Masukkan Password Konfirmasi:", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
@@ -123,7 +125,8 @@ class _ClassTableViewState extends ConsumerState<ClassTableView> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(kelas.name,
+                                  // FIX: Menggunakan namaKelas sesuai standarisasi model terbaru
+                                  Text(kelas.namaKelas,
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13, color: Color(0xFF1E293B))),
@@ -171,9 +174,16 @@ class _ClassTableViewState extends ConsumerState<ClassTableView> {
                             ),
                             Expanded(
                               flex: 1,
-                              child: Text("0/${kelas.kapasitas ?? 15}",
-                                  textAlign: TextAlign.center,
-                                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFF1E293B))),
+                              child: Builder(builder: (context) {
+                                // FIX: Menghitung jumlah siswa yang memiliki kelas_id sama dengan kelas ini
+                                final studentCount = (ref.watch(siswaListProvider).value ?? [])
+                                    .where((s) => s.kelasId == kelas.id)
+                                    .length;
+
+                                return Text("$studentCount/${kelas.kapasitas ?? 15}",
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFF1E293B)));
+                              }),
                             ),
                             PopupMenuButton<String>(
                               padding: EdgeInsets.zero,

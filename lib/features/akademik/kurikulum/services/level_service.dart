@@ -22,7 +22,8 @@ class LevelService extends BaseService {
   Future<void> saveLevel(LevelModel level) async {
     try {
       final data = cleanData(level.toJson())..remove('modul');
-      if (level.id == null) {
+      // Perbaikan: Menangani ID null atau string kosong ("") agar benar-benar menjalankan INSERT
+      if (level.id == null || level.id!.isEmpty) {
         await supabase.from('kurikulum_level').insert(data..remove('id'));
       } else {
         await supabase.from('kurikulum_level').update(data).eq('id', level.id!);

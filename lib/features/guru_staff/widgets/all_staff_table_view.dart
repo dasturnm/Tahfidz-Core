@@ -1,11 +1,10 @@
+// Lokasi: lib/features/guru_staff/widgets/all_staff_table_view.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/staff_provider.dart';
-// PERBAIKAN: Unused imports (staff_form_screen, staff_assignment_screen, staff_detail_screen) TELAH DIHAPUS
 
-// PERBAIKAN: Nama class disamakan dengan pemanggil di StaffHubScreen
 class AllStaffTableView extends ConsumerWidget {
-  // PERBAIKAN: Menambahkan parameter agar sesuai dengan panggilan di StaffHubScreen
   final List<dynamic> staffList;
   final Function(dynamic) onActionTap;
 
@@ -17,7 +16,6 @@ class AllStaffTableView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // PERBAIKAN: Menghapus watch internal karena data sudah dikirim via constructor
     if (staffList.isEmpty) {
       return _buildEmptyState();
     }
@@ -43,7 +41,7 @@ class AllStaffTableView extends ConsumerWidget {
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: SizedBox(
-              width: 750, // Memberikan ruang napas bagi kolom-kolom
+              width: 750,
               child: Column(
                 children: [
                   _buildTableHeader(),
@@ -62,7 +60,6 @@ class AllStaffTableView extends ConsumerWidget {
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           child: Row(
                             children: [
-                              // 1. PERSONIL (Avatar + Nama + ID)
                               Expanded(
                                 flex: 3,
                                 child: Row(
@@ -81,18 +78,17 @@ class AllStaffTableView extends ConsumerWidget {
                                   ],
                                 ),
                               ),
-                              // 2. JABATAN & DIVISI (Digabung agar ringkas)
                               Expanded(
                                 flex: 2,
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
+                                    // FIX: Jabatan ditarik dari hasil Join/Fallback Service
                                     Text(staff.namaJabatan ?? '-', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF475569))),
                                     Text(staff.namaDivisi ?? 'UMUM', style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Color(0xFF14B8A6))),
                                   ],
                                 ),
                               ),
-                              // 3. ROLE & CABANG
                               Expanded(
                                 flex: 2,
                                 child: Column(
@@ -100,11 +96,11 @@ class AllStaffTableView extends ConsumerWidget {
                                   children: [
                                     _buildRoleBadge(staff.role ?? 'guru'),
                                     const SizedBox(height: 4),
+                                    // FIX: Cabang menampilkan 'Pusat' jika null di penugasan utama
                                     Text(staff.namaCabang ?? '-', style: const TextStyle(fontSize: 9, color: Color(0xFF94A3B8), fontWeight: FontWeight.bold)),
                                   ],
                                 ),
                               ),
-                              // 4. STATUS & AKSI
                               Expanded(
                                 flex: 2,
                                 child: Row(
@@ -113,7 +109,6 @@ class AllStaffTableView extends ConsumerWidget {
                                     _buildStatusBadge(staff.isActive),
                                     IconButton(
                                       icon: const Icon(Icons.more_horiz, color: Color(0xFF94A3B8), size: 20),
-                                      // PERBAIKAN: Memanggil fungsi aksi dari Hub
                                       onPressed: () => onActionTap(staff),
                                     ),
                                   ],
@@ -133,8 +128,6 @@ class AllStaffTableView extends ConsumerWidget {
       ),
     );
   }
-
-  // --- WIDGET HELPER TABEL ---
 
   Widget _buildTableHeader() {
     return Container(

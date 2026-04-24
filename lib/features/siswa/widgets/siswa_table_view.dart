@@ -103,7 +103,8 @@ class _SiswaTableViewState extends ConsumerState<SiswaTableView> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(siswa.kelas?.name ?? 'Tanpa Kelas',
+                                  // FIX: Menggunakan namaKelas sesuai standarisasi model terbaru
+                                  Text(siswa.kelas?.namaKelas ?? 'Tanpa Kelas',
                                       style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF475569)),
                                       maxLines: 1, overflow: TextOverflow.ellipsis),
                                   const Text("LEVEL 1 (JUZ 30)",

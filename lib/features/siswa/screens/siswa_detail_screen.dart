@@ -65,7 +65,8 @@ class SiswaDetailScreen extends StatelessWidget {
             _buildInfoCard(
               title: "Informasi Akademik",
               items: [
-                _buildInfoTile(Icons.home_work_rounded, "Unit kelas", siswa.kelas?.name ?? 'Belum ada kelas'),
+                // FIX: Menggunakan namaKelas sesuai standarisasi model terbaru
+                _buildInfoTile(Icons.home_work_rounded, "Unit kelas", siswa.kelas?.namaKelas ?? 'Belum ada kelas'),
                 _buildInfoTile(Icons.auto_awesome_rounded, "Program", siswa.program?.namaProgram ?? '-'),
                 _buildInfoTile(Icons.trending_up_rounded, "Total Hafalan", "${siswa.totalJuzHafalan.toStringAsFixed(1)} Juz"),
               ],

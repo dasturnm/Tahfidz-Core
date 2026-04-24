@@ -10,18 +10,25 @@ class SiswaListScreen extends ConsumerWidget {
   const SiswaListScreen({super.key});
 
   void _handleImport(BuildContext context, WidgetRef ref) async {
-    final confirm = await showDialog<bool>(
+    final action = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text("Import CSV"),
+        title: const Text("Import Data Siswa"),
         content: const Text(
-            "Pastikan file CSV memiliki format urutan:\n\n1. No\n2. Nama\n3. L/P\n4. NISN\n5. Alamat\n\nBaris pertama (Header) akan dilewati."),
+            "Gunakan template resmi untuk menghindari kesalahan data.\n\nUrutan Kolom:\nNama, NISN, Email, No HP, JK, Tgl Lahir, Alamat, Status, Password."),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
+            onPressed: () {
+              ref.read(siswaListProvider.notifier).downloadTemplate();
+              Navigator.pop(ctx);
+            },
+            child: const Text("Unduh Template", style: TextStyle(color: Colors.orange)),
+          ),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, 'cancel'),
               child: const Text("Batal")),
           ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
+            onPressed: () => Navigator.pop(ctx, 'import'),
             style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF10B981)),
             child:
@@ -31,34 +38,24 @@ class SiswaListScreen extends ConsumerWidget {
       ),
     );
 
-    if (confirm != true) return;
+    if (action != 'import') return;
 
     if (!context.mounted) return;
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) =>
-      const Center(child: CircularProgressIndicator(color: Color(0xFF10B981))),
-    );
 
-    // Simulasi proses async dengan safety check (Aturan 8)
-    await Future.delayed(const Duration(seconds: 1));
+    // Menjalankan fungsi import yang sudah terhubung ke SiswaService
+    await ref.read(siswaListProvider.notifier).importSiswaCsv();
+
     if (!context.mounted) return;
-    Navigator.pop(context); // Tutup loading dialog
-
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-      content: Text("Fitur Import sedang dikembangkan"),
+      content: Text("Proses import selesai"),
       backgroundColor: Color(0xFF10B981),
     ));
   }
 
   void _handleExport(BuildContext context, WidgetRef ref) async {
     try {
-      // Export logic here
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text("Fitur Export sedang disiapkan"),
-        backgroundColor: Colors.blue,
-      ));
+      // Memanggil fungsi export dari provider
+      await ref.read(siswaListProvider.notifier).exportSiswa();
     } catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -134,7 +131,8 @@ class SiswaListScreen extends ConsumerWidget {
                 // FIX: Menggunakan waliKelas sesuai properti di KelasModel (v2026.03.22)
                 final waliKelas = siswa.kelas?.waliKelas?.namaLengkap ??
                     'Belum ada wali kelas';
-                final namaKelas = siswa.kelas?.name ?? 'Tanpa Kelas';
+                // FIX: Menggunakan namaKelas sesuai standarisasi model terbaru
+                final namaKelas = siswa.kelas?.namaKelas ?? 'Tanpa Kelas';
                 final isLaki = siswa.jenisKelamin == 'L';
 
                 return Card(

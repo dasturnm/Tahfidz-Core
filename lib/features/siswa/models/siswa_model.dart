@@ -11,6 +11,9 @@ class SiswaModel {
   final String? cabangId;
   final String namaLengkap;
   final String? nisn;
+  final String? email; // TAMBAHAN: Untuk keperluan Auth/Import
+  final String? noHp; // TAMBAHAN: Untuk keperluan Auth/Import
+  final String? passwordSementara; // TAMBAHAN: Untuk kebutuhan Template CSV
   final String jenisKelamin; // 'L' atau 'P'
   final DateTime? tglLahir;
   final String? alamat;
@@ -19,6 +22,7 @@ class SiswaModel {
   final String? kelasId;
   final String? guruId;
   final String? programId;
+  final String? levelId; // TAMBAHAN: Sinkron dengan kolom level_id di DB
   final String? currentLevelId;
 
   final String? lastSurah;
@@ -36,6 +40,9 @@ class SiswaModel {
     this.cabangId,
     required this.namaLengkap,
     this.nisn,
+    this.email,
+    this.noHp,
+    this.passwordSementara,
     required this.jenisKelamin,
     this.tglLahir,
     this.alamat,
@@ -43,6 +50,7 @@ class SiswaModel {
     this.kelasId,
     this.guruId,
     this.programId,
+    this.levelId,
     this.currentLevelId,
     this.lastSurah,
     this.lastAyat,
@@ -60,6 +68,9 @@ class SiswaModel {
       cabangId: (json['cabang_id'] == null || json['cabang_id'].toString() == 'null') ? null : json['cabang_id'].toString(),
       namaLengkap: json['nama_lengkap']?.toString() ?? '',
       nisn: json['nisn']?.toString(),
+      email: json['email']?.toString(),
+      noHp: json['no_hp']?.toString(),
+      passwordSementara: null, // Tidak disimpan di DB
       jenisKelamin: json['jenis_kelamin']?.toString() ?? 'L',
       tglLahir: json['tgl_lahir'] != null
           ? DateTime.tryParse(json['tgl_lahir'].toString())
@@ -69,6 +80,7 @@ class SiswaModel {
       kelasId: (json['kelas_id'] == null || json['kelas_id'].toString() == 'null') ? null : json['kelas_id'].toString(),
       guruId: (json['guru_id'] == null || json['guru_id'].toString() == 'null') ? null : json['guru_id'].toString(),
       programId: (json['program_id'] == null || json['program_id'].toString() == 'null') ? null : json['program_id'].toString(),
+      levelId: (json['level_id'] == null || json['level_id'].toString() == 'null') ? null : json['level_id'].toString(),
       currentLevelId: (json['current_level_id'] == null || json['current_level_id'].toString() == 'null') ? null : json['current_level_id'].toString(),
       lastSurah: json['last_surah']?.toString(),
       lastAyat: json['last_ayat'] != null ? (json['last_ayat'] as num).toInt() : null,
@@ -88,6 +100,8 @@ class SiswaModel {
       'cabang_id': cabangId,
       'nama_lengkap': namaLengkap, // FIX: Typo namaLengkaap diperbaiki
       'nisn': nisn,
+      'email': email,
+      'no_hp': noHp,
       'jenis_kelamin': jenisKelamin,
       'tgl_lahir': tglLahir?.toIso8601String().split('T')[0],
       'alamat': alamat,
@@ -95,6 +109,7 @@ class SiswaModel {
       'kelas_id': kelasId,
       'guru_id': guruId,
       'program_id': programId,
+      'level_id': levelId,
       'current_level_id': currentLevelId,
       'last_surah': lastSurah,
       'last_ayat': lastAyat,
@@ -108,6 +123,9 @@ class SiswaModel {
     String? cabangId,
     String? namaLengkap,
     String? nisn,
+    String? email,
+    String? noHp,
+    String? passwordSementara,
     String? jenisKelamin,
     DateTime? tglLahir,
     String? alamat,
@@ -115,6 +133,7 @@ class SiswaModel {
     String? kelasId,
     String? guruId,
     String? programId,
+    String? levelId,
     String? currentLevelId,
     String? lastSurah,
     int? lastAyat,
@@ -130,6 +149,9 @@ class SiswaModel {
       cabangId: cabangId ?? this.cabangId,
       namaLengkap: namaLengkap ?? this.namaLengkap,
       nisn: nisn ?? this.nisn,
+      email: email ?? this.email,
+      noHp: noHp ?? this.noHp,
+      passwordSementara: passwordSementara ?? this.passwordSementara,
       jenisKelamin: jenisKelamin ?? this.jenisKelamin,
       tglLahir: tglLahir ?? this.tglLahir,
       alamat: alamat ?? this.alamat,
@@ -137,6 +159,7 @@ class SiswaModel {
       kelasId: kelasId ?? this.kelasId,
       guruId: guruId ?? this.guruId,
       programId: programId ?? this.programId,
+      levelId: levelId ?? this.levelId,
       currentLevelId: currentLevelId ?? this.currentLevelId,
       lastSurah: lastSurah ?? this.lastSurah,
       lastAyat: lastAyat ?? this.lastAyat,

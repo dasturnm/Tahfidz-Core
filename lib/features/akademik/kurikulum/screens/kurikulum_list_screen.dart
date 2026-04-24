@@ -85,16 +85,32 @@ class KurikulumListScreen extends ConsumerWidget {
                     children: [
                       Text(k.namaKurikulum, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                       const SizedBox(height: 4),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: k.isLinear ? Colors.orange.withValues(alpha: 0.1) : _emerald.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          k.isLinear ? "LINEAR" : "HIERARKI",
-                          style: TextStyle(color: k.isLinear ? Colors.orange : _emerald, fontSize: 8, fontWeight: FontWeight.w900),
-                        ),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: k.isLinear ? Colors.orange.withValues(alpha: 0.1) : _emerald.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              k.isLinear ? "LINEAR" : "HIERARKI",
+                              style: TextStyle(color: k.isLinear ? Colors.orange : _emerald, fontSize: 8, fontWeight: FontWeight.w900),
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: k.promotionPolicy == 'flexible' ? Colors.blue.withValues(alpha: 0.1) : Colors.purple.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              k.promotionPolicy == 'flexible' ? "BEBAS" : "SEKUENSIAL",
+                              style: TextStyle(color: k.promotionPolicy == 'flexible' ? Colors.blue : Colors.purple, fontSize: 8, fontWeight: FontWeight.w900),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),

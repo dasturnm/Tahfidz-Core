@@ -10,7 +10,8 @@ class ProgramService extends BaseService {
   }) async {
     try {
       // 🔥 FIX: Tambahkan relasi kurikulum(id) agar ProgramModel bisa mengecek hasKurikulum
-      PostgrestFilterBuilder query = supabase.from('program').select('*, kurikulum(id)');
+      // Menggunakan !kurikulum_id untuk mematikan ambiguitas relasi ganda
+      PostgrestFilterBuilder query = supabase.from('program').select('*, kurikulum!kurikulum_id(id)');
 
       // Gunakan helper BaseService untuk keamanan data
       query = applyLembagaFilter(query: query, lembagaId: lembagaId);
@@ -37,6 +38,7 @@ class ProgramService extends BaseService {
   Future<void> addProgram({
     required String lembagaId,
     required String nama,
+    String? kurikulumId,
     String? cabangId,
     String? deskripsi,
     double pendaftaran = 0,
@@ -46,6 +48,7 @@ class ProgramService extends BaseService {
     try {
       final data = cleanData({
         'lembaga_id': lembagaId,
+        'kurikulum_id': kurikulumId,
         'cabang_id': cabangId,
         'nama_program': nama,
         'deskripsi': deskripsi,
@@ -64,6 +67,7 @@ class ProgramService extends BaseService {
     try {
       final data = cleanData({
         'nama_program': updated.namaProgram,
+        'kurikulum_id': updated.kurikulumId,
         'cabang_id': updated.cabangId,
         'deskripsi': updated.deskripsi,
         'biaya_pendaftaran': updated.biayaPendaftaran,

@@ -70,7 +70,8 @@ class _BulkPlottingDialogState extends ConsumerState<BulkPlottingDialog> {
                   isExpanded: true,
                   // FIX: Menangani data list dari AsyncValue (kelasListProvider)
                   items: (kelasAsync.value ?? []).map((c) {
-                    return DropdownMenuItem(value: c.id, child: Text(c.name));
+                    // FIX: Menggunakan namaKelas sesuai standarisasi model terbaru
+                    return DropdownMenuItem(value: c.id, child: Text(c.namaKelas));
                   }).toList(),
                   onChanged: (val) => setState(() => _selectedKelasId = val),
                 ),
@@ -135,7 +136,8 @@ class _BulkPlottingDialogState extends ConsumerState<BulkPlottingDialog> {
                     return CheckboxListTile(
                       value: isChecked,
                       title: Text(s.namaLengkap, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                      subtitle: Text(s.kelas?.name ?? "Belum Ada Kelas", style: const TextStyle(fontSize: 10)), // PERBAIKAN: Relasi Kelas
+                      // FIX: Menggunakan namaKelas sesuai standarisasi model terbaru
+                      subtitle: Text(s.kelas?.namaKelas ?? "Belum Ada Kelas", style: const TextStyle(fontSize: 10)), // PERBAIKAN: Relasi Kelas
                       activeColor: const Color(0xFF4F46E5),
                       dense: true,
                       onChanged: (val) {

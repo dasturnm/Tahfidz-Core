@@ -85,7 +85,8 @@ class SiswaGridView extends ConsumerWidget {
                       style: const TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 12),
-                    _buildClassInfo(siswa.kelas?.name ?? 'Tanpa Kelas'),
+                    // FIX: Menggunakan namaKelas sesuai standarisasi model terbaru
+                    _buildClassInfo(siswa.kelas?.namaKelas ?? 'Tanpa Kelas'),
                   ],
                 ),
               ),

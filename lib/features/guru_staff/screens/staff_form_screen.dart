@@ -1,3 +1,5 @@
+// Lokasi: lib/features/guru_staff/screens/staff_form_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tahfidz_core/features/auth/services/auth_service.dart';
@@ -22,6 +24,7 @@ class _StaffFormScreenState extends ConsumerState<StaffFormScreen> {
   final _namaController = TextEditingController();
   final _emailController = TextEditingController();
   final _noHpController = TextEditingController();
+  final _nipController = TextEditingController(); // TAMBAHAN: Sinkronisasi CSV & Model
   final _tglBergabungController = TextEditingController(); // FIX: Controller Kalender
   final _passwordController = TextEditingController(); // Controller Password Utama
 
@@ -40,6 +43,7 @@ class _StaffFormScreenState extends ConsumerState<StaffFormScreen> {
       _namaController.text = widget.staff!['nama_lengkap'] ?? '';
       _emailController.text = widget.staff!['email'] ?? '';
       _noHpController.text = widget.staff!['no_hp'] ?? '';
+      _nipController.text = widget.staff!['nip'] ?? ''; // TAMBAHAN
       _tglBergabungController.text = widget.staff!['tanggal_bergabung'] ?? ''; // Ambil data lama jika ada
       _selectedGender = widget.staff!['jenis_kelamin']; // NEW: Ambil gender lama
       // Password tidak diisi saat edit
@@ -51,6 +55,7 @@ class _StaffFormScreenState extends ConsumerState<StaffFormScreen> {
     _namaController.dispose();
     _emailController.dispose();
     _noHpController.dispose();
+    _nipController.dispose(); // TAMBAHAN
     _tglBergabungController.dispose(); // Dispose controller baru
     _passwordController.dispose();
     super.dispose();
@@ -86,10 +91,16 @@ class _StaffFormScreenState extends ConsumerState<StaffFormScreen> {
     try {
       if (widget.staff == null) {
         // --- PROSES TAMBAH STAFF BARU (Create User Auth) ---
+        // FIX: Mengirimkan data lengkap (Gender, Cabang, Jabatan) ke metadata Auth
         final String? targetUserId = await ref.read(authServiceProvider).registerGuru(
           nama: _namaController.text,
           email: _emailController.text,
           noHp: _noHpController.text,
+          jenisKelamin: _selectedGender, // SINKRON: Metadata Gender
+          nip: _nipController.text.isEmpty ? null : _nipController.text,
+          cabangId: _selectedCabangId, // SINKRON: Metadata Cabang
+          devisiId: null, // Placeholder jika form belum memiliki pilihan divisi
+          jabatanId: _selectedJabatanId, // SINKRON: Metadata Jabatan
           password: _passwordController.text,
           lembagaId: lembagaId,
         );
@@ -111,6 +122,7 @@ class _StaffFormScreenState extends ConsumerState<StaffFormScreen> {
             'tanggal_bergabung': _tglBergabungController.text.isEmpty ? null : _tglBergabungController.text,
             'nama_lengkap': _namaController.text,
             'no_hp': _noHpController.text,
+            'nip': _nipController.text.isEmpty ? null : _nipController.text, // TAMBAHAN
             'jenis_kelamin': _selectedGender, // NEW
           }).eq('id', targetUserId);
 
@@ -127,6 +139,8 @@ class _StaffFormScreenState extends ConsumerState<StaffFormScreen> {
         await Supabase.instance.client.from('profiles').update({
           'nama_lengkap': _namaController.text,
           'no_hp': _noHpController.text,
+          'email': _emailController.text.trim().toLowerCase(), // FIX: Simpan email baru
+          'nip': _nipController.text.isEmpty ? null : _nipController.text, // TAMBAHAN
           'tanggal_bergabung': _tglBergabungController.text.isEmpty ? null : _tglBergabungController.text,
           'jenis_kelamin': _selectedGender, // NEW
         }).eq('id', widget.staff!['id']);
@@ -194,8 +208,12 @@ class _StaffFormScreenState extends ConsumerState<StaffFormScreen> {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
             onPressed: () {
-              Navigator.pop(context); // Tutup dialog
-              Navigator.pop(context); // Kembali ke list
+              // FIX: Menghindari Layar Hitam dengan rootNavigator dan pengecekan canPop
+              Navigator.of(context, rootNavigator: true).pop(); // Tutup dialog
+
+              if (mounted && Navigator.of(context).canPop()) {
+                Navigator.of(context).pop(); // Kembali ke list
+              }
             },
             child: const Text("Selesai", style: TextStyle(color: Colors.white)),
           )
@@ -256,11 +274,15 @@ class _StaffFormScreenState extends ConsumerState<StaffFormScreen> {
                 _buildField(_namaController, "Nama Lengkap", Icons.person),
                 const SizedBox(height: 16),
 
+                // TAMBAHAN: Field NIP Opsional
+                _buildField(_nipController, "NIP (Opsional)", Icons.badge_outlined, isOptional: true),
+                const SizedBox(height: 16),
+
                 _buildField(
                   _emailController,
                   "Email Staff",
                   Icons.email,
-                  enabled: !isEditMode,
+                  enabled: true, // FIX: Sekarang bisa diedit/diklik saat mode Edit
                   keyboardType: TextInputType.emailAddress,
                 ),
                 const SizedBox(height: 16),
@@ -355,6 +377,7 @@ class _StaffFormScreenState extends ConsumerState<StaffFormScreen> {
       IconData icon, {
         bool enabled = true,
         bool isPassword = false,
+        bool isOptional = false, // TAMBAHAN
         TextInputType? keyboardType,
       }) {
     return TextFormField(
@@ -381,10 +404,10 @@ class _StaffFormScreenState extends ConsumerState<StaffFormScreen> {
         ),
       ),
       validator: (v) {
-        if (v == null || v.isEmpty) {
+        if (!isOptional && (v == null || v.isEmpty)) { // FIX: Cek jika tidak opsional
           return "$label wajib diisi";
         }
-        if (isPassword && v.length < 6) {
+        if (isPassword && v != null && v.isNotEmpty && v.length < 6) {
           return "Password minimal 6 karakter";
         }
         return null;

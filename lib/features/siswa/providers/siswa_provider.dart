@@ -4,6 +4,8 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:tahfidz_core/core/providers/app_context_provider.dart';
 import '../models/siswa_model.dart';
 import '../services/siswa_service.dart';
+import '../../kelas/models/kelas_model.dart'; // Tambahan untuk tipe data
+import '../../kelas/providers/kelas_provider.dart'; // Tambahan untuk akses data kelas
 
 part 'siswa_provider.g.dart';
 
@@ -13,6 +15,18 @@ class SiswaSearch extends _$SiswaSearch {
   @override
   String build() => '';
   void updateQuery(String query) => state = query;
+}
+
+// --- PROVIDER FILTER KELAS (Reactive Filter) ---
+// Provider ini digunakan untuk menyaring daftar kelas berdasarkan Program ID yang dipilih.
+@riverpod
+List<KelasModel> filteredKelas(FilteredKelasRef ref, String? programId) {
+  if (programId == null) return [];
+
+  // Logic reaktif: Mengambil semua kelas dan memfilternya berdasarkan programId
+  final allKelas = ref.watch(kelasProvider);
+
+  return allKelas.where((kelas) => kelas.programId == programId).toList();
 }
 
 // --- PROVIDER UTAMA SISWA (AsyncNotifier) ---
@@ -88,7 +102,8 @@ class SiswaList extends _$SiswaList {
     state = const AsyncValue.loading();
     try {
       await _siswaervice.assignSiswaToKelas(siswaId, kelasId);
-      ref.invalidateSelf();
+      ref.invalidateSelf(); // Refresh data siswa
+      ref.invalidate(kelasListProvider); // 🔥 PERBAIKAN: Paksa refresh data kelas agar jumlah sinkron
       await future;
       return true;
     } catch (e) {
@@ -114,13 +129,35 @@ class SiswaList extends _$SiswaList {
     state = const AsyncValue.loading();
     try {
       await _siswaervice.bulkAssignSiswaToKelas(siswaIds, kelasId);
-      ref.invalidateSelf();
+      ref.invalidateSelf(); // Refresh data siswa
+      ref.invalidate(kelasListProvider); // 🔥 PERBAIKAN: Paksa refresh data kelas agar jumlah sinkron
       await future;
       return true;
     } catch (e) {
       state = AsyncValue.error(e, StackTrace.current);
       return false;
     }
+  }
+
+  // --- FITUR CSV ---
+
+  Future<void> exportSiswa() async {
+    final listSiswa = state.value ?? [];
+    await _siswaervice.exportSiswaKeCsv(listSiswa);
+  }
+
+  Future<void> downloadTemplate() async {
+    await _siswaervice.unduhTemplateSiswaCsv();
+  }
+
+  Future<void> importSiswaCsv() async {
+    final appContext = ref.read(appContextProvider);
+    final lembagaId = appContext.lembaga?.id ?? '';
+
+    await _siswaervice.importSiswaDariCsv(
+      lembagaId: lembagaId,
+      onComplete: () => ref.invalidateSelf(),
+    );
   }
 
   // --- HELPER COMPATIBILITY (Untuk UI existing Coach) ---

@@ -21,7 +21,8 @@ class ModulService extends BaseService {
   Future<void> saveModul(ModulModel modul) async {
     try {
       final data = cleanData(modul.toJson());
-      if (modul.id == null) {
+      // Perbaikan: Menangani ID null atau string kosong ("") agar benar-benar menjalankan INSERT
+      if (modul.id == null || modul.id!.isEmpty) {
         await supabase.from('modul_kurikulum').insert(data..remove('id'));
       } else {
         await supabase.from('modul_kurikulum').update(data).eq('id', modul.id!);

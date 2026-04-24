@@ -7,7 +7,12 @@ import 'package:tahfidz_core/features/akademik/kurikulum/models/kurikulum_model.
 // sudah disatukan di dalam kurikulum_model.dart
 
 class KurikulumService extends BaseService {
+  // ===========================================================================
+  // 1. FETCH SERVICES (READ OPERATIONS)
+  // ===========================================================================
+
   /// 🔍 FETCH KURIKULUM
+  /// Mengambil data kurikulum lengkap beserta seluruh hierarkinya
   Future<List<KurikulumModel>> fetchKurikulum({
     required String lembagaId,
     String search = '',
@@ -17,9 +22,10 @@ class KurikulumService extends BaseService {
   }) async {
     try {
       // Menggunakan instance 'supabase' dari BaseService
+      // PENYEMPURNAAN: Sertakan target_metrik_kurikulum dalam select
       PostgrestFilterBuilder query = supabase
           .from('kurikulum')
-          .select('*, jenjang:jenjang_kurikulum(*, level:kurikulum_level(*, modul:modul_kurikulum(*)))');
+          .select('*, jenjang:jenjang_kurikulum(*, level:kurikulum_level(*, modul:modul_kurikulum(*, target_metrik_kurikulum(*))))');
 
       // Filter Lembaga via Helper BaseService
       // FIX: Casting eksplisit ke PostgrestList untuk menghindari error invalid_assignment
@@ -48,7 +54,28 @@ class KurikulumService extends BaseService {
     }
   }
 
+  /// 🔍 FETCH LEVELS BY PROGRAM
+  /// Mengambil daftar level berdasarkan Program ID (untuk dropdown di Form Siswa/Mutabaah)
+  Future<List<LevelModel>> getLevelsByProgram(String programId) async {
+    try {
+      final response = await supabase
+          .from('kurikulum_level')
+          .select('*, jenjang:jenjang_kurikulum(*)')
+          .eq('program_id', programId)
+          .order('urutan', ascending: true);
+
+      return (response as List).map((e) => LevelModel.fromJson(e)).toList();
+    } catch (e) {
+      throw Exception(handleError(e));
+    }
+  }
+
+  // ===========================================================================
+  // 2. SAVE SERVICES (WRITE/DEEP UPSERT OPERATIONS)
+  // ===========================================================================
+
   /// 💾 SAVE KURIKULUM (Deep Upsert)
+  /// Menyimpan kurikulum beserta Jenjang, Level, Modul, dan Target Metrik secara berjenjang
   Future<void> saveKurikulum(KurikulumModel kurikulum) async {
     try {
       // FIX: Menggunakan cleanData() untuk proteksi input
@@ -78,7 +105,21 @@ class KurikulumService extends BaseService {
           jenjangId = jenjang.id!;
         }
 
-        for (var level in jenjang.level) {
+        // 🛡️ VIRTUAL LEVEL LOGIC:
+        // Jika jenjang tidak memiliki level (Kurikulum Flat), buat 1 level default secara otomatis.
+        // Ini memastikan constraint 'level_id NOT NULL' di tabel modul_kurikulum tetap terpenuhi.
+        List<LevelModel> activeLevels = List.from(jenjang.level);
+        if (activeLevels.isEmpty) {
+          activeLevels.add(LevelModel(
+            namaLevel: 'Level Utama',
+            urutan: 1,
+            kurikulumId: kurikulumId,
+            jenjangId: jenjangId,
+            programId: kurikulum.programId,
+          ));
+        }
+
+        for (var level in activeLevels) {
           // FIX: Menggunakan cleanData()
           final levelData = cleanData(level.toJson())
             ..remove('modul')
@@ -95,12 +136,28 @@ class KurikulumService extends BaseService {
           }
 
           for (var modul in level.modul) {
-            // FIX: Menggunakan cleanData()
-            final modulData = cleanData(modul.toJson())..['level_id'] = levelId;
+            // FIX: Menggunakan cleanData() & proteksi dari field nested
+            final modulData = cleanData(modul.toJson())
+              ..remove('target_metrik_kurikulum')
+              ..['level_id'] = levelId;
+
+            String modulId;
             if (modul.id == null) {
-              await supabase.from('modul_kurikulum').insert(modulData..remove('id'));
+              final res = await supabase.from('modul_kurikulum').insert(modulData..remove('id')).select().single();
+              modulId = res['id'];
             } else {
               await supabase.from('modul_kurikulum').update(modulData).eq('id', modul.id!);
+              modulId = modul.id!;
+            }
+
+            // SIMPAN: Target Metrik Kurikulum (Relasi terbawah)
+            for (var target in modul.targetMetrik) {
+              final targetData = cleanData(target.toJson())..['modul_id'] = modulId;
+              if (target.id == null) {
+                await supabase.from('target_metrik_kurikulum').insert(targetData..remove('id'));
+              } else {
+                await supabase.from('target_metrik_kurikulum').update(targetData).eq('id', target.id!);
+              }
             }
           }
         }
@@ -109,6 +166,10 @@ class KurikulumService extends BaseService {
       throw Exception(handleError(e));
     }
   }
+
+  // ===========================================================================
+  // 3. DELETE SERVICES (REMOVE OPERATIONS)
+  // ===========================================================================
 
   /// 🗑️ DELETE KURIKULUM
   Future<void> deleteKurikulum(String id) async {

@@ -8,6 +8,7 @@ import '../models/siswa_model.dart';
 import '../providers/siswa_provider.dart';
 import '../../program/providers/program_provider.dart'; // FIX: Migrasi ke programNotifierProvider
 import '../../kelas/providers/kelas_provider.dart';
+import '../../akademik/kurikulum/providers/level_provider.dart'; // FIX: Menggunakan level_provider spesifik
 import 'package:tahfidz_core/core/providers/app_context_provider.dart';
 
 class SiswaFormScreen extends ConsumerStatefulWidget {
@@ -52,7 +53,7 @@ class _SiswaFormScreenState extends ConsumerState<SiswaFormScreen> {
       _status = s.status;
       _tglLahir = s.tglLahir;
       _selectedProgramId = s.programId;
-      _selectedLevelId = s.currentLevelId;
+      _selectedLevelId = s.levelId ?? s.currentLevelId; // FIX: Gunakan field levelId baru
       _selectedKelasId = s.kelasId; // PERBAIKAN: Label Kelas
     }
   }
@@ -116,6 +117,7 @@ class _SiswaFormScreenState extends ConsumerState<SiswaFormScreen> {
       alamat: _alamatController.text.trim().isEmpty ? null : _alamatController.text.trim(),
       status: _status,
       programId: _selectedProgramId,
+      levelId: _selectedLevelId, // TAMBAHAN: Sinkron dengan field baru
       currentLevelId: _selectedLevelId,
       kelasId: _selectedKelasId, // PERBAIKAN: Label Kelas
       totalJuzHafalan: widget.existingSiswa?.totalJuzHafalan ?? 0,
@@ -166,6 +168,9 @@ class _SiswaFormScreenState extends ConsumerState<SiswaFormScreen> {
 
     // FIX: Menggunakan kelasListProvider hasil generator
     final kelasAsync = ref.watch(kelasListProvider);
+
+    // 🔥 REAKTIF: Watch levels berdasarkan program yang dipilih menggunakan provider baru
+    final levelsAsync = ref.watch(levelsByProgramProvider(_selectedProgramId));
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -286,7 +291,20 @@ class _SiswaFormScreenState extends ConsumerState<SiswaFormScreen> {
                       orElse: () => [],
                     ),
                   ],
-                  onChanged: (val) => setState(() => _selectedProgramId = val?.toString()),
+                  onChanged: (val) {
+                    setState(() {
+                      _selectedProgramId = val?.toString();
+                      _selectedLevelId = null; // 🛡️ SAFE SYNC: Reset level saat program berubah
+                      // 🛡️ SAFE SYNC: Reset Kelas jika tidak cocok dengan Program baru
+                      if (_selectedKelasId != null && _selectedProgramId != null) {
+                        final allKelas = kelasAsync.value ?? [];
+                        final currentKelas = allKelas.where((k) => k.id == _selectedKelasId).firstOrNull;
+                        if (currentKelas != null && currentKelas.programId != _selectedProgramId) {
+                          _selectedKelasId = null;
+                        }
+                      }
+                    });
+                  },
                 ),
                 const SizedBox(height: 16),
 
@@ -296,10 +314,18 @@ class _SiswaFormScreenState extends ConsumerState<SiswaFormScreen> {
                       child: _buildDropdown(
                         label: 'Level Kurikulum',
                         value: _selectedLevelId,
-                        // NOTE: Sementara menggunakan list kosong agar tidak error merah
-                        // sambil menunggu LevelNotifier dibuat
-                        hint: 'Pilih Level',
-                        items: const [],
+                        // FIX: Mengambil data reaktif dari LevelListProvider
+                        hint: levelsAsync.isLoading ? 'Memuat...' : 'Pilih Level',
+                        items: [
+                          const DropdownMenuItem(value: null, child: Text('Pilih Level')),
+                          ...levelsAsync.maybeWhen(
+                            data: (list) => list.map((l) => DropdownMenuItem(
+                              value: l.id,
+                              child: Text(l.namaLevel),
+                            )).toList(),
+                            orElse: () => [],
+                          ),
+                        ],
                         onChanged: (val) => setState(() => _selectedLevelId = val?.toString()),
                       ),
                     ),
@@ -312,11 +338,24 @@ class _SiswaFormScreenState extends ConsumerState<SiswaFormScreen> {
                         hint: kelasAsync.isLoading ? 'Memuat...' : 'Pilih Kelas',
                         items: [
                           const DropdownMenuItem(value: null, child: Text('Belum Ada')),
-                          ...(kelasAsync.value ?? []).map((c) {
-                            return DropdownMenuItem(value: c.id, child: Text(c.name, overflow: TextOverflow.ellipsis));
+                          // 🛡️ REACTIVE FILTER: Hanya tampilkan kelas yang sesuai program pilihan
+                          ...(kelasAsync.value ?? [])
+                              .where((c) => _selectedProgramId == null || c.programId == _selectedProgramId)
+                              .map((c) {
+                            // FIX: Menggunakan namaKelas sesuai standarisasi model terbaru
+                            return DropdownMenuItem(value: c.id, child: Text(c.namaKelas, overflow: TextOverflow.ellipsis));
                           }),
                         ],
-                        onChanged: (val) => setState(() => _selectedKelasId = val?.toString()),
+                        onChanged: (val) {
+                          setState(() {
+                            _selectedKelasId = val?.toString();
+                            // 🛡️ AUTO-ASSIGN: Jika Kelas dipilih, kunci Program-nya
+                            if (_selectedKelasId != null) {
+                              final pickedKelas = (kelasAsync.value ?? []).firstWhere((k) => k.id == _selectedKelasId);
+                              _selectedProgramId = pickedKelas.programId;
+                            }
+                          });
+                        },
                       ),
                     ),
                   ],
@@ -435,7 +474,7 @@ class _SiswaFormScreenState extends ConsumerState<SiswaFormScreen> {
         ),
         const SizedBox(height: 8),
         DropdownButtonFormField<Object>(
-          // FIX: Menggunakan value agar reaktif terhadap AsyncNotifier
+          // FIX: Menggunakan value agar reaktif terhadap perubahan state
           initialValue: items.any((item) => item.value == value) ? value : null,
           items: items,
           onChanged: onChanged,

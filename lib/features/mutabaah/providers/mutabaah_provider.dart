@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tahfidz_core/core/providers/app_context_provider.dart'; // FIX: Untuk mendapatkan ID Guru yang login
 import 'package:tahfidz_core/features/siswa/services/siswa_service.dart'; // FIX: Untuk akses filter siswa
 import 'package:tahfidz_core/features/siswa/models/siswa_model.dart';
+import 'package:tahfidz_core/features/akademik/kurikulum/models/kurikulum_model.dart'; // TAMBAHAN
 import '../models/mutabaah_model.dart';
 import '../services/mutabaah_service.dart';
 import 'delegasi_provider.dart'; // FIX: Integrasi Delegasi untuk Guru Pengganti
@@ -20,7 +21,7 @@ final mutabaahHistoryProvider = FutureProvider.family<List<MutabaahRecord>, Stri
 // 3. Provider untuk mengambil seluruh riwayat mutabaah (digunakan di Mutabaah Hub)
 final mutabaahAllHistoryProvider = FutureProvider<List<MutabaahRecord>>((ref) async {
   // FIX: Menggunakan service untuk fetch data
-  return ref.read(mutabaahServiceProvider).getAllHistory();
+  return ref.read(mutabaahServiceProvider).getHistoryByLembaga(ref);
 });
 
 // 4. Provider untuk menghitung statistik bulanan siswa secara reaktif
@@ -112,3 +113,9 @@ final siswaByGuruProvider = FutureProvider<List<SiswaModel>>((ref) async {
 
 // 7. Session Provider (Menyimpan draft input sementara sesuai Analisa)
 final mutabaahSessionProvider = StateProvider<MutabaahRecord?>((ref) => null);
+
+// 8. Provider untuk mendeteksi Modul Aktif (Kantong Hutang vs Kantong Kewajiban)
+// Mengambil modul berdasarkan kebijakan promotion_policy Kurikulum (Flexible/Strict)
+final activeModulsBySiswaProvider = FutureProvider.family<List<ModulModel>, String>((ref, siswaId) async {
+  return ref.read(mutabaahServiceProvider).getActiveModuls(ref, siswaId);
+});

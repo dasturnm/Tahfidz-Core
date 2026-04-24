@@ -2,39 +2,54 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart'; // TAMBAHKAN INI
-import 'package:tahfidz_core/core/constants/app_routes.dart'; // TAMBAHKAN INI
+import 'package:go_router/go_router.dart';
+import 'package:tahfidz_core/core/constants/app_routes.dart';
+import 'package:tahfidz_core/core/constants/app_roles.dart';
 import '../../core/providers/app_context_provider.dart';
-// Import Screen yang sudah kita buat
-import '../../features/management_lembaga/screens/lembaga_profile_screen.dart';
-import '../../features/management_lembaga/screens/cabang_list_screen.dart';
-import '../../features/management_lembaga/screens/tahun_ajaran_screen.dart';
-import '../../features/management_lembaga/screens/divisi_list_screen.dart';
-import '../../features/program/widgets/academic_calendar_tab.dart'; // Baru: Import Kalender
-import '../../features/program/screens/agenda_akademik_screen.dart'; // Baru: Import Agenda Screen
+import '../../features/auth/providers/auth_provider.dart'; // TAMBAHAN: Untuk fungsi Logout
 
 class AppDrawer extends ConsumerWidget {
   const AppDrawer({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Ambil state utuh untuk akses flag isInitialized
     final contextState = ref.watch(appContextProvider);
-    final namaLembaga = contextState.lembaga?.namaLembaga ?? "Tahfidz Core";
+    final String role = contextState.role ?? '';
+    final String namaLembaga = contextState.lembaga?.namaLembaga ?? "Tahfidz Core";
+    final bool isInitialized = contextState.isInitialized;
+
+    // SAFE UPDATE: Logika reaktif untuk displayName agar tidak stuck di 'User'
+    final profile = contextState.profile;
+    final String displayName = (profile?.namaLengkap != null && profile!.namaLengkap.isNotEmpty)
+        ? profile.namaLengkap
+        : (contextState.isLoading ? "Memuat profil..." : "User");
+    final initial = (displayName != "Memuat profil..." && displayName != "User")
+        ? displayName[0].toUpperCase()
+        : "?";
+
+    // OPTIMASI: Guarding - Tampilkan loading hanya saat fetch pertama kali
+    if (!isInitialized && contextState.isLoading) {
+      return const Drawer(child: Center(child: CircularProgressIndicator.adaptive()));
+    }
+
+    // Tambahkan 'OWNER' ke dalam kategori Admin
+    final bool isAdmin = role == AppRoles.admin || role == AppRoles.kepalaCabang || role == 'OWNER' || role == 'admin';
 
     return Drawer(
       child: Column(
         children: [
           UserAccountsDrawerHeader(
             decoration: const BoxDecoration(color: Color(0xFF10B981)),
-            currentAccountPicture: const CircleAvatar(
+            currentAccountPicture: CircleAvatar(
               backgroundColor: Colors.white,
-              child: Icon(Icons.mosque, color: Color(0xFF10B981), size: 40),
+              child: Text(initial, style: const TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.bold, fontSize: 24)),
             ),
             accountName: Text(
-              namaLembaga,
+              displayName,
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
             ),
-            accountEmail: const Text("Administrator System"),
+            accountEmail: Text(role.isEmpty ? "Belum Terkonfigurasi" : "Akses: ${role.toUpperCase()} • $namaLembaga"),
           ),
 
           Expanded(
@@ -47,85 +62,113 @@ class AppDrawer extends ConsumerWidget {
                   onTap: () => _navigatePath(context, AppRouteNames.dashboard),
                 ),
 
-                const Divider(),
-                _buildSectionHeader("MANAJEMEN LEMBAGA"),
-                _buildDrawerItem(
-                  icon: Icons.business_outlined,
-                  label: "Profil Lembaga",
-                  onTap: () => _navigate(context, const LembagaProfileScreen()),
-                ),
-                _buildDrawerItem(
-                  icon: Icons.location_city_outlined,
-                  label: "Daftar Cabang",
-                  onTap: () => _navigate(context, const CabangListScreen()),
-                ),
-                _buildDrawerItem(
-                  icon: Icons.calendar_today_outlined,
-                  label: "Tahun Ajaran",
-                  onTap: () => _navigate(context, const TahunAjaranScreen()),
-                ),
-                _buildDrawerItem(
-                  icon: Icons.account_tree_outlined,
-                  label: "Divisi & Jabatan",
-                  onTap: () => _navigate(context, const DivisiListScreen()),
-                ),
+                // KELOMPOK 1: MANAJEMEN LEMBAGA
+                if (isAdmin || contextState.lembaga == null) ...[
+                  const Divider(height: 8),
+                  _buildSectionHeader("KONFIGURASI LEMBAGA"),
+                  _buildDrawerItem(
+                    icon: Icons.business_outlined,
+                    label: "Manajemen Lembaga",
+                    onTap: () => _navigatePath(context, AppRouteNames.setupLembaga), // Langsung ke Hub
+                  ),
+                ],
 
-                const Divider(),
-                _buildSectionHeader("KONTEKS AKADEMIK"),
-                _buildDrawerItem(
-                  icon: Icons.menu_book_outlined,
-                  label: "Program Belajar",
-                  onTap: () => _navigatePath(context, '/akademik/program'),
-                ),
-                _buildDrawerItem( // Baru: Menu Agenda Akademik (List View)
-                  icon: Icons.format_list_bulleted, // Ikon diperbarui
-                  label: "Agenda Akademik",
-                  onTap: () => _navigate(context, const AgendaAkademikScreen()),
-                ),
-                _buildDrawerItem( // Baru: Menu Kalender Akademik (Calendar View)
-                  icon: Icons.event_note, // Ikon diperbarui ke Solid
-                  label: "Kalender Akademik",
-                  onTap: () => _navigate(context, const AcademicCalendarTab()),
-                ),
-                _buildDrawerItem(
-                  icon: Icons.assignment_outlined,
-                  label: "Kurikulum & Level",
-                  onTap: () => _navigatePath(context, AppRouteNames.kurikulum),
-                ),
+                // KELOMPOK 2: BLUEPRINT AKADEMIK
+                if (contextState.lembaga != null && (isAdmin || role == AppRoles.guru)) ...[
+                  const Divider(height: 8),
+                  _buildSectionHeader("BLUEPRINT AKADEMIK"),
+                  _buildDrawerItem(
+                    icon: Icons.menu_book_outlined,
+                    label: "Program dan Kaldik",
+                    onTap: () => _navigatePath(context, AppRouteNames.program),
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.assignment_outlined,
+                    label: "Kurikulum & Modul",
+                    onTap: () => _navigatePath(context, AppRouteNames.kurikulum),
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.my_library_books_outlined,
+                    label: "Katalog Silabus",
+                    onTap: () => _navigatePath(context, AppRouteNames.katalogSilabus),
+                  ),
+                ],
 
-                const Divider(),
-                _buildSectionHeader("GURU & STAFF"),
-                _buildDrawerItem(
-                  icon: Icons.people_alt_outlined,
-                  label: "Guru & Staff",
-                  onTap: () => _navigatePath(context, '/staf'),
-                ),
+                // KELOMPOK 3: MANAJEMEN SDM & SISWA
+                if (contextState.lembaga != null && (isAdmin || role == AppRoles.guru)) ...[
+                  const Divider(height: 8),
+                  _buildSectionHeader("MANAJEMEN SDM & SISWA"),
+                  if (isAdmin)
+                    _buildDrawerItem(
+                      icon: Icons.people_alt_outlined,
+                      label: "Guru & Staff",
+                      onTap: () => _navigatePath(context, AppRouteNames.staf),
+                    ),
+                  _buildDrawerItem(
+                    icon: Icons.meeting_room_outlined,
+                    label: "Siswa & Kelas",
+                    onTap: () => _navigatePath(context, AppRouteNames.kelas),
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.co_present_outlined,
+                    label: "Presensi",
+                    onTap: () => _navigatePath(context, AppRouteNames.presensiSiswa),
+                  ),
+                ],
 
-                const Divider(),
-                _buildSectionHeader("DATA SISWA"),
-                _buildDrawerItem(
-                  icon: Icons.face_outlined,
-                  label: "Daftar Siswa",
-                  onTap: () => _navigatePath(context, AppRouteNames.siswa),
-                ),
-                _buildDrawerItem(
-                  icon: Icons.meeting_room_outlined,
-                  label: "Manajemen Kelas",
-                  onTap: () => _navigatePath(context, '/kelas'),
-                ),
+                // KELOMPOK 4: AKTIVITAS & OUTPUT
+                if (contextState.lembaga != null) ...[
+                  const Divider(height: 8),
+                  _buildSectionHeader("AKTIVITAS & OUTPUT"),
+                  if (isAdmin || role == AppRoles.guru || role == AppRoles.wali)
+                    _buildDrawerItem(
+                      icon: Icons.history_edu_rounded,
+                      label: "Mutabaah Tahfidz",
+                      onTap: () => _navigatePath(context, AppRouteNames.mutabaahHub),
+                    ),
+                  if (isAdmin || role == AppRoles.guru) ...[
+                    _buildDrawerItem(
+                      icon: Icons.verified_outlined,
+                      label: "Ujian Tasmi'",
+                      onTap: () => _navigatePath(context, AppRouteNames.tasmi),
+                    ),
+                    _buildDrawerItem(
+                      icon: Icons.analytics_outlined,
+                      label: "E-Rapor",
+                      onTap: () => _navigatePath(context, AppRouteNames.eRapor),
+                    ),
+                    _buildDrawerItem(
+                      icon: Icons.card_membership_outlined,
+                      label: "E-Sertifikat",
+                      onTap: () => _navigatePath(context, AppRouteNames.eSertifikat),
+                    ),
+                  ],
+                  _buildDrawerItem(
+                    icon: Icons.menu_book_outlined,
+                    label: "Mushaf Digital",
+                    onTap: () => _navigatePath(context, AppRouteNames.mushafIndex),
+                  ),
+                ],
 
-                // FIX: Tambahkan Section Mutabaah untuk menghilangkan silang merah
-                const Divider(),
-                _buildSectionHeader("AKTIVITAS & KEUANGAN"),
+                // KELOMPOK 5: FINANSIAL & SISTEM
+                if (contextState.lembaga != null && (isAdmin || role == AppRoles.wali)) ...[
+                  const Divider(height: 8),
+                  _buildSectionHeader("FINANSIAL & SISTEM"),
+                  _buildDrawerItem(
+                    icon: Icons.account_balance_wallet_outlined,
+                    label: "Keuangan",
+                    onTap: () => _navigatePath(context, AppRouteNames.keuanganHub),
+                  ),
+                ],
+
+                const Divider(height: 8),
                 _buildDrawerItem(
-                  icon: Icons.edit_note_outlined,
-                  label: "Mutabaah Tahfidz",
-                  onTap: () => _navigatePath(context, AppRouteNames.mutabaahHub),
-                ),
-                _buildDrawerItem(
-                  icon: Icons.payments_outlined,
-                  label: "Keuangan",
-                  onTap: () => _navigatePath(context, AppRouteNames.keuanganHub),
+                  icon: Icons.logout,
+                  label: "Logout",
+                  onTap: () {
+                    Navigator.pop(context); // Tutup drawer
+                    ref.read(authProvider.notifier).logout(); // Panggil fungsi logout
+                  },
                 ),
 
                 const SizedBox(height: 20),
@@ -145,13 +188,6 @@ class AppDrawer extends ConsumerWidget {
     );
   }
 
-  // Navigasi lama (menggunakan Widget)
-  void _navigate(BuildContext context, Widget screen) {
-    Navigator.pop(context);
-    Navigator.push(context, MaterialPageRoute(builder: (context) => screen));
-  }
-
-  // SAFE UPDATE: Navigasi baru menggunakan GoRouter Path
   void _navigatePath(BuildContext context, String path) {
     Navigator.pop(context);
     context.go(path);

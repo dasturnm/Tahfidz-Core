@@ -6,7 +6,7 @@ part of 'level_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$levelListHash() => r'036e8c56a9240b35a682cd5a8306d3581c3df983';
+String _$levelListHash() => r'1230bfbe7218535b65cd9aba594509727b656f19';
 
 /// Copied from Dart SDK
 class _SystemHash {
@@ -170,6 +170,153 @@ class _LevelListProviderElement
 
   @override
   String get jenjangId => (origin as LevelListProvider).jenjangId;
+}
+
+String _$levelsByProgramHash() => r'bdd0f7ed88364df9b569ce9da3d883a1feec7e52';
+
+abstract class _$LevelsByProgram
+    extends BuildlessAutoDisposeAsyncNotifier<List<LevelModel>> {
+  late final String? programId;
+
+  FutureOr<List<LevelModel>> build(
+    String? programId,
+  );
+}
+
+/// See also [LevelsByProgram].
+@ProviderFor(LevelsByProgram)
+const levelsByProgramProvider = LevelsByProgramFamily();
+
+/// See also [LevelsByProgram].
+class LevelsByProgramFamily extends Family<AsyncValue<List<LevelModel>>> {
+  /// See also [LevelsByProgram].
+  const LevelsByProgramFamily();
+
+  /// See also [LevelsByProgram].
+  LevelsByProgramProvider call(
+    String? programId,
+  ) {
+    return LevelsByProgramProvider(
+      programId,
+    );
+  }
+
+  @override
+  LevelsByProgramProvider getProviderOverride(
+    covariant LevelsByProgramProvider provider,
+  ) {
+    return call(
+      provider.programId,
+    );
+  }
+
+  static const Iterable<ProviderOrFamily>? _dependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
+
+  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
+      _allTransitiveDependencies;
+
+  @override
+  String? get name => r'levelsByProgramProvider';
+}
+
+/// See also [LevelsByProgram].
+class LevelsByProgramProvider extends AutoDisposeAsyncNotifierProviderImpl<
+    LevelsByProgram, List<LevelModel>> {
+  /// See also [LevelsByProgram].
+  LevelsByProgramProvider(
+    String? programId,
+  ) : this._internal(
+          () => LevelsByProgram()..programId = programId,
+          from: levelsByProgramProvider,
+          name: r'levelsByProgramProvider',
+          debugGetCreateSourceHash:
+              const bool.fromEnvironment('dart.vm.product')
+                  ? null
+                  : _$levelsByProgramHash,
+          dependencies: LevelsByProgramFamily._dependencies,
+          allTransitiveDependencies:
+              LevelsByProgramFamily._allTransitiveDependencies,
+          programId: programId,
+        );
+
+  LevelsByProgramProvider._internal(
+    super._createNotifier, {
+    required super.name,
+    required super.dependencies,
+    required super.allTransitiveDependencies,
+    required super.debugGetCreateSourceHash,
+    required super.from,
+    required this.programId,
+  }) : super.internal();
+
+  final String? programId;
+
+  @override
+  FutureOr<List<LevelModel>> runNotifierBuild(
+    covariant LevelsByProgram notifier,
+  ) {
+    return notifier.build(
+      programId,
+    );
+  }
+
+  @override
+  Override overrideWith(LevelsByProgram Function() create) {
+    return ProviderOverride(
+      origin: this,
+      override: LevelsByProgramProvider._internal(
+        () => create()..programId = programId,
+        from: from,
+        name: null,
+        dependencies: null,
+        allTransitiveDependencies: null,
+        debugGetCreateSourceHash: null,
+        programId: programId,
+      ),
+    );
+  }
+
+  @override
+  AutoDisposeAsyncNotifierProviderElement<LevelsByProgram, List<LevelModel>>
+      createElement() {
+    return _LevelsByProgramProviderElement(this);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is LevelsByProgramProvider && other.programId == programId;
+  }
+
+  @override
+  int get hashCode {
+    var hash = _SystemHash.combine(0, runtimeType.hashCode);
+    hash = _SystemHash.combine(hash, programId.hashCode);
+
+    return _SystemHash.finish(hash);
+  }
+}
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+mixin LevelsByProgramRef
+    on AutoDisposeAsyncNotifierProviderRef<List<LevelModel>> {
+  /// The parameter `programId` of this provider.
+  String? get programId;
+}
+
+class _LevelsByProgramProviderElement
+    extends AutoDisposeAsyncNotifierProviderElement<LevelsByProgram,
+        List<LevelModel>> with LevelsByProgramRef {
+  _LevelsByProgramProviderElement(super.provider);
+
+  @override
+  String? get programId => (origin as LevelsByProgramProvider).programId;
 }
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

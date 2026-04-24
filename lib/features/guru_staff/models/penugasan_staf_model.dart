@@ -11,6 +11,11 @@ class PenugasanStafModel {
   // Data Relasi (Diambil otomatis pakai JOIN Supabase)
   final String? namaStaf;
   final String? emailStaf;
+  final String? nip; // TAMBAHAN: Sinkronisasi Form & CSV
+  final String? noHp; // TAMBAHAN: Sinkronisasi Form & CSV
+  final String? jenisKelamin; // TAMBAHAN: Sinkronisasi Form & CSV
+  final String? tanggalBergabung; // TAMBAHAN: Sinkronisasi Form & CSV
+  final String? passwordSementara; // TAMBAHAN: Khusus untuk kebutuhan Export/Import
   final String? namaJabatan;
   final String? namaCabang;
 
@@ -25,6 +30,11 @@ class PenugasanStafModel {
     this.isUtama = false,
     this.namaStaf,
     this.emailStaf,
+    this.nip,
+    this.noHp,
+    this.jenisKelamin,
+    this.tanggalBergabung,
+    this.passwordSementara,
     this.namaJabatan,
     this.namaCabang,
   });
@@ -47,6 +57,11 @@ class PenugasanStafModel {
       // Ambil nama dari relasi, sesuaikan field 'nama_lengkap' dengan kolom di tabel profiles Anda
       namaStaf: profile?['nama_lengkap'] ?? profile?['full_name'] ?? 'Tanpa Nama',
       emailStaf: profile?['email'] ?? '-',
+      nip: profile?['nip'],
+      noHp: profile?['no_hp'],
+      jenisKelamin: profile?['jenis_kelamin'],
+      tanggalBergabung: profile?['tanggal_bergabung'],
+      passwordSementara: null, // Password tidak diambil dari DB untuk keamanan
       namaJabatan: jabatan?['nama_jabatan'] ?? 'Belum ada jabatan',
       namaCabang: cabang?['nama_cabang'] ?? '-',
     );
@@ -76,6 +91,11 @@ class PenugasanStafModel {
     bool? isUtama,
     String? namaStaf,
     String? emailStaf,
+    String? nip,
+    String? noHp,
+    String? jenisKelamin,
+    String? tanggalBergabung,
+    String? passwordSementara,
     String? namaJabatan,
     String? namaCabang,
   }) {
@@ -90,6 +110,11 @@ class PenugasanStafModel {
       isUtama: isUtama ?? this.isUtama,
       namaStaf: namaStaf ?? this.namaStaf,
       emailStaf: emailStaf ?? this.emailStaf,
+      nip: nip ?? this.nip,
+      noHp: noHp ?? this.noHp,
+      jenisKelamin: jenisKelamin ?? this.jenisKelamin,
+      tanggalBergabung: tanggalBergabung ?? this.tanggalBergabung,
+      passwordSementara: passwordSementara ?? this.passwordSementara,
       namaJabatan: namaJabatan ?? this.namaJabatan,
       namaCabang: namaCabang ?? this.namaCabang,
     );

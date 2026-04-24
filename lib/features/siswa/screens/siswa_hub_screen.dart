@@ -52,9 +52,17 @@ class _SiswaHubScreenState extends ConsumerState<SiswaHubScreen> {
               Navigator.pop(context);
               Navigator.push(context, MaterialPageRoute(builder: (context) => const SiswaFormScreen()));
             }),
-            _buildMenuTile(Icons.upload_file_rounded, "Import Siswa (CSV)", () {
+            _buildMenuTile(Icons.upload_file_rounded, "Import Data", () { // Label disederhanakan
               Navigator.pop(context);
               showDialog(context: context, builder: (context) => const ImportSiswaDialog());
+            }),
+            _buildMenuTile(Icons.description_rounded, "Download Template (CSV)", () { // Menu Baru
+              Navigator.pop(context);
+              ref.read(siswaListProvider.notifier).downloadTemplate();
+            }),
+            _buildMenuTile(Icons.download_for_offline_rounded, "Export Data (CSV)", () { // Menu Baru
+              Navigator.pop(context);
+              ref.read(siswaListProvider.notifier).exportSiswa();
             }),
             _buildMenuTile(Icons.badge_rounded, "Cetak Kartu Siswa", () {
               Navigator.pop(context);

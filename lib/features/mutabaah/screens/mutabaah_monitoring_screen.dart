@@ -66,8 +66,8 @@ class MutabaahMonitoringScreen extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(siswa.namaLengkap, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: Color(0xFF0F172A))),
-                  // FIX: Menyesuaikan getter nama kelas menjadi 'name' sesuai KelasModel
-                  Text("Kelas: ${siswa.kelas?.name ?? '-'}", style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                  // FIX: Menggunakan namaKelas sesuai standarisasi model terbaru
+                  Text("Kelas: ${siswa.kelas?.namaKelas ?? '-'}", style: const TextStyle(fontSize: 12, color: Colors.grey)),
                 ],
               ),
               const Icon(Icons.trending_up, color: Colors.blue, size: 20),

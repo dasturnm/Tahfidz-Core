@@ -41,7 +41,8 @@ class ClassDetailDialog extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(kelas.name, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900)),
+                        // FIX: Menggunakan namaKelas sesuai standarisasi model terbaru
+                        Text(kelas.namaKelas, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900)),
                         // PERBAIKAN: Menggunakan namaLengkap (camelCase)
                         Text(
                             "Guru: ${kelas.waliKelas?.namaLengkap ?? '-'} • RUANG: ${kelas.ruangan ?? '-'}",
@@ -84,8 +85,9 @@ class ClassDetailDialog extends ConsumerWidget {
   }
 
   Widget _buildSiswaTable(WidgetRef ref) {
-    // FIX: Menggunakan notifier dari siswaListProvider hasil generator sesuai arsitektur modern
-    final siswas = ref.watch(siswaListProvider.notifier).getSiswaInKelas(kelas.id ?? '');
+    // FIX: Mengambil data langsung dari State secara reaktif dan memfilternya berdasarkan kelas.id
+    final siswaState = ref.watch(siswaListProvider);
+    final siswas = siswaState.value?.where((s) => s.kelasId == kelas.id).toList() ?? [];
 
     if (siswas.isEmpty) {
       return const Center(

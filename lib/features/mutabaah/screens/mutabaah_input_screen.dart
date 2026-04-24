@@ -8,7 +8,7 @@ import '../../siswa/models/siswa_model.dart';
 import '../models/mutabaah_model.dart';
 import '../providers/mutabaah_provider.dart';
 import '../services/mutabaah_service.dart';
-import '../providers/delegasi_provider.dart'; // FIX: Untuk deteksi audit delegasi
+import '../providers/delegasi_provider.dart';
 
 class MutabaahInputScreen extends ConsumerStatefulWidget {
   final SiswaModel siswa;
@@ -38,9 +38,21 @@ class _ModulInputScreenState extends ConsumerState<MutabaahInputScreen> {
   int? _startSurah, _startAyah, _endSurah, _endAyah;
   double _calculatedPages = 0.0;
   double _calculatedLines = 0.0;
-  double _calculatedAyahs = 0.0; // TAMBAHAN: Pendukung Independensi Metrik
+  double _calculatedAyahs = 0.0;
   bool _isTargetMet = true;
   bool _isLoadingPages = false;
+
+  // STATE "MUTABAAH PINTAR"
+  double _previousDebt = 0.0; // Saldo hutang dari pertemuan sebelumnya
+  double _totalTargetSnapshot = 0.0; // Target Modul + Hutang
+
+  // STATE TASMI' (LIVE GRADING)
+  final Map<String, int> _penaltyCounts = {
+    'itqon_s': 0, 'itqon_t': 0, 'itqon_p': 0,
+    'tajwid_k': 0, 'tajwid_s': 0,
+    'makhraj_k': 0, 'makhraj_s': 0,
+  };
+  final Map<String, double> _directScores = {};
 
   @override
   void initState() {
@@ -48,6 +60,17 @@ class _ModulInputScreenState extends ConsumerState<MutabaahInputScreen> {
     // Mendukung kategori tipe Quran terbaru
     if (['ZIYADAH HAFALAN', 'ZIYADAH TILAWAH', 'MUROJAAH', 'TASMI\''].contains(widget.modul.tipe)) {
       _fetchSurahs();
+      _loadDebt(); // Ambil saldo hutang saat form diinisialisasi
+    }
+
+    // Inisialisasi skor default untuk Aspek Kategori B (Tasmi')
+    if (widget.modul.tipe == 'TASMI\'') {
+      final settings = widget.modul.tasmiSettings ?? {};
+      settings.forEach((key, val) {
+        if (val['active'] == true && (key == 'nada' || key == 'adab' || val['is_custom'] == true)) {
+          _directScores[key] = 80.0; // Nilai default awal
+        }
+      });
     }
   }
 
@@ -60,14 +83,47 @@ class _ModulInputScreenState extends ConsumerState<MutabaahInputScreen> {
     super.dispose();
   }
 
+  Future<void> _loadDebt() async {
+    final debt = await MutabaahTahfidzService().getLatestDebt(widget.siswa.id!, widget.modul.id!);
+    if (mounted) {
+      setState(() {
+        _previousDebt = debt;
+        _totalTargetSnapshot = widget.modul.targetAmount + (widget.modul.isAccumulated ? debt : 0.0);
+      });
+    }
+  }
+
   Future<void> _fetchSurahs() async {
     try {
+      // FIX: Menghapus total_ayah dari query (karena kolom tidak ada di database).
       final data = await _supabase
           .from('data_mushaf')
-          .select('id:surah_number, name_id:surah_name, total_ayah')
+          .select('id:surah_number, name_id:surah_name')
           .eq('ayah_number', 1)
           .order('surah_number');
-      setState(() => _surahList = List<Map<String, dynamic>>.from(data));
+
+      // FIX: Mapping standar jumlah ayat Al-Quran (Index 1 = Al-Fatihah, Index 114 = An-Nas)
+      const totalAyahs = [0, 7, 286, 200, 176, 120, 165, 206, 75, 129, 109, 123, 111, 43, 52, 99, 128, 111, 110, 98, 135, 112, 78, 118, 64, 77, 227, 93, 88, 69, 60, 34, 30, 73, 54, 45, 83, 182, 88, 75, 85, 54, 53, 89, 59, 37, 35, 38, 29, 18, 45, 60, 49, 62, 55, 78, 96, 29, 22, 24, 13, 14, 11, 11, 18, 12, 12, 30, 52, 52, 44, 28, 28, 20, 56, 40, 31, 50, 40, 46, 42, 29, 19, 36, 25, 22, 17, 19, 26, 30, 20, 15, 21, 11, 8, 8, 19, 5, 8, 8, 11, 11, 8, 3, 9, 5, 4, 7, 3, 6, 3, 5, 4, 5, 6];
+
+      final seen = <int>{};
+      final enrichedData = <Map<String, dynamic>>[];
+
+      for (var e in (data as List)) {
+        int sNum = e['id'] as int;
+        // Mencegah error duplikasi data pada Dropdown
+        if (!seen.contains(sNum)) {
+          seen.add(sNum);
+          enrichedData.add({
+            'id': sNum,
+            'name_id': e['name_id'],
+            'total_ayah': sNum >= 1 && sNum <= 114 ? totalAyahs[sNum] : 286,
+          });
+        }
+      }
+
+      if (mounted) {
+        setState(() => _surahList = enrichedData);
+      }
     } catch (e) {
       debugPrint("Error fetching surahs: $e");
     }
@@ -84,19 +140,24 @@ class _ModulInputScreenState extends ConsumerState<MutabaahInputScreen> {
         surahAkhir: _endSurah!,
         ayatAkhir: _endAyah!,
         targetAmount: widget.modul.targetAmount,
-        targetUnit: widget.modul.targetAmountUnit, // FIX: Menggunakan unit target dari modul
+        previousDebt: widget.modul.isAccumulated ? _previousDebt : 0.0,
+        targetUnit: widget.modul.targetAmountUnit,
       );
 
-      setState(() {
-        _calculatedPages = (result['calculated_pages'] as num).toDouble();
-        _calculatedLines = (result['calculated_lines'] as num).toDouble();
-        _calculatedAyahs = (result['calculated_ayahs'] as num? ?? 0).toDouble(); // Simpan hasil hitung ayat
-        _isTargetMet = result['is_target_met'] ?? true;
-      });
+      if (mounted) {
+        setState(() {
+          _calculatedPages = (result['calculated_pages'] as num).toDouble();
+          _calculatedLines = (result['calculated_lines'] as num).toDouble();
+          _calculatedAyahs = (result['calculated_ayahs'] as num? ?? 0).toDouble();
+          _isTargetMet = result['is_target_met'] ?? true;
+        });
+      }
     } catch (e) {
       debugPrint("Error calculating pages/lines: $e");
     } finally {
-      setState(() => _isLoadingPages = false);
+      if (mounted) {
+        setState(() => _isLoadingPages = false);
+      }
     }
   }
 
@@ -107,6 +168,10 @@ class _ModulInputScreenState extends ConsumerState<MutabaahInputScreen> {
     const Color slate = Color(0xFF1E293B);
 
     final bool isQuranic = ['ZIYADAH HAFALAN', 'ZIYADAH TILAWAH', 'MUROJAAH', 'TASMI\''].contains(widget.modul.tipe);
+
+    // FIX: Menghapus pemanggilan activeModulsBySiswaProvider di dalam build() untuk mencegah Infinite Loop
+    // Logika kantong hutang (Delayed Pocket) dihitung dari data hutang (_previousDebt) saja agar lebih aman.
+    final bool isDelayedPocket = _previousDebt > 0;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -121,12 +186,13 @@ class _ModulInputScreenState extends ConsumerState<MutabaahInputScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildSiswaInfo(emerald),
+            _buildSiswaInfo(emerald, isDelayedPocket),
             const SizedBox(height: 32),
             Text(widget.modul.tipe, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 11, color: Colors.grey, letterSpacing: 1.2)),
             const SizedBox(height: 16),
 
-            if (isQuranic) _buildTahfidzForm(emerald),
+            if (isQuranic && widget.modul.tipe != 'TASMI\'') _buildTahfidzForm(emerald, isDelayedPocket),
+            if (widget.modul.tipe == 'TASMI\'') _buildTasmiGradingForm(emerald),
             if (widget.modul.tipe == 'DINIYAH' || widget.modul.tipe == 'TAHSIN') _buildAkademikForm(emerald),
 
             const SizedBox(height: 32),
@@ -165,7 +231,7 @@ class _ModulInputScreenState extends ConsumerState<MutabaahInputScreen> {
     );
   }
 
-  Widget _buildSiswaInfo(Color color) {
+  Widget _buildSiswaInfo(Color color, bool isDelayed) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -186,7 +252,16 @@ class _ModulInputScreenState extends ConsumerState<MutabaahInputScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(widget.siswa.namaLengkap, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17, color: Color(0xFF0F172A))),
-                Text("Modul: ${widget.modul.namaModul}", style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 13)),
+                Row(
+                  children: [
+                    // FIX: Membungkus nama modul dengan Expanded agar tidak Overflow (Garis Kuning-Hitam)
+                    Expanded(
+                      child: Text("Modul: ${widget.modul.namaModul}", style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 13), overflow: TextOverflow.ellipsis),
+                    ),
+                    const SizedBox(width: 8),
+                    _buildPocketBadge(isDelayed),
+                  ],
+                ),
               ],
             ),
           ),
@@ -195,12 +270,120 @@ class _ModulInputScreenState extends ConsumerState<MutabaahInputScreen> {
     );
   }
 
-  Widget _buildTahfidzForm(Color color) {
-    final double target = widget.modul.targetAmount;
-    final bool isBelowTarget = !_isTargetMet && target > 0;
+  // --- NEW: TASMI' GRADING FORM ---
+  Widget _buildTasmiGradingForm(Color color) {
+    final settings = widget.modul.tasmiSettings ?? {};
+    double currentScore = MutabaahTahfidzService().calculateTasmiScore(settings, _penaltyCounts, _directScores);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _surahAyahPicker(
+            label: "RENTANG UJIAN MULAI",
+            surahValue: _startSurah, ayahValue: _startAyah,
+            onUpdate: (s, a) { setState(() { _startSurah = s; _startAyah = a; }); _calculateProgress(); }
+        ),
+        const SizedBox(height: 16),
+        _surahAyahPicker(
+            label: "RENTANG UJIAN AKHIR",
+            surahValue: _endSurah, ayahValue: _endAyah,
+            onUpdate: (s, a) { setState(() { _endSurah = s; _endAyah = a; }); _calculateProgress(); }
+        ),
+        const SizedBox(height: 32),
+
+        // Live Score Board
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(color: const Color(0xFF1E293B), borderRadius: BorderRadius.circular(16)),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text("LIVE SCORE", style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold)),
+              Text(
+                currentScore.toStringAsFixed(1),
+                style: TextStyle(color: currentScore >= widget.modul.kkm ? const Color(0xFF10B981) : Colors.orange, fontSize: 28, fontWeight: FontWeight.w900),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+
+        // Pinalti
+        const Text("KATEGORI A: PENGURANGAN (KLIK UNTUK MENGURANGI)", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.grey)),
+        const SizedBox(height: 12),
+        if (settings['itqon']?['active'] == true) _buildPenaltyRow("Itqon", ['itqon_s', 'itqon_t', 'itqon_p'], ['[S] Saktah', '[T] Tawaquf', '[P] Pindah']),
+        if (settings['tajwid']?['active'] == true) _buildPenaltyRow("Tajwid", ['tajwid_k', 'tajwid_s'], ['[K] Kurang', '[S] Salah']),
+        if (settings['makhraj']?['active'] == true) _buildPenaltyRow("Makhraj", ['makhraj_k', 'makhraj_s'], ['[K] Kurang', '[S] Salah']),
+
+        const SizedBox(height: 24),
+        const Text("KATEGORI B: SKOR LANGSUNG", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.grey)),
+        const SizedBox(height: 12),
+        ..._directScores.keys.map((key) {
+          String label = settings[key]?['name'] ?? key.toUpperCase();
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text("$label: ${_directScores[key]?.toInt()}", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+              Slider(
+                value: _directScores[key] ?? 80.0,
+                min: 0, max: 100, divisions: 100,
+                activeColor: color,
+                onChanged: (val) => setState(() => _directScores[key] = val),
+              ),
+            ],
+          );
+        }),
+      ],
+    );
+  }
+
+  Widget _buildPenaltyRow(String title, List<String> keys, List<String> labels) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        children: [
+          SizedBox(width: 80, child: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
+          Expanded(
+            child: Wrap(
+              spacing: 8, runSpacing: 8,
+              children: List.generate(keys.length, (i) {
+                return ActionChip(
+                  label: Text("${labels[i]}: ${_penaltyCounts[keys[i]]}", style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.red)),
+                  backgroundColor: Colors.red.withValues(alpha: 0.05),
+                  side: BorderSide(color: Colors.red.withValues(alpha: 0.2)),
+                  onPressed: () => setState(() => _penaltyCounts[keys[i]] = (_penaltyCounts[keys[i]] ?? 0) + 1),
+                );
+              }),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  // --- END TASMI ---
+
+  Widget _buildTahfidzForm(Color color, bool isDelayed) {
+    final bool isBelowTarget = !_isTargetMet && _totalTargetSnapshot > 0;
 
     return Column(
       children: [
+        if (widget.modul.isAccumulated && _previousDebt > 0)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(color: Colors.red[50], borderRadius: BorderRadius.circular(8)),
+              child: Row(
+                children: [
+                  Icon(Icons.history_edu, color: Colors.red[800], size: 16),
+                  const SizedBox(width: 8),
+                  Text("Ada hutang hafalan: ${_previousDebt.toInt()} ${widget.modul.targetAmountUnit}",
+                      style: TextStyle(color: Colors.red[800], fontSize: 11, fontWeight: FontWeight.bold)),
+                ],
+              ),
+            ),
+          ),
+
         _surahAyahPicker(
             label: "MULAI",
             surahValue: _startSurah,
@@ -235,7 +418,10 @@ class _ModulInputScreenState extends ConsumerState<MutabaahInputScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text("Realisasi:", style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
+                  Text(
+                    isDelayed ? "Realisasi Pelunasan:" : "Realisasi:",
+                    style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF64748B)),
+                  ),
                   _isLoadingPages
                       ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
                       : Text(
@@ -248,12 +434,12 @@ class _ModulInputScreenState extends ConsumerState<MutabaahInputScreen> {
                   ),
                 ],
               ),
-              if (target > 0) ...[
+              if (_totalTargetSnapshot > 0) ...[
                 const Divider(height: 24),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text("Target: ${target.toInt()} ${widget.modul.targetAmountUnit}", style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w600)),
+                    Text("Target Kumulatif: ${_totalTargetSnapshot.toInt()} ${widget.modul.targetAmountUnit}", style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w600)),
                     Text(
                       isBelowTarget ? "DIBAWAH TARGET" : "TARGET TERCAPAI",
                       style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: isBelowTarget ? Colors.orange : color),
@@ -265,7 +451,8 @@ class _ModulInputScreenState extends ConsumerState<MutabaahInputScreen> {
           ),
         ),
 
-        if (widget.modul.tipe == 'MUROJAAH') _buildMurojaahFields(color),
+        // Tampilkan pilar murajaah secara kondisional berdasarkan flag modul
+        if (widget.modul.tipe == 'MUROJAAH' || widget.modul.showSabqiInMutabaah) _buildMurojaahFields(color),
       ],
     );
   }
@@ -278,20 +465,23 @@ class _ModulInputScreenState extends ConsumerState<MutabaahInputScreen> {
         const Text("PILAR MURAJAAH", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 11, color: Colors.grey)),
         const SizedBox(height: 16),
 
-        // Sabqi Input
-        _pilarInput(
-          label: "SABQI (Target: ${widget.modul.sabqiAmount} Hal)",
-          controller: _sabqiInputController,
-          hint: "Jumlah halaman yang disetor...",
-        ),
+        // Sabqi Input: Muncul jika modul Murojaah atau modul Ziyadah yang mengaktifkan Sabqi
+        if (widget.modul.tipe == 'MUROJAAH' || widget.modul.showSabqiInMutabaah)
+          _pilarInput(
+            label: "SABQI (Target: ${widget.modul.sabqiAmount} Hal)",
+            controller: _sabqiInputController,
+            hint: "Jumlah halaman yang disetor...",
+          ),
+
         const SizedBox(height: 16),
 
-        // Manzil Input
-        _pilarInput(
-          label: "MANZIL (${widget.modul.manzilType == 'fixed' ? 'Target: ${widget.modul.manzilAmount.toInt()} Hal' : 'Target: ${widget.modul.manzilAmount.toInt()}%'})",
-          controller: _manzilInputController,
-          hint: "Realisasi manzil hari ini...",
-        ),
+        // Manzil Input: Muncul hanya jika tipe Murojaah murni
+        if (widget.modul.tipe == 'MUROJAAH')
+          _pilarInput(
+            label: "MANZIL (${widget.modul.manzilType == 'fixed' ? 'Target: ${widget.modul.manzilAmount.toInt()} Hal' : 'Target: ${widget.modul.manzilAmount.toInt()}%'})",
+            controller: _manzilInputController,
+            hint: "Realisasi manzil hari ini...",
+          ),
       ],
     );
   }
@@ -365,43 +555,69 @@ class _ModulInputScreenState extends ConsumerState<MutabaahInputScreen> {
     final bool isQuranic = ['ZIYADAH HAFALAN', 'ZIYADAH TILAWAH', 'MUROJAAH', 'TASMI\''].contains(widget.modul.tipe);
     Map<String, dynamic> payload = {};
 
+    double achieved = 0.0;
+    double deficit = 0.0;
+
     if (isQuranic) {
       if (_startSurah == null || _startAyah == null || _endSurah == null || _endAyah == null) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Lengkapi rentang ayat!")));
         return;
       }
 
-      // LOGIKA VALIDASI KEBIJAKAN BLUEPRINT FINAL
-      if (!_isTargetMet && widget.modul.targetAmount > 0) {
-        if (widget.modul.isStrict) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(backgroundColor: Colors.red[800], content: Text("Gagal Simpan: Sesuai kebijakan 'Wajib Target', setoran minimal harus ${widget.modul.targetAmount.toInt()} ${widget.modul.targetAmountUnit.toLowerCase()}.")));
-          return;
-        } else if (widget.modul.isAllowBelowTarget) {
-          final confirm = await showDialog<bool>(
-            context: context,
-            builder: (ctx) => AlertDialog(
-              title: const Text("Konfirmasi Target"),
-              content: const Text("Setoran santri di bawah target. Tetap simpan?"),
-              actions: [
-                TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text("BATAL")),
-                TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text("TETAP SIMPAN", style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold))),
-              ],
-            ),
-          );
-          if (confirm != true) return;
-        }
-      }
+      if (widget.modul.tipe == 'TASMI\'') {
+        final settings = widget.modul.tasmiSettings ?? {};
+        double finalScore = MutabaahTahfidzService().calculateTasmiScore(settings, _penaltyCounts, _directScores);
+        achieved = finalScore;
+        _isTargetMet = achieved >= widget.modul.kkm; // Lulus jika >= KKM
 
-      payload = {
-        "start_surah": _startSurah, "start_ayah": _startAyah,
-        "end_surah": _endSurah, "end_ayah": _endAyah,
-        "calculated_pages": _calculatedPages, "calculated_lines": _calculatedLines,
-        "calculated_ayahs": _calculatedAyahs, // Simpan realisasi unit Ayat ke DB
-        "sabqi_realisasi": double.tryParse(_sabqiInputController.text) ?? 0.0,
-        "manzil_realisasi": double.tryParse(_manzilInputController.text) ?? 0.0,
-      };
+        payload = {
+          "start_surah": _startSurah, "start_ayah": _startAyah,
+          "end_surah": _endSurah, "end_ayah": _endAyah,
+          "tasmi_score": finalScore,
+          "penalty_counts": _penaltyCounts,
+          "direct_scores": _directScores,
+        };
+      } else {
+        // Tentukan capaian berdasarkan unit target
+        achieved = widget.modul.targetAmountUnit == 'HALAMAN' ? _calculatedPages : (widget.modul.targetAmountUnit == 'AYAT' ? _calculatedAyahs : _calculatedLines);
+
+        // Hitung kekurangan (hutang baru)
+        deficit = _totalTargetSnapshot - achieved;
+        if (deficit < 0) deficit = 0; // Tidak ada hutang jika melampaui target
+
+        // VALIDASI KEBIJAKAN WAJIB TARGET (STRICT)
+        if (!_isTargetMet && _totalTargetSnapshot > 0) {
+          if (widget.modul.isStrict) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(backgroundColor: Colors.red[800], content: Text("Gagal Simpan: Sesuai kebijakan 'Wajib Target', setoran minimal (Target + Hutang) harus ${_totalTargetSnapshot.toInt()} ${widget.modul.targetAmountUnit.toLowerCase()}.")));
+            return;
+          } else if (widget.modul.isAllowBelowTarget) {
+            final confirm = await showDialog<bool>(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: const Text("Konfirmasi Target"),
+                content: Text("Setoran santri di bawah target kumulatif (Kurang: ${deficit.toInt()} ${widget.modul.targetAmountUnit}). Tetap simpan?"),
+                actions: [
+                  TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text("BATAL")),
+                  TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text("TETAP SIMPAN", style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold))),
+                ],
+              ),
+            );
+            if (confirm != true) return;
+          }
+        }
+
+        payload = {
+          "start_surah": _startSurah, "start_ayah": _startAyah,
+          "end_surah": _endSurah, "end_ayah": _endAyah,
+          "calculated_pages": _calculatedPages, "calculated_lines": _calculatedLines,
+          "calculated_ayahs": _calculatedAyahs,
+          "sabqi_realisasi": double.tryParse(_sabqiInputController.text) ?? 0.0,
+          "manzil_realisasi": double.tryParse(_manzilInputController.text) ?? 0.0,
+        };
+      }
     } else {
       payload = {"nilai": double.tryParse(_nilaiController.text) ?? 0.0};
+      achieved = payload["nilai"];
     }
 
     final String originalGuruId = widget.siswa.guruId ?? '';
@@ -419,11 +635,35 @@ class _ModulInputScreenState extends ConsumerState<MutabaahInputScreen> {
       originalGuruId: originalGuruId, isDelegasi: isSubstitute,
       delegasiId: activeDelegasiId, payrollStatus: 'pending',
       modulId: widget.modul.id ?? '', tipeModul: widget.modul.tipe,
-      dataPayload: payload, catatan: _catatanController.text,
+      dataPayload: payload,
+      targetSnapshot: _totalTargetSnapshot,
+      achievedAmount: achieved,
+      sabqiAmount: double.tryParse(_sabqiInputController.text) ?? 0.0,
+      debtCreated: widget.modul.isAccumulated ? deficit : 0.0,
+      isPassedTarget: _isTargetMet,
+      catatan: _catatanController.text,
       createdAt: DateTime.now(),
     );
 
     await ref.read(mutabaahProvider.notifier).submitRecord(record);
     if (mounted) Navigator.pop(context);
+  }
+
+  Widget _buildPocketBadge(bool isDelayed) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: isDelayed ? Colors.orange.withValues(alpha: 0.1) : Colors.blue.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        isDelayed ? "KANTONG HUTANG" : "KANTONG BERJALAN",
+        style: TextStyle(
+          color: isDelayed ? Colors.orange : Colors.blue,
+          fontSize: 8,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+    );
   }
 }

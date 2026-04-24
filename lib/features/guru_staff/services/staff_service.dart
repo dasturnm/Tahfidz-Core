@@ -35,8 +35,10 @@ class StaffService extends BaseService {
           ...json,
           'nama': json['nama_lengkap'],
           'namaDivisi': json['divisi']?['nama_divisi'] ?? '-',
-          'namaCabang': penugasanActive?['cabang']?['nama_cabang'] ?? '-',
-          'namaJabatan': penugasanActive?['jabatan']?['nama_jabatan'] ?? '-',
+          // FIX: Identifikasi Pusat jika cabang_id null di penugasan aktif
+          'namaCabang': penugasanActive?['cabang']?['nama_cabang'] ?? (penugasanActive != null ? 'Pusat' : '-'),
+          // FIX: Fallback ke teks jabatan di profile jika data relasi penugasan belum dibuat
+          'namaJabatan': penugasanActive?['jabatan']?['nama_jabatan'] ?? json['jabatan'] ?? '-',
           'assignments': listPenugasan,
           'last_attendance': lastAttendance,
         });

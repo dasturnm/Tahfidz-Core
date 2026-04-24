@@ -50,7 +50,7 @@ class _KelasFormScreenState extends ConsumerState<KelasFormScreen> {
     // Jika mode edit, isi data awal
     if (widget.existingKelas != null) {
       final c = widget.existingKelas!;
-      _nameController.text = c.name;
+      _nameController.text = c.namaKelas; // FIX: Menggunakan namaKelas
       _selectedProgramId = c.programId;
       _selectedTeacherId = c.guruId; // PERBAIKAN: Label Guru
       _waktuController.text = c.waktuBelajar ?? '';
@@ -138,7 +138,7 @@ class _KelasFormScreenState extends ConsumerState<KelasFormScreen> {
     // Merakit data kelas (cabangId diabaikan karena redundan)
     final classData = KelasModel(
       id: widget.existingKelas?.id,
-      name: _nameController.text.trim(),
+      namaKelas: _nameController.text.trim(), // FIX: Menggunakan namaKelas
       programId: _selectedProgramId,
       guruId: _selectedTeacherId, // PERBAIKAN: Label Guru
       waktuBelajar: _waktuController.text.trim(),

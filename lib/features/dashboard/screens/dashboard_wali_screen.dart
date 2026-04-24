@@ -56,20 +56,16 @@ class DashboardWaliScreen extends ConsumerWidget {
               _buildProgressCard(emerald),
               const SizedBox(height: 32),
 
-              // 3. MUROJAAH CHECKLIST (CORE FEATURE)
-              if (profile != null)
-                MurojaahChecklistWidget(
-                  studentId: profile.id, // Menghapus dead null aware (id sudah pasti ada jika profile != null)
-                  // Menghapus 'const' karena ModulModel memiliki properti List/non-const
-                  modul: ModulModel(
-                      levelId: "current_level",
-                      namaModul: "Program Murojaah",
-                      tipe: "MUROJAAH",
-                      sabqiAmount: 5, // Default 5 hal ke belakang
-                      manzilType: 'percentage', // Default manzil dinamis 10%
-                      manzilAmount: 10.0
-                  ),
-                ),
+              // 3. MONITORING TARGET & HUTANG (V2026 - MUTABAAH PINTAR)
+              if (profile != null) ...[
+                // Banner Hutang: Muncul jika santri memiliki akumulasi beban
+                _buildDebtBanner(emerald),
+                const SizedBox(height: 16),
+
+                // Checklist Murojaah Mandiri (Manzil)
+                // Hanya muncul jika diaktifkan di Kurikulum (showManzilInDashboard: true)
+                _buildMurojaahSection(profile.id),
+              ],
 
               const SizedBox(height: 32),
 
@@ -83,6 +79,75 @@ class DashboardWaliScreen extends ConsumerWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  // Widget pendukung untuk logika Murojaah Mandiri
+  Widget _buildMurojaahSection(String studentId) {
+    // Note: Di produksi, ModulModel ini diambil dari data profil/kurikulum aktif siswa
+    // Kita simulasikan dengan flag showManzilInDashboard: true
+    final activeModul = ModulModel(
+      levelId: "current_level",
+      namaModul: "Program Murojaah",
+      tipe: "MUROJAAH",
+      sabqiAmount: 5,
+      manzilType: 'percentage',
+      manzilAmount: 10.0,
+      showManzilInDashboard: true, // Flag krusial dari Kurikulum
+    );
+
+    if (!activeModul.showManzilInDashboard) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          "TUGAS MURAJAAH HARI INI",
+          style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12, color: Colors.blueGrey, letterSpacing: 1.1),
+        ),
+        const SizedBox(height: 16),
+        MurojaahChecklistWidget(
+          studentId: studentId,
+          modul: activeModul,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDebtBanner(Color color) {
+    // Simulasi deteksi hutang dari record mutabaah terakhir
+    // Di produksi, data ini diambil dari provider mutabaah (getLatestDebt)
+    const double currentDebt = 3.0;
+
+    if (currentDebt <= 0) return const SizedBox.shrink();
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.orange[50],
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.orange[200]!),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(color: Colors.orange, borderRadius: BorderRadius.circular(10)),
+            child: const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 20),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text("Hutang Hafalan Terdeteksi!", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.orange)),
+                Text("Ananda memiliki tanggungan $currentDebt halaman. Yuk semangat melunasi hari ini!",
+                    style: TextStyle(fontSize: 11, color: Colors.orange[900])),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -82,7 +82,7 @@ class _AddKelasDialogState extends ConsumerState<AddKelasDialog> {
             // PERBAIKAN: Menggunakan kelasListProvider.notifier sesuai standar Riverpod Generator
             await ref.read(kelasListProvider.notifier).addKelas(
               KelasModel(
-                name: _nameController.text,
+                namaKelas: _nameController.text, // FIX: Menggunakan namaKelas sesuai Model terbaru
                 guruId: _selectedTeacherId,
                 // level dihapus sementara agar tidak error undefined_named_parameter
               ),

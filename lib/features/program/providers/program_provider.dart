@@ -49,6 +49,7 @@ class ProgramNotifier extends _$ProgramNotifier {
   // --- FUNGSI TAMBAH PROGRAM BARU ---
   Future<void> addProgram({
     required String nama,
+    String? kurikulumId, // Tambahkan kurikulumId
     String? cabangId, // Diubah: Mengganti tag menjadi cabangId
     String? deskripsi,
     double pendaftaran = 0,
@@ -67,6 +68,7 @@ class ProgramNotifier extends _$ProgramNotifier {
       await _service.addProgram(
         lembagaId: lembagaId,
         nama: nama,
+        kurikulumId: kurikulumId, // Teruskan kurikulumId ke service
         cabangId: cabangId,
         deskripsi: deskripsi,
         pendaftaran: pendaftaran,
@@ -125,7 +127,27 @@ class ProgramNotifier extends _$ProgramNotifier {
 /// Mengambil daftar hari efektif program secara reaktif untuk kalkulasi estimasi tanggal selesai.
 @riverpod
 List<String> programHariEfektif(ProgramHariEfektifRef ref, String programId) {
+  if (programId.isEmpty || programId == 'null') {
+    debugPrint("⚠️ Estimasi Lulus: programId KOSONG. Pastikan Level ini sudah terhubung dengan program_id di Database.");
+    return [];
+  }
+
   final programs = ref.watch(programNotifierProvider).value ?? [];
+  if (programs.isEmpty) {
+    debugPrint("⏳ Estimasi Lulus: Menunggu data ProgramNotifier selesai di-load...");
+  }
+
   final match = programs.where((p) => p.id == programId);
-  return match.isNotEmpty ? match.first.hariAktif : []; // FIX: Menggunakan hariAktif sesuai ProgramModel
+
+  if (match.isEmpty && programs.isNotEmpty) {
+    debugPrint("⚠️ Estimasi Lulus: Program dengan ID $programId TIDAK DITEMUKAN di dalam list Program!");
+    return [];
+  }
+
+  final hari = match.isNotEmpty ? match.first.hariAktif : <String>[];
+  if (match.isNotEmpty) {
+    debugPrint("✅ Estimasi Lulus: Ditemukan hari aktif $hari untuk program ${match.first.namaProgram}.");
+  }
+
+  return hari;
 }

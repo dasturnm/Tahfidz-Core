@@ -7,7 +7,7 @@ import 'package:intl/intl.dart';
 import '../../../core/constants/app_routes.dart';
 import '../providers/mutabaah_provider.dart';
 import '../models/mutabaah_model.dart';
-import '../../akademik/kurikulum/models/kurikulum_model.dart'; // FIX: Tambahkan import agar ModulModel dikenali
+// FIX: Tambahkan import agar ModulModel dikenali
 import '../../siswa/providers/siswa_provider.dart';
 
 
@@ -304,23 +304,13 @@ class _MutabaahHubScreenState extends ConsumerState<MutabaahHubScreen> {
                           child: Text(s.namaLengkap[0], style: TextStyle(color: _emerald, fontWeight: FontWeight.bold)),
                         ),
                         title: Text(s.namaLengkap, style: const TextStyle(fontWeight: FontWeight.bold)),
-                        subtitle: Text("Kelas: ${s.kelas?.name ?? '-'}"),
+                        // FIX: Menggunakan namaKelas sesuai standarisasi model terbaru
+                        subtitle: Text("Kelas: ${s.kelas?.namaKelas ?? '-'}"),
                         trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
                         onTap: () {
                           Navigator.pop(context);
-                          // FIX: Menambahkan parameter wajib levelId agar tidak error
-                          context.push(
-                            AppRouteNames.mutabaahInput,
-                            extra: {
-                              'siswa': s,
-                              'modul': ModulModel(
-                                id: 'default-hafalan',
-                                namaModul: 'Setoran Hafalan',
-                                tipe: 'HAFALAN',
-                                levelId: '', // FIX: Parameter wajib ditambahkan
-                              ),
-                            },
-                          );
+                          // Navigasi ke pemilihan kantong (Dua Kantong System)
+                          _showModulPocketSelector(context, ref, s);
                         },
                       );
                     },
@@ -332,6 +322,83 @@ class _MutabaahHubScreenState extends ConsumerState<MutabaahHubScreen> {
         ),
       ),
     );
+  }
+
+  // FIX: Mengubah BuildContext parentContext agar lebih eksplisit, dan menyimpan NavigatorState di awal
+  void _showModulPocketSelector(BuildContext parentContext, WidgetRef ref, dynamic s) async {
+    // 1. Ambil NavigatorState SEBELUM proses async dimulai.
+    // Ini menjamin kita punya akses ke Navigator yang aman, terlepas dari apa yang terjadi pada context layar.
+    final navigator = Navigator.of(parentContext, rootNavigator: true);
+
+    // 2. Tampilkan loading
+    showDialog(
+      context: parentContext,
+      barrierDismissible: false,
+      useRootNavigator: true,
+      builder: (ctx) => const PopScope(
+        canPop: false,
+        child: Center(child: CircularProgressIndicator(color: Color(0xFF10B981))),
+      ),
+    );
+
+    try {
+      final activeModuls = await ref.read(activeModulsBySiswaProvider(s.id!).future);
+
+      // 3. Tutup dialog loading menggunakan NavigatorState yang sudah diamankan
+      navigator.pop();
+
+      if (activeModuls.isEmpty) {
+        if (parentContext.mounted) ScaffoldMessenger.of(parentContext).showSnackBar(const SnackBar(content: Text("Tidak ada modul aktif untuk siswa ini.")));
+        return;
+      }
+
+      // Jika hanya ada 1 modul (Sekuensial / Belum ada hutang), langsung ke input
+      if (activeModuls.length == 1) {
+        if (parentContext.mounted) parentContext.push(AppRouteNames.mutabaahInput, extra: {'siswa': s, 'modul': activeModuls.first});
+        return;
+      }
+
+      // Jika ada > 1 modul (Tipe A / Carry-over), tampilkan pemilih kantong
+      if (parentContext.mounted) {
+        showModalBottomSheet(
+          context: parentContext,
+          backgroundColor: Colors.transparent,
+          builder: (ctx) => Container(
+            padding: const EdgeInsets.all(32),
+            decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text("Pilih Kantong Input", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                const Text("Siswa memiliki modul yang belum tuntas.", style: TextStyle(color: Colors.grey, fontSize: 13)),
+                const SizedBox(height: 24),
+                ...List.generate(activeModuls.length, (index) {
+                  final m = activeModuls[index];
+                  final bool isHutang = index < activeModuls.length - 1;
+                  return ListTile(
+                    leading: Icon(isHutang ? Icons.history_edu_rounded : Icons.star_rounded, color: isHutang ? Colors.orange : _emerald),
+                    title: Text(m.namaModul, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: Text(isHutang ? "KANTONG HUTANG" : "KANTONG BERJALAN", style: TextStyle(color: isHutang ? Colors.orange : _emerald, fontWeight: FontWeight.bold, fontSize: 10)),
+                    trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      parentContext.push(AppRouteNames.mutabaahInput, extra: {'siswa': s, 'modul': m});
+                    },
+                  );
+                }),
+              ],
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      // 4. Jika error, paksa tutup loading dan tampilkan pesan
+      navigator.pop();
+      if (parentContext.mounted) {
+        ScaffoldMessenger.of(parentContext).showSnackBar(SnackBar(content: Text("Error: $e")));
+      }
+    }
   }
 
   Widget _iconActionButton(IconData icon, VoidCallback onTap) {

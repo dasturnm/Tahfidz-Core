@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/kelas_provider.dart';
 import '../screens/kelas_form_screen.dart';
+import '../../siswa/providers/siswa_provider.dart'; // TAMBAHAN: Provider Siswa
 import 'kelas_detail_dialog.dart'; // Import dialog baru
 
 class ClassCardGrid extends ConsumerStatefulWidget {
@@ -32,7 +33,8 @@ class _ClassCardGridState extends ConsumerState<ClassCardGrid> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("Apakah Anda yakin ingin menghapus kelas '${kelas.name}'?"),
+            // FIX: Menggunakan namaKelas sesuai standarisasi model terbaru
+            Text("Apakah Anda yakin ingin menghapus kelas '${kelas.namaKelas}'?"),
             const SizedBox(height: 16),
             const Text("Masukkan Password Konfirmasi:", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
@@ -150,13 +152,22 @@ class _ClassCardGridState extends ConsumerState<ClassCardGrid> {
                 ],
               ),
               const SizedBox(height: 16),
-              Text(kelas.name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Color(0xFF1E293B))),
+              // FIX: Menggunakan namaKelas sesuai standarisasi model terbaru
+              Text(kelas.namaKelas, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Color(0xFF1E293B))),
               _buildGenderTag(kelas.program?.namaProgram ?? 'IKHWAN'),
               const Spacer(),
               _buildDetailRow('GURU', kelas.waliKelas?.namaLengkap ?? '-', Icons.person_outline, isTeal: false),
               _buildDetailRow('WAKTU', kelas.waktuBelajar ?? '-', Icons.access_time_rounded),
               _buildDetailRow('RUANGAN', kelas.ruangan ?? '-', Icons.business_rounded),
-              _buildCapacityRow(kelas.kapasitas ?? 15),
+              // FIX: Menyisipkan jumlah siswa dari siswaListProvider
+              Builder(
+                  builder: (context) {
+                    final studentCount = (ref.watch(siswaListProvider).value ?? [])
+                        .where((s) => s.kelasId == kelas.id)
+                        .length;
+                    return _buildCapacityRow(studentCount, kelas.kapasitas ?? 15);
+                  }
+              ),
             ],
           ),
         ),
@@ -201,14 +212,15 @@ class _ClassCardGridState extends ConsumerState<ClassCardGrid> {
     );
   }
 
-  Widget _buildCapacityRow(int max) {
+  // FIX: Menerima parameter current agar nilai tidak di-hardcode '0'
+  Widget _buildCapacityRow(int current, int max) {
     return Row(
       children: [
         const Text('KAPASITAS', style: TextStyle(fontSize: 8, fontWeight: FontWeight.w900, color: Color(0xFF94A3B8))),
         const Spacer(),
         _buildDotProgress(),
         const SizedBox(width: 8),
-        Text('0 / $max', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFF1E293B))),
+        Text('$current / $max', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFF1E293B))),
       ],
     );
   }

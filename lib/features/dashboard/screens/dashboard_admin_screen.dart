@@ -197,7 +197,8 @@ class DashboardAdminScreen extends ConsumerWidget {
                   return _buildSiswaItem(
                     (index + 1).toString(),
                     s.namaLengkap,
-                    s.kelas?.name ?? "Tanpa Kelas",
+                    // FIX: Menggunakan namaKelas sesuai standarisasi model terbaru
+                    s.kelas?.namaKelas ?? "Tanpa Kelas",
                     "100%", // Placeholder progress
                   );
                 }),

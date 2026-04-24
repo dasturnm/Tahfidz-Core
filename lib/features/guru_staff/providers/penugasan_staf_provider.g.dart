@@ -6,7 +6,7 @@ part of 'penugasan_staf_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$penugasanStafListHash() => r'e9ae81f75ab5c376ad8816b5a1a1569104a5feec';
+String _$penugasanStafListHash() => r'3280ed185e7b96345f4c5118d03ab954a2c4e66f';
 
 /// Copied from Dart SDK
 class _SystemHash {
@@ -175,12 +175,12 @@ class _PenugasanStafListProviderElement
   String get lembagaId => (origin as PenugasanStafListProvider).lembagaId;
 }
 
-String _$penugasanStafHash() => r'3695366dcda24a68f275a8d98c5bf94646640ec5';
+String _$penugasanStafHash() => r'0b27df2b8d5b1456474555e804e26b1ce1fde4f0';
 
 /// See also [PenugasanStaf].
 @ProviderFor(PenugasanStaf)
 final penugasanStafProvider =
-    AutoDisposeAsyncNotifierProvider<PenugasanStaf, void>.internal(
+    AutoDisposeNotifierProvider<PenugasanStaf, void>.internal(
   PenugasanStaf.new,
   name: r'penugasanStafProvider',
   debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
@@ -190,6 +190,6 @@ final penugasanStafProvider =
   allTransitiveDependencies: null,
 );
 
-typedef _$PenugasanStaf = AutoDisposeAsyncNotifier<void>;
+typedef _$PenugasanStaf = AutoDisposeNotifier<void>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

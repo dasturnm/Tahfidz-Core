@@ -4,6 +4,7 @@ class ProgramModel {
   final String id;
   final String lembagaId;
   final String? cabangId; // Baru: Menggantikan tagKurikulum untuk relasi cabang
+  final String? kurikulumId; // Tambahkan properti kurikulumId
   final String namaProgram;
   final String? deskripsi;
   final double biayaPendaftaran; // Ditampilkan di seksi Investasi
@@ -17,6 +18,7 @@ class ProgramModel {
     required this.id,
     required this.lembagaId,
     this.cabangId,
+    this.kurikulumId, // Tambahkan ke constructor
     required this.namaProgram,
     this.deskripsi,
     this.biayaPendaftaran = 0,
@@ -30,6 +32,7 @@ class ProgramModel {
     id: json['id']?.toString() ?? '',
     lembagaId: json['lembaga_id']?.toString() ?? '',
     cabangId: json['cabang_id']?.toString(),
+    kurikulumId: json['kurikulum_id']?.toString(), // Map dari database
     namaProgram: json['nama_program']?.toString() ?? '',
     deskripsi: json['deskripsi']?.toString(),
     biayaPendaftaran: (json['biaya_pendaftaran'] as num?)?.toDouble() ?? 0,
@@ -45,6 +48,7 @@ class ProgramModel {
   Map<String, dynamic> toJson() => {
     'lembaga_id': lembagaId,
     'cabang_id': cabangId,
+    'kurikulum_id': kurikulumId, // Sertakan saat insert/update
     'nama_program': namaProgram,
     'deskripsi': deskripsi,
     'biaya_pendaftaran': biayaPendaftaran,
@@ -58,6 +62,7 @@ class ProgramModel {
     String? id,
     String? lembagaId,
     String? cabangId,
+    String? kurikulumId, // Tambahkan kurikulumId
     String? namaProgram,
     String? deskripsi,
     double? biayaPendaftaran,
@@ -70,6 +75,7 @@ class ProgramModel {
       id: id ?? this.id,
       lembagaId: lembagaId ?? this.lembagaId,
       cabangId: cabangId ?? this.cabangId,
+      kurikulumId: kurikulumId ?? this.kurikulumId,
       namaProgram: namaProgram ?? this.namaProgram,
       deskripsi: deskripsi ?? this.deskripsi,
       biayaPendaftaran: biayaPendaftaran ?? this.biayaPendaftaran,

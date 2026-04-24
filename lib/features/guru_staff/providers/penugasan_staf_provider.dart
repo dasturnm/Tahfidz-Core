@@ -1,4 +1,7 @@
+// Lokasi: lib/features/guru_staff/providers/penugasan_staf_provider.dart
+
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:tahfidz_core/core/providers/app_context_provider.dart'; // TAMBAHAN
 import '../models/penugasan_staf_model.dart';
 import '../services/penugasan_staf_service.dart';
 
@@ -15,30 +18,23 @@ class PenugasanStafList extends _$PenugasanStafList {
   }
 
   Future<void> savePenugasan(PenugasanStafModel penugasan) async {
-    try {
-      state = const AsyncValue.loading();
-
-      // FIX: Logika simpan dipindah ke service
+    state = const AsyncValue.loading();
+    // FIX: Menggunakan AsyncValue.guard untuk mencegah "Future already completed"
+    state = await AsyncValue.guard(() async {
       await _service.savePenugasan(penugasan);
-
-      // Refresh data agar UI otomatis update
-      state = AsyncValue.data(await _service.fetchPenugasan(lembagaId: lembagaId));
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
-    }
+      // Ambil data terbaru secara aman
+      return _service.fetchPenugasan(lembagaId: lembagaId);
+    });
   }
 
   Future<void> hapusPenugasan(String id) async {
-    try {
-      state = const AsyncValue.loading();
-
-      // FIX: Logika hapus dipindah ke service
+    state = const AsyncValue.loading();
+    // FIX: Menggunakan AsyncValue.guard untuk mencegah "Future already completed"
+    state = await AsyncValue.guard(() async {
       await _service.deletePenugasan(id);
-
-      state = AsyncValue.data(await _service.fetchPenugasan(lembagaId: lembagaId));
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
-    }
+      // Ambil data terbaru secara aman
+      return _service.fetchPenugasan(lembagaId: lembagaId);
+    });
   }
 }
 
@@ -47,9 +43,9 @@ class PenugasanStaf extends _$PenugasanStaf {
   final _service = PenugasanStafService();
 
   @override
-  FutureOr<void> build() {
-    // Inisialisasi awal (kosong)
-    return null;
+  void build() {
+    // FIX: Method build dibuat void (sinkronus) untuk Notifier Aksi/Mutasi
+    // agar tidak terjadi konflik completer saat update state manual.
   }
 
   /// Menambahkan data penugasan staf/guru baru ke database
@@ -60,22 +56,27 @@ class PenugasanStaf extends _$PenugasanStaf {
     bool isUtama = false, // Tambahan: Mendukung Rangkap Jabatan
     bool deactivatePrevious = false, // Tambahan: Opsi Mutasi (Ganti) atau Rangkap (Tambah)
   }) async {
-    try {
-      state = const AsyncValue.loading();
+    state = const AsyncValue.loading();
 
-      // FIX: Pindahkan seluruh logika bisnis mutasi & rangkap ke Service
+    // FIX: Menggunakan try-catch manual karena state bertipe void (menghindari use_of_void_result)
+    try {
+      // FIX: Ambil lembagaId dari context agar data tidak 'Yatim' (Lolos RLS)
+      final lembagaId = ref.read(appContextProvider).lembaga?.id ?? '';
+
       await _service.tambahPenugasan(
         stafId: stafId,
+        lembagaId: lembagaId, // SINKRON: Mengirim lembagaId ke service
         jabatanId: jabatanId,
         cabangId: cabangId,
         isUtama: isUtama,
         deactivatePrevious: deactivatePrevious,
       );
 
+      // Berhasil: set state ke data null
       state = const AsyncValue.data(null);
     } catch (e, st) {
+      // Gagal: set state ke error
       state = AsyncValue.error(e, st);
-      // Lempar error ke UI jika proses gagal agar bisa ditangkap oleh blok catch di form
       rethrow;
     }
   }

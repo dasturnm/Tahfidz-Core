@@ -22,14 +22,20 @@ import 'package:tahfidz_core/features/mutabaah/screens/ranking_screen.dart';
 import 'package:tahfidz_core/features/siswa/screens/siswa_list_screen.dart'; // SAFE UPDATE: Perbaikan case sensitivity
 import 'package:tahfidz_core/features/siswa/screens/siswa_hub_screen.dart'; // SAFE UPDATE: Hub Kelas
 import 'package:tahfidz_core/features/program/screens/program_list_screen.dart'; // SAFE UPDATE: Hub Program
-// FIX: Tambahkan import untuk fitur yang belum terdaftar di router
+// FIX: Tambahkan import untuk fitur yang baru ditambahkan di Sidebar
+import 'package:tahfidz_core/features/management_lembaga/screens/lembaga_profile_screen.dart';
+import 'package:tahfidz_core/features/management_lembaga/screens/cabang_list_screen.dart';
+import 'package:tahfidz_core/features/management_lembaga/screens/tahun_ajaran_screen.dart';
+import 'package:tahfidz_core/features/management_lembaga/screens/divisi_list_screen.dart';
+import 'package:tahfidz_core/features/program/screens/agenda_akademik_screen.dart';
+import 'package:tahfidz_core/features/program/widgets/academic_calendar_tab.dart';
+// REMOVED: modul_model.dart (File tidak ada, ModulModel ada di kurikulum_model.dart)
 import 'package:tahfidz_core/features/guru_staff/screens/staff_hub_screen.dart';
 // import 'package:tahfidz_core/features/kelas/screens/kelas_hub_screen.dart'; // REMOVED: File tidak ada
 import 'package:tahfidz_core/features/mushaf/screens/mushaf_index_screen.dart';
 import 'package:tahfidz_core/features/mushaf/screens/mushaf_screen.dart';
 import 'package:tahfidz_core/features/siswa/models/siswa_model.dart';
 import 'package:tahfidz_core/features/akademik/kurikulum/models/kurikulum_model.dart';
-// FIX: Tambahkan import ModulModel
 import 'package:tahfidz_core/features/keuangan/screens/keuangan_screen.dart';
 import 'package:tahfidz_core/features/keuangan/screens/salary_settings_screen.dart';
 import 'package:tahfidz_core/features/keuangan/widgets/teacher_payroll_dashboard.dart';
@@ -39,10 +45,12 @@ part 'app_routes.g.dart';
 
 @riverpod
 GoRouter router(Ref ref) { // Ganti RouterRef jadi Ref
-  // Watch authProvider untuk memantau perubahan status logi
+  // Watch authProvider untuk memantau perubahan status login
   final authState = ref.watch(authProvider);
-  final appContext = ref.watch(appContextProvider);
 
+  // OPTIMASI: Gunakan .select agar router tidak rebuild berlebihan saat data context berubah
+  // Ini kunci utama untuk menghilangkan flickering (kedipan)
+  final bool isAppContextLoading = ref.watch(appContextProvider.select((s) => s.isLoading));
 
   return GoRouter(
     initialLocation: AppRouteNames.dashboard,
@@ -57,13 +65,14 @@ GoRouter router(Ref ref) { // Ganti RouterRef jadi Ref
       }
 
       // 2. Jika sedang loading data konteks lembaga, jangan pindah dulu
-      if (appContext.isLoading) return null;
+      if (isAppContextLoading) return null;
 
       // 3. Jika sudah login tapi masih di halaman login -> masukkan ke dashboard
       if (isLoggingIn) {
         return AppRouteNames.dashboard;
       }
 
+      // CATATAN: Paksaan redirect ke setup lembaga DILONGGARKAN agar Dashboard bisa diakses
       return null;
     },
 
@@ -84,7 +93,7 @@ GoRouter router(Ref ref) { // Ganti RouterRef jadi Ref
           ),
           // FIX: Daftarkan Route Staf (SDM) agar bisa diklik
           GoRoute(
-            path: '/staf',
+            path: AppRouteNames.staf,
             builder: (context, state) => const StaffHubScreen(),
           ),
           // FIX: Daftarkan Route Mutabaah (Entry Point) untuk memperbaiki GoException
@@ -120,23 +129,56 @@ GoRouter router(Ref ref) { // Ganti RouterRef jadi Ref
           ),
           // FIX: Daftarkan Route Kelas di dalam Shell agar Sidebar TIDAK ganda
           GoRoute(
-            path: '/kelas',
+            path: AppRouteNames.kelas,
             builder: (context, state) => const SiswaHubScreen(), // SAFE UPDATE: Diarahkan ke SiswaHub sesuai struktur Hub Anda
           ),
           GoRoute(
-            path: '/mushaf-index',
+            path: AppRouteNames.mushafIndex,
             builder: (context, state) => const MushafIndexScreen(),
           ),
           // Tetap di dalam Shell agar Sidebar tetap muncul saat setup profil
           GoRoute(
-            path: '/setup-lembaga',
+            path: AppRouteNames.setupLembaga,
             builder: (context, state) => const ManagementHubScreen(),
           ),
+
+          // SAFE UPDATE: Daftarkan Route untuk modul lembaga yang baru ditambahkan di Sidebar
+          GoRoute(
+            path: AppRouteNames.profilLembaga,
+            builder: (context, state) => const LembagaProfileScreen(),
+          ),
+          GoRoute(
+            path: AppRouteNames.cabang,
+            builder: (context, state) => const CabangListScreen(),
+          ),
+          GoRoute(
+            path: AppRouteNames.tahunAjaran,
+            builder: (context, state) => const TahunAjaranScreen(),
+          ),
+          GoRoute(
+            path: AppRouteNames.divisi,
+            builder: (context, state) => const DivisiListScreen(),
+          ),
+
           // Tambahkan rute akademik jika diperlukan untuk navigasi sidebar
           GoRoute(
-            path: '/akademik/program',
+            path: AppRouteNames.program,
             builder: (context, state) => const ProgramListScreen(),
           ),
+          // SAFE UPDATE: Daftarkan Route akademik baru
+          GoRoute(
+            path: AppRouteNames.akademikAgenda,
+            builder: (context, state) => const AgendaAkademikScreen(),
+          ),
+          GoRoute(
+            path: AppRouteNames.akademikKalender,
+            builder: (context, state) => const AcademicCalendarTab(),
+          ),
+          GoRoute(
+            path: AppRouteNames.tasmi,
+            builder: (context, state) => const Scaffold(body: Center(child: Text('Fitur Ujian Tasmi dalam Pengembangan'))),
+          ),
+
           GoRoute(
             path: AppRouteNames.kurikulum,
             builder: (context, state) {
@@ -157,12 +199,29 @@ GoRouter router(Ref ref) { // Ganti RouterRef jadi Ref
             path: AppRouteNames.teacherPayroll,
             builder: (context, state) => const TeacherPayrollDashboard(),
           ),
+          // TAMBAHAN RUTE BARU (Sesuai update AppRouteNames)
+          GoRoute(
+            path: AppRouteNames.katalogSilabus,
+            builder: (context, state) => const Scaffold(body: Center(child: Text('Fitur Katalog Silabus dalam Pengembangan'))),
+          ),
+          GoRoute(
+            path: AppRouteNames.eRapor,
+            builder: (context, state) => const Scaffold(body: Center(child: Text('Fitur E-Rapor dalam Pengembangan'))),
+          ),
+          GoRoute(
+            path: AppRouteNames.eSertifikat,
+            builder: (context, state) => const Scaffold(body: Center(child: Text('Fitur E-Sertifikat dalam Pengembangan'))),
+          ),
+          GoRoute(
+            path: AppRouteNames.presensiSiswa,
+            builder: (context, state) => const Scaffold(body: Center(child: Text('Fitur Presensi Siswa dalam Pengembangan'))),
+          ),
         ],
       ),
 
       // 3. Route Full Screen (Tanpa Sidebar - Contoh: Mode baca Mushaf)
       GoRoute(
-        path: '/mushaf',
+        path: AppRouteNames.mushaf,
         builder: (context, state) => const MushafScreen(),
       ),
     ],

@@ -1,3 +1,5 @@
+// Lokasi: lib/features/guru_staff/widgets/all_staff_grid_view.dart
+
 import 'package:flutter/material.dart';
 import 'package:tahfidz_core/shared/models/profile_model.dart';
 import '../screens/staff_detail_screen.dart';
@@ -66,7 +68,10 @@ class AllStaffGridView extends StatelessWidget {
                       style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14, color: Color(0xFF1E293B)),
                     ),
                     Text(
+                      // FIX: Jabatan sinkron dengan Profile/Penugasan
                       staff.namaJabatan ?? 'Staf',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(fontSize: 10, color: Color(0xFF14B8A6), fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 8),

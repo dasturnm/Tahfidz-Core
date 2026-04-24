@@ -4,12 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 // FIX: Sinkronisasi nama file import (Staff dengan dua 'f')
 import 'package:tahfidz_core/features/guru_staff/services/guru_dan_staff_bulk_service.dart';
-import 'package:tahfidz_core/core/providers/app_context_provider.dart';
 import 'package:tahfidz_core/features/guru_staff/providers/staff_provider.dart';
-import 'package:tahfidz_core/features/guru_staff/providers/penugasan_staf_provider.dart';
-import 'package:tahfidz_core/features/auth/services/auth_service.dart';
 import 'staff_form_screen.dart';
 // PERBAIKAN: Baris import all_staff_table_screen.dart DIHAPUS karena file akan dihapus
+import '../widgets/import_staff_dialog.dart'; // TAMBAHAN
 import '../widgets/assignment_timeline_wrapper.dart';
 import '../widgets/all_staff_grid_view.dart';
 import '../widgets/all_staff_table_view.dart';
@@ -23,8 +21,22 @@ class StaffHubScreen extends ConsumerStatefulWidget {
   ConsumerState<StaffHubScreen> createState() => _StaffHubScreenState();
 }
 
-class _StaffHubScreenState extends ConsumerState<StaffHubScreen> {
+class _StaffHubScreenState extends ConsumerState<StaffHubScreen> with TickerProviderStateMixin {
   bool isGridView = true; // State untuk toggle tampilan
+  late TabController _tabController; // TAMBAHAN: Untuk deteksi Tab Riwayat
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 4, vsync: this);
+    _tabController.addListener(() => setState(() {})); // Rebuild saat tab pindah
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
 
   // --- 2. FUNGSI FILTER (Aktifkan Filter) ---
   void _showFilterSheet() {
@@ -115,136 +127,138 @@ class _StaffHubScreenState extends ConsumerState<StaffHubScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 4,
-      child: Scaffold(
-        backgroundColor: const Color(0xFFF8FAFC),
-        appBar: AppBar(
-          backgroundColor: Colors.white,
-          elevation: 0,
-          centerTitle: false,
-          title: const Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "SDM & Personalia",
-                style: TextStyle(color: Color(0xFF0F172A), fontWeight: FontWeight.w900, fontSize: 20),
-              ),
-              Text(
-                "Manajemen terpadu personil organisasi",
-                style: TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.w500),
-              ),
-            ],
-          ),
-          bottom: const TabBar(
-            isScrollable: true,
-            labelColor: Color(0xFF10B981),
-            unselectedLabelColor: Colors.grey,
-            indicatorColor: Color(0xFF10B981),
-            indicatorWeight: 3,
-            labelStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-            tabs: [
-              Tab(text: "Semua Staf"),
-              Tab(text: "Guru / Pengajar"),
-              Tab(text: "Staf Administrasi"),
-              Tab(text: "Riwayat Penugasan"),
-            ],
-          ),
-        ),
-        body: Column(
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: false,
+        title: const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 3. PERBAIKAN LETAK IKON: Kolom Pencarian | Filter | Ganti View
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      height: 50,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(15),
-                        border: Border.all(color: Colors.grey.shade200),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.search, color: Colors.grey, size: 20),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: TextField(
-                              onChanged: (val) => ref.read(staffSearchProvider.notifier).updateQuery(val),
-                              style: const TextStyle(fontSize: 13),
-                              decoration: const InputDecoration(
-                                hintText: "Cari personil...",
-                                hintStyle: TextStyle(color: Colors.grey, fontSize: 13),
-                                border: InputBorder.none,
-                                isDense: true,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  // --- IKON FILTER (Sekarang Berfungsi) ---
-                  GestureDetector(
-                    onTap: _showFilterSheet,
-                    child: Container(
-                      height: 50,
-                      width: 50,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(15),
-                        border: Border.all(color: Colors.grey.shade200),
-                      ),
-                      child: const Icon(Icons.filter_list, color: Colors.grey),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  // --- IKON GANTI VIEW ---
-                  GestureDetector(
-                    onTap: () => setState(() => isGridView = !isGridView),
-                    child: Container(
-                      height: 50,
-                      width: 50,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(15),
-                        border: Border.all(color: Colors.grey.shade200),
-                      ),
-                      child: Icon(
-                        isGridView ? Icons.view_list_rounded : Icons.grid_view_rounded,
-                        color: const Color(0xFF10B981),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+            Text(
+              "SDM & Personalia",
+              style: TextStyle(color: Color(0xFF0F172A), fontWeight: FontWeight.w900, fontSize: 20),
             ),
-            // DATA LIST AREA
-            Expanded(
-              child: TabBarView(
-                children: [
-                  // Tab 1: Semua Staf
-                  _buildFilteredView(null),
-                  // 1. PERBAIKAN VIEW GURU: Mengikuti Toggle
-                  _buildFilteredView('guru'),
-                  // 1. PERBAIKAN VIEW ADMIN: Mengikuti Toggle
-                  _buildFilteredView('admin'),
-                  // Tab 4: Riwayat Penugasan (Biasanya Timeline Tetap)
-                  const AssignmentTimelineWrapper(),
-                ],
-              ),
+            Text(
+              "Manajemen terpadu personil organisasi",
+              style: TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.w500),
             ),
           ],
         ),
-        floatingActionButton: FloatingActionButton(
-          backgroundColor: const Color(0xFF10B981),
-          onPressed: () => _showMassActionSheet(context, ref),
-          child: const Icon(Icons.add, color: Colors.white),
+        bottom: TabBar(
+          controller: _tabController,
+          isScrollable: true,
+          labelColor: const Color(0xFF10B981),
+          unselectedLabelColor: Colors.grey,
+          indicatorColor: const Color(0xFF10B981),
+          indicatorWeight: 3,
+          labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+          tabs: const [
+            Tab(text: "Semua Staf"),
+            Tab(text: "Guru / Pengajar"),
+            Tab(text: "Staf Administrasi"),
+            Tab(text: "Riwayat Penugasan"),
+          ],
         ),
+      ),
+      body: Column(
+        children: [
+          // 3. PERBAIKAN LETAK IKON: Kolom Pencarian | Filter | Ganti View
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    height: 50,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(15),
+                      border: Border.all(color: Colors.grey.shade200),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.search, color: Colors.grey, size: 20),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextField(
+                            onChanged: (val) => ref.read(staffSearchProvider.notifier).updateQuery(val),
+                            style: const TextStyle(fontSize: 13),
+                            decoration: const InputDecoration(
+                              hintText: "Cari personil...",
+                              hintStyle: TextStyle(color: Colors.grey, fontSize: 13),
+                              border: InputBorder.none,
+                              isDense: true,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // --- IKON FILTER (Sekarang Berfungsi) ---
+                GestureDetector(
+                  onTap: _showFilterSheet,
+                  child: Container(
+                    height: 50,
+                    width: 50,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(15),
+                      border: Border.all(color: Colors.grey.shade200),
+                    ),
+                    child: const Icon(Icons.filter_list, color: Colors.grey),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // --- IKON GANTI VIEW ---
+                GestureDetector(
+                  onTap: () => setState(() => isGridView = !isGridView),
+                  child: Container(
+                    height: 50,
+                    width: 50,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(15),
+                      border: Border.all(color: Colors.grey.shade200),
+                    ),
+                    child: Icon(
+                      isGridView ? Icons.view_list_rounded : Icons.grid_view_rounded,
+                      color: const Color(0xFF10B981),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // DATA LIST AREA
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                // Tab 1: Semua Staf
+                _buildFilteredView(null),
+                // 1. PERBAIKAN VIEW GURU: Mengikuti Toggle
+                _buildFilteredView('guru'),
+                // 1. PERBAIKAN VIEW ADMIN: Mengikuti Toggle
+                _buildFilteredView('admin'),
+                // Tab 4: Riwayat Penugasan (Biasanya Timeline Tetap)
+                const AssignmentTimelineWrapper(),
+              ],
+            ),
+          ),
+        ],
+      ),
+      // FIX: Tombol Plus dihapus otomatis saat berada di Tab Riwayat (Index 3)
+      floatingActionButton: _tabController.index == 3
+          ? null
+          : FloatingActionButton(
+        backgroundColor: const Color(0xFF10B981),
+        onPressed: () => _showMassActionSheet(context, ref),
+        child: const Icon(Icons.add, color: Colors.white),
       ),
     );
   }
@@ -258,8 +272,14 @@ class _StaffHubScreenState extends ConsumerState<StaffHubScreen> {
           // FIX: Hapus pengecekan null (?? false) pada s.id karena tipenya non-nullable String
           final bool matchesSearch = s.nama.toLowerCase().contains(query) || s.id.toLowerCase().contains(query);
           if (roleFilter == null) return matchesSearch;
-          if (roleFilter == 'guru') return matchesSearch && s.role == 'guru';
-          return matchesSearch && s.role != 'guru';
+
+          if (roleFilter == 'guru') {
+            // FIX: Cek role di profile ATAU nama jabatan hasil join
+            return matchesSearch && (s.role.toLowerCase() == 'guru' || (s.namaJabatan?.toLowerCase().contains('guru') ?? false));
+          }
+
+          // Filter Admin: Selain guru
+          return matchesSearch && (s.role.toLowerCase() != 'guru' && !(s.namaJabatan?.toLowerCase().contains('guru') ?? false));
         }).toList();
 
         return isGridView
@@ -301,24 +321,23 @@ class _StaffHubScreenState extends ConsumerState<StaffHubScreen> {
               ),
               ListTile(
                 leading: const Icon(Icons.upload_file_outlined, color: Colors.indigo),
-                title: const Text("Input Manual (CSV)", style: TextStyle(fontWeight: FontWeight.bold)),
+                title: const Text("Import Data", style: TextStyle(fontWeight: FontWeight.bold)), // Label Diubah
+                onTap: () {
+                  Navigator.pop(context);
+                  // FIX: Membuka dialog pratinjau agar sama dengan pola Siswa
+                  showDialog(
+                    context: context,
+                    builder: (context) => const ImportStaffDialog(),
+                  );
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.description_outlined, color: Colors.amber), // Tombol Baru
+                title: const Text("Download Template (CSV)", style: TextStyle(fontWeight: FontWeight.bold)),
                 onTap: () async {
                   Navigator.pop(context);
-                  final lembagaId = ref.read(appContextProvider).lembaga?.id ?? '';
-
-                  // FIX: Sinkronisasi nama provider ke guruDanStaffBulkServiceProvider (Dua 'f')
-                  await ref.read(guruDanStaffBulkServiceProvider).importDariCsv(
-                    lembagaId: lembagaId,
-                    defaultJabatanId: '',
-                    defaultCabangId: '',
-                    authService: ref.read(authServiceProvider),
-                    onTambahPenugasan: (stafId) => ref.read(penugasanStafProvider.notifier).tambahPenugasan(
-                      stafId: stafId,
-                      jabatanId: '',
-                      cabangId: '',
-                    ),
-                    onComplete: () => ref.invalidate(staffListProvider),
-                  );
+                  // Memanggil fungsi unduh template kosong dengan baris contoh
+                  await ref.read(guruDanStaffBulkServiceProvider).unduhTemplateCsv();
                 },
               ),
               ListTile(
@@ -327,7 +346,6 @@ class _StaffHubScreenState extends ConsumerState<StaffHubScreen> {
                 onTap: () async {
                   Navigator.pop(context);
                   final listStaff = ref.read(staffListProvider).value ?? [];
-                  // FIX: Sinkronisasi nama provider ke guruDanStaffBulkServiceProvider (Dua 'f')
                   await ref.read(guruDanStaffBulkServiceProvider).exportKeCsv(listStaff);
                 },
               ),

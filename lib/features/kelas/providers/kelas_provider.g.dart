@@ -6,6 +6,22 @@ part of 'kelas_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
+String _$kelasHash() => r'840ad65eb9bed6508e02dbf8a069dba3a345c7bd';
+
+/// See also [kelas].
+@ProviderFor(kelas)
+final kelasProvider = AutoDisposeProvider<List<KelasModel>>.internal(
+  kelas,
+  name: r'kelasProvider',
+  debugGetCreateSourceHash:
+      const bool.fromEnvironment('dart.vm.product') ? null : _$kelasHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef KelasRef = AutoDisposeProviderRef<List<KelasModel>>;
 String _$kelasSearchHash() => r'6482ecad19a96a6b1d9a50d8d3c2c1ca00601b69';
 
 /// See also [KelasSearch].
@@ -21,7 +37,7 @@ final kelasSearchProvider =
 );
 
 typedef _$KelasSearch = AutoDisposeNotifier<String>;
-String _$kelasListHash() => r'809222f7b6471d55d5021075ab50787403fb8022';
+String _$kelasListHash() => r'1c38e94f841e88dad3bc31a09ef479fc025e5baf';
 
 /// See also [KelasList].
 @ProviderFor(KelasList)

@@ -25,7 +25,8 @@ class _AttendancePrintDialogState extends ConsumerState<AttendancePrintDialog> {
 
     final pdf = pw.Document();
     // PERBAIKAN: Mengambil data dari value KelasListProvider (AsyncValue)
-    final className = (ref.read(kelasListProvider).value ?? []).firstWhere((c) => c.id == _selectedClassId).name;
+    // FIX: Menggunakan namaKelas sesuai standarisasi model terbaru
+    final className = (ref.read(kelasListProvider).value ?? []).firstWhere((c) => c.id == _selectedClassId).namaKelas;
 
     // FIX: Menggunakan notifier dari siswaListProvider sesuai arsitektur modern
     final siswa = ref.read(siswaListProvider.notifier).getSiswaInKelas(_selectedClassId!);
@@ -74,7 +75,8 @@ class _AttendancePrintDialogState extends ConsumerState<AttendancePrintDialog> {
           DropdownButtonFormField<String>(
             decoration: const InputDecoration(labelText: "Pilih Kelas"),
             // FIX: Menangani data list dari AsyncValue
-            items: (kelasAsync.value ?? []).map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))).toList(),
+            // FIX: Menggunakan namaKelas sesuai standarisasi model terbaru
+            items: (kelasAsync.value ?? []).map((c) => DropdownMenuItem(value: c.id, child: Text(c.namaKelas))).toList(),
             onChanged: (val) => setState(() => _selectedClassId = val),
           ),
         ],

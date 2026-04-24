@@ -61,6 +61,7 @@ class PenugasanStafService extends BaseService {
   /// 🚀 LOGIKA BISNIS: TAMBAH PENUGASAN (Mutasi & Rangkap Jabatan)
   Future<void> tambahPenugasan({
     required String stafId,
+    required String lembagaId, // TAMBAHAN: Agar data terbaca oleh RLS
     required String jabatanId,
     String? cabangId,
     bool isUtama = false,
@@ -69,20 +70,48 @@ class PenugasanStafService extends BaseService {
     try {
       final today = DateTime.now().toIso8601String().split('T')[0];
 
-      // 1. LOGIKA MUTASI: Selesaikan semua jabatan aktif sebelumnya jika diminta
+      // 1. Ambil info Role dari tabel jabatan (SINKRON: Menggunakan kolom default_role)
+      final jabData = await supabase
+          .from('jabatan')
+          .select('default_role')
+          .eq('id', jabatanId)
+          .single();
+
+      // FIX: Gunakan trim() dan toUpperCase() agar pencocokan string 100% akurat
+      final String roleValue = (jabData['default_role'] ?? '').toString().trim().toUpperCase();
+      String targetRole = 'staff';
+
+      // Sesuai dengan pilihan di Dropdown Jabatan (ADMIN_PUSAT, ADMIN_CABANG, GURU, STAFF)
+      if (roleValue == 'ADMIN_PUSAT') {
+        targetRole = 'admin_lembaga';
+      } else if (roleValue == 'ADMIN_CABANG') {
+        targetRole = 'admin_cabang';
+      } else if (roleValue == 'GURU') {
+        targetRole = 'guru';
+      } else if (roleValue == 'STAFF') {
+        targetRole = 'staff';
+      }
+
+      // 2. Update ROLE di tabel profiles agar sinkron dengan Jabatan Baru
+      await supabase
+          .from('profiles')
+          .update({'role': targetRole})
+          .eq('id', stafId);
+
+      // 3. LOGIKA MUTASI: Selesaikan semua jabatan aktif sebelumnya jika diminta
       if (deactivatePrevious) {
         await supabase
             .from('penugasan_staf')
             .update({
           'status': 'selesai',
-          'tanggal_selesai': today,
+          'tanggal_selesai': today, // FIX: Membutuhkan kolom ini di Supabase
           'is_utama': false,
         })
             .eq('profile_id', stafId)
             .eq('status', 'aktif');
       }
 
-      // 2. LOGIKA JABATAN UTAMA: Pastikan hanya ada satu jabatan utama yang aktif
+      // 4. LOGIKA JABATAN UTAMA: Pastikan hanya ada satu jabatan utama yang aktif
       if (isUtama) {
         await supabase
             .from('penugasan_staf')
@@ -90,9 +119,10 @@ class PenugasanStafService extends BaseService {
             .eq('profile_id', stafId);
       }
 
-      // 3. PROSES INSERT: Menambahkan penugasan baru
+      // 5. PROSES INSERT: Menambahkan penugasan baru
       await supabase.from('penugasan_staf').insert({
         'profile_id': stafId,
+        'lembaga_id': lembagaId, // FIX: Wajib ada agar data muncul di Tab/Filter
         'cabang_id': cabangId,
         'jabatan_id': jabatanId,
         'tanggal_mulai': today,

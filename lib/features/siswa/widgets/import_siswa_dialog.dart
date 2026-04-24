@@ -62,11 +62,15 @@ class _ImportSiswaDialogState extends ConsumerState<ImportSiswaDialog> {
         if (row.length >= 2) {
           tempSiswa.add(
             SiswaModel(
-              namaLengkap: row[0].toString(),
-              jenisKelamin: row[1].toString().toUpperCase() == 'L' ? 'L' : 'P',
-              nisn: row.length > 2 ? row[2].toString() : null,
-              status: 'aktif',
               lembagaId: lembagaId,
+              namaLengkap: row[0].toString(),
+              nisn: row.length > 1 ? row[1].toString() : null,
+              email: row.length > 2 ? row[2].toString() : null,
+              noHp: row.length > 3 ? row[3].toString() : null,
+              jenisKelamin: row.length > 4 ? (row[4].toString().toUpperCase() == 'L' ? 'L' : 'P') : 'L',
+              tglLahir: row.length > 5 ? DateTime.tryParse(row[5].toString()) : null,
+              alamat: row.length > 6 ? row[6].toString() : null,
+              status: row.length > 7 ? row[7].toString().toLowerCase() : 'aktif',
             ),
           );
         }
@@ -128,8 +132,9 @@ class _ImportSiswaDialogState extends ConsumerState<ImportSiswaDialog> {
           mainAxisSize: MainAxisSize.min,
           children: [
             const Text(
-              'Gunakan format file .CSV dengan kolom:\nNama, Jenis Kelamin (L/P), NISN',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
+              'Gunakan format file .CSV sesuai template resmi.\nKolom: Nama, NISN, Email, No HP, JK, Tgl Lahir, Alamat, Status, Password',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 11, color: Colors.grey),
             ),
             const SizedBox(height: 20),
 
@@ -186,6 +191,13 @@ class _ImportSiswaDialogState extends ConsumerState<ImportSiswaDialog> {
         ),
       ),
       actions: [
+        TextButton(
+          onPressed: () => ref.read(siswaListProvider.notifier).downloadTemplate(),
+          child: const Text(
+              'Unduh Template',
+              style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold)
+          ),
+        ),
         TextButton(
           onPressed: () => Navigator.pop(context),
           child: const Text(

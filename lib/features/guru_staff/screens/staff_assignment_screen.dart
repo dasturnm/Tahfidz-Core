@@ -20,6 +20,7 @@ class _StaffAssignmentScreenState extends ConsumerState<StaffAssignmentScreen> {
   String? _selectedJabatanId;
   bool _isUtama = false;
   bool _isMutation = true; // True = Ganti Jabatan, False = Tambah Jabatan (Hybrid)
+  bool _isLoading = false; // TAMBAHAN: Mencegah Race Condition (Bad State)
 
   @override
   void initState() {
@@ -85,8 +86,10 @@ class _StaffAssignmentScreenState extends ConsumerState<StaffAssignmentScreen> {
               height: 55,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0F172A)),
-                onPressed: _prosesSimpan,
-                child: const Text("UPDATE PENUGASAN", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                onPressed: _isLoading ? null : _prosesSimpan,
+                child: _isLoading
+                    ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    : const Text("UPDATE PENUGASAN", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
               ),
             )
           ],
@@ -97,34 +100,44 @@ class _StaffAssignmentScreenState extends ConsumerState<StaffAssignmentScreen> {
 
   // --- LOGIKA SIMPAN ---
   void _prosesSimpan() async {
-    if (_selectedJabatanId == null) return;
+    if (_selectedJabatanId == null || _isLoading) return; // FIX: Guard Loading
 
-    // FIX: Menghapus variabel lembagaId yang tidak terpakai (unused_local_variable)
+    setState(() => _isLoading = true);
 
-    // 1. Jalankan proses penugasan (Mutasi/Hybrid)
-    await ref.read(penugasanStafProvider.notifier).tambahPenugasan(
-      stafId: widget.staff['id'],
-      cabangId: _selectedCabangId,
-      jabatanId: _selectedJabatanId!,
-      isUtama: _isUtama,
-      deactivatePrevious: _isMutation,
-    );
+    try {
+      // 1. Jalankan proses penugasan (Mutasi/Hybrid)
+      await ref.read(penugasanStafProvider.notifier).tambahPenugasan(
+        stafId: widget.staff['id'],
+        cabangId: _selectedCabangId,
+        jabatanId: _selectedJabatanId!,
+        isUtama: _isUtama,
+        deactivatePrevious: _isMutation,
+      );
 
-    // 2. DETEKSI ROLE OTOMATIS: Update Role di Profile berdasarkan Jabatan baru
-    // FIX: jabatanListProvider sekarang tidak menerima parameter
-    final jabatans = ref.read(jabatanListProvider).value ?? [];
-    final selectedJabatan = jabatans.firstWhere((j) => j.id.toString() == _selectedJabatanId);
+      // 2. DETEKSI ROLE OTOMATIS: Update Role di Profile berdasarkan Jabatan baru
+      // FIX: jabatanListProvider sekarang tidak menerima parameter
+      final jabatans = ref.read(jabatanListProvider).value ?? [];
+      final selectedJabatan = jabatans.firstWhere((j) => j.id.toString() == _selectedJabatanId);
 
-    // Jika nama jabatan mengandung kata 'guru' atau 'pengajar', set role 'guru'
-    // Selain itu (Admin, Sekretaris, Bendahara, dll), set role 'admin_lembaga'
-    final String namaLower = selectedJabatan.namaJabatan.toLowerCase();
-    final String newRole = (namaLower.contains('guru') || namaLower.contains('pengajar'))
-        ? 'guru'
-        : 'admin_lembaga';
+      // Jika nama jabatan mengandung kata 'guru' atau 'pengajar', set role 'guru'
+      // Selain itu (Admin, Sekretaris, Bendahara, dll), set role 'admin_lembaga'
+      final String namaLower = selectedJabatan.namaJabatan.toLowerCase();
+      final String newRole = (namaLower.contains('guru') || namaLower.contains('pengajar'))
+          ? 'guru'
+          : 'admin_lembaga';
 
-    await ref.read(staffListProvider.notifier).updateRole(widget.staff['id'], newRole);
+      await ref.read(staffListProvider.notifier).updateRole(widget.staff['id'], newRole);
 
-    if (mounted) Navigator.pop(context);
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Gagal mengupdate penugasan: $e"), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   Widget _buildModeOption(bool val, String title, String sub) {

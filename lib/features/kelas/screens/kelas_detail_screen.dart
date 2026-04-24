@@ -33,7 +33,8 @@ class _ClassDetailScreenState extends ConsumerState<ClassDetailScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Keluarkan Siswa?'),
-        content: Text('Apakah Anda yakin ingin mengeluarkan ${siswa.namaLengkap} dari Kelas ${widget.kelas.name}?'),
+        // FIX: Menggunakan namaKelas sesuai standarisasi model terbaru
+        content: Text('Apakah Anda yakin ingin mengeluarkan ${siswa.namaLengkap} dari Kelas ${widget.kelas.namaKelas}?'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')),
           TextButton(
@@ -85,7 +86,8 @@ class _ClassDetailScreenState extends ConsumerState<ClassDetailScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              widget.kelas.name,
+              // FIX: Menggunakan namaKelas sesuai standarisasi model terbaru
+              widget.kelas.namaKelas,
               style: const TextStyle(color: Color(0xFF1E293B), fontWeight: FontWeight.w900, fontSize: 18),
             ),
             Text(

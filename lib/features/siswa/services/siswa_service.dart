@@ -1,5 +1,12 @@
 // Lokasi: lib/features/siswa/services/siswa_service.dart
 
+import 'dart:io'; // TAMBAHAN
+import 'dart:typed_data'; // TAMBAHAN
+import 'package:csv/csv.dart'; // TAMBAHAN
+import 'package:file_picker/file_picker.dart'; // TAMBAHAN
+import 'package:path_provider/path_provider.dart'; // TAMBAHAN
+import 'package:share_plus/share_plus.dart'; // TAMBAHAN
+import 'package:flutter/material.dart'; // TAMBAHAN
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -20,20 +27,19 @@ class SiswaService extends BaseService {
     try {
       final lembagaId = getLembagaId(ref);
 
-      // FIX: Gunakan tipe data eksplisit untuk menghindari error invalid_assignment
+      // FIX: Menggunakan Left Join agar siswa muncul meski data relasi (kelas/level) ada yang kosong
       PostgrestFilterBuilder query = supabase
           .from('siswa')
           .select('''
             *,
             kelas (*),
             program (*),
-            kurikulum_level (*),
+            kurikulum_level!level_id (*),
             guru:profiles (*)
           ''');
 
-      // 🔥 EXPLICIT-SAFE: Gunakan helper dari BaseService
-      // FIX: Casting ke PostgrestFilterBuilder<PostgrestList> untuk konsistensi linting
-      query = applyLembagaFilter(query: query, lembagaId: lembagaId) as PostgrestFilterBuilder<PostgrestList>;
+      // 🔥 EXPLICIT-SAFE: Gunakan helper dari BaseService tanpa casting berlebihan
+      query = applyLembagaFilter(query: query, lembagaId: lembagaId);
 
       final response = await query.order('nama_lengkap', ascending: true);
 
@@ -51,18 +57,18 @@ class SiswaService extends BaseService {
     try {
       final lembagaId = getLembagaId(ref);
 
+      // FIX: Menghapus tanda '!' untuk mencegah siswa hilang jika level/guru belum diset
       PostgrestFilterBuilder query = supabase
           .from('siswa')
           .select('''
             *,
             kelas (*),
             program (*),
-            kurikulum_level (*),
+            kurikulum_level!level_id (*),
             guru:profiles (*)
           ''');
 
-      // FIX: Casting ke PostgrestFilterBuilder<PostgrestList>
-      query = applyLembagaFilter(query: query, lembagaId: lembagaId) as PostgrestFilterBuilder<PostgrestList>;
+      query = applyLembagaFilter(query: query, lembagaId: lembagaId);
 
       final response = await query
           .eq('kelas_id', kelasId)
@@ -84,11 +90,11 @@ class SiswaService extends BaseService {
             *,
             kelas (*),
             program (*),
-            kurikulum_level (*),
+            kurikulum_level!level_id (*),
             guru:profiles (*)
           ''');
 
-      query = applyLembagaFilter(query: query, lembagaId: lembagaId) as PostgrestFilterBuilder<PostgrestList>;
+      query = applyLembagaFilter(query: query, lembagaId: lembagaId);
 
       final response = await query
           .eq('guru_id', guruId)
@@ -109,11 +115,11 @@ class SiswaService extends BaseService {
             *,
             kelas!inner(*),
             program (*),
-            kurikulum_level (*),
+            kurikulum_level!level_id (*),
             guru:profiles (*)
           ''');
 
-      query = applyLembagaFilter(query: query, lembagaId: lembagaId) as PostgrestFilterBuilder<PostgrestList>;
+      query = applyLembagaFilter(query: query, lembagaId: lembagaId);
 
       final response = await query
           .eq('kelas.guru_id', guruId)
@@ -133,11 +139,11 @@ class SiswaService extends BaseService {
             *,
             kelas (*),
             program (*),
-            kurikulum_level (*),
+            kurikulum_level!level_id (*),
             guru:profiles (*)
           ''');
 
-      query = applyLembagaFilter(query: query, lembagaId: lembagaId) as PostgrestFilterBuilder<PostgrestList>;
+      query = applyLembagaFilter(query: query, lembagaId: lembagaId);
 
       final response = await query.order('nama_lengkap', ascending: true);
       return (response as List).map((json) => SiswaModel.fromJson(json)).toList();
@@ -149,11 +155,48 @@ class SiswaService extends BaseService {
   /// 3. CREATE: Menambahkan siswa baru
   Future<void> addSiswa(SiswaModel siswa) async {
     try {
-      // 🔥 CLEAN: Pastikan tidak ada string 'null' yang masuk ke DB
-      final data = cleanData(siswa.toJson());
+      String? targetLembagaId = siswa.lembagaId;
+      String? targetLevelId = siswa.levelId;
+
+      // 🛡️ SYNC LEMBAGA: Pastikan siswa mengikuti lembaga_id dari Kelas yang dipilih
+      if (siswa.kelasId != null) {
+        final classData = await supabase
+            .from('kelas')
+            .select('program_id, lembaga_id')
+            .eq('id', siswa.kelasId!)
+            .single();
+
+        targetLembagaId = classData['lembaga_id']; // Paksa sinkron ke lembaga kelas
+
+        if (siswa.programId != null && classData['program_id'] != siswa.programId) {
+          throw Exception('Peringatan Keamanan: Program siswa tidak cocok dengan Program pada Kelas yang dipilih.');
+        }
+      }
+
+      // 🎯 AUTO-ASSIGN LEVEL: Hubungkan siswa ke level pertama jika level_id kosong
+      if (targetLevelId == null && siswa.programId != null) {
+        final firstLevel = await supabase
+            .from('kurikulum_level')
+            .select('id')
+            .eq('program_id', siswa.programId!)
+            .order('urutan', ascending: true)
+            .limit(1)
+            .maybeSingle();
+
+        targetLevelId = firstLevel?['id'];
+      }
+
+      // 🔥 FINAL OBJECT: Gunakan copyWith untuk menyisipkan targetLembagaId dan targetLevelId
+      final finalSiswa = siswa.copyWith(
+        lembagaId: targetLembagaId,
+        levelId: targetLevelId,
+        currentLevelId: targetLevelId,
+      );
+
+      final data = cleanData(finalSiswa.toJson());
 
       // FIX: Menghapus ID null agar UUID di-generate otomatis oleh Supabase
-      if (siswa.id == null || (siswa.id?.isEmpty ?? true)) {
+      if (finalSiswa.id == null || (finalSiswa.id?.isEmpty ?? true)) {
         data.remove('id');
       }
 
@@ -168,11 +211,48 @@ class SiswaService extends BaseService {
     if (siswa.id == null) throw Exception('ID siswa tidak ditemukan');
 
     try {
-      final data = cleanData(siswa.toJson());
+      String? targetLembagaId = siswa.lembagaId;
+      String? targetLevelId = siswa.levelId;
+
+      // 🛡️ SYNC LEMBAGA pada Update
+      if (siswa.kelasId != null) {
+        final classData = await supabase
+            .from('kelas')
+            .select('program_id, lembaga_id')
+            .eq('id', siswa.kelasId!)
+            .single();
+
+        targetLembagaId = classData['lembaga_id'];
+
+        if (siswa.programId != null && classData['program_id'] != siswa.programId) {
+          throw Exception('Peringatan Keamanan: Program siswa tidak cocok dengan Program pada Kelas yang dipilih.');
+        }
+      }
+
+      // 🎯 AUTO-ASSIGN LEVEL: Hubungkan siswa ke level pertama jika program berubah dan level kosong
+      if (targetLevelId == null && siswa.programId != null) {
+        final firstLevel = await supabase
+            .from('kurikulum_level')
+            .select('id')
+            .eq('program_id', siswa.programId!)
+            .order('urutan', ascending: true)
+            .limit(1)
+            .maybeSingle();
+
+        targetLevelId = firstLevel?['id'];
+      }
+
+      final finalSiswa = siswa.copyWith(
+        lembagaId: targetLembagaId,
+        levelId: targetLevelId,
+        currentLevelId: targetLevelId,
+      );
+
+      final data = cleanData(finalSiswa.toJson());
       await supabase
           .from('siswa')
           .update(data)
-          .eq('id', siswa.id!);
+          .eq('id', finalSiswa.id!);
     } catch (e) {
       throw Exception(handleError(e));
     }
@@ -190,9 +270,10 @@ class SiswaService extends BaseService {
   /// 6. PLOTTING: Memasukkan/Mengeluarkan siswa dari Kelas
   Future<void> assignSiswaToKelas(String siswaId, String? kelasId) async {
     try {
+      // FIX: Jangan gunakan cleanData agar nilai null (untuk unplotting) tidak terhapus
       await supabase
           .from('siswa')
-          .update(cleanData({'kelas_id': kelasId}))
+          .update({'kelas_id': kelasId})
           .eq('id', siswaId);
     } catch (e) {
       throw Exception(handleError(e));
@@ -212,12 +293,111 @@ class SiswaService extends BaseService {
   /// 8. BULK PLOTTING: Memasukkan banyak siswa ke dalam satu Kelas sekaligus
   Future<void> bulkAssignSiswaToKelas(List<String> siswaIds, String? kelasId) async {
     try {
+      // FIX: Menggunakan .filter dengan operator 'in' sebagai pengganti .in_ untuk menghindari error undefined_method
       await supabase
           .from('siswa')
-          .update(cleanData({'kelas_id': kelasId}))
-          .filter('id', 'in', siswaIds); // FIX: Menggunakan filter 'in' standar Supabase
+          .update({'kelas_id': kelasId})
+          .filter('id', 'in', siswaIds);
     } catch (e) {
       throw Exception(handleError(e));
     }
+  }
+
+  /// 9. CSV: Export data siswa ke file CSV
+  Future<void> exportSiswaKeCsv(List<SiswaModel> listSiswa) async {
+    List<List<dynamic>> rows = [
+      ["Nama Lengkap", "NISN", "Email", "No HP", "Jenis Kelamin", "Tanggal Lahir", "Alamat", "Status", "Password Sementara"]
+    ];
+
+    for (var s in listSiswa) {
+      rows.add([
+        s.namaLengkap,
+        s.nisn ?? '-',
+        s.email ?? '-',
+        s.noHp ?? '-',
+        s.jenisKelamin,
+        s.tglLahir?.toIso8601String().split('T')[0] ?? '-',
+        s.alamat ?? '-',
+        s.status,
+        "-", // Password tidak di-export
+      ]);
+    }
+
+    String csvData = CsvCodec().encode(rows); // FIX: Menghapus const karena bukan const constructor
+    final directory = await getTemporaryDirectory();
+    final file = File('${directory.path}/Export_Siswa_${DateTime.now().millisecondsSinceEpoch}.csv');
+    await file.writeAsString(csvData);
+
+    // FIX: Gunakan class Share langsung dari package share_plus
+    await Share.shareXFiles([XFile(file.path)], subject: 'Export Data Siswa');
+  }
+
+  /// 10. CSV: Unduh Template Kosong Siswa
+  Future<void> unduhTemplateSiswaCsv() async {
+    try {
+      List<List<dynamic>> rows = [
+        ["Nama Lengkap", "NISN", "Email", "No HP", "Jenis Kelamin", "Tanggal Lahir", "Alamat", "Status", "Password Sementara"],
+        ["Zaidan Akram", "123456789", "wali.zaidan@email.com", "08123456789", "L", "2015-05-20", "Jl. Melati No. 12", "aktif", "Siswa123!"]
+      ];
+
+      String csvData = CsvCodec().encode(rows); // FIX: Menghapus const karena bukan const constructor
+      Uint8List bytes = Uint8List.fromList(csvData.codeUnits);
+
+      await FilePicker.platform.saveFile(
+        dialogTitle: 'Simpan Template Import Siswa',
+        fileName: 'Template_Import_Siswa.csv',
+        bytes: bytes,
+      );
+    } catch (e) {
+      debugPrint("Gagal mengunduh template: $e");
+    }
+  }
+
+  /// 11. CSV: Import data siswa dari file CSV
+  Future<Map<String, int>> importSiswaDariCsv({
+    required String lembagaId,
+    required VoidCallback onComplete,
+  }) async {
+    int sukses = 0;
+    int gagal = 0;
+
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['csv'],
+    );
+
+    if (result == null) return {'sukses': 0, 'gagal': 0};
+
+    final file = File(result.files.single.path!);
+    final csvString = await file.readAsString();
+    final fields = CsvCodec().decode(csvString); // FIX: Menghapus const karena bukan const constructor
+
+    for (int i = 1; i < fields.length; i++) {
+      final row = fields[i];
+      if (row.length < 5) continue;
+
+      try {
+        final siswa = SiswaModel(
+          lembagaId: lembagaId,
+          namaLengkap: row[0].toString(),
+          nisn: row[1].toString(),
+          email: row[2].toString(),
+          noHp: row[3].toString(),
+          jenisKelamin: row[4].toString().toUpperCase(),
+          tglLahir: DateTime.tryParse(row[5].toString()),
+          alamat: row[6].toString(),
+          status: row[7].toString().toLowerCase(),
+        );
+
+        await addSiswa(siswa);
+        sukses++;
+      } catch (e) {
+        gagal++;
+        debugPrint("Gagal import siswa baris $i: $e");
+      }
+    }
+
+    onComplete();
+    return {'sukses': sukses, 'gagal': gagal};
   }
 }
