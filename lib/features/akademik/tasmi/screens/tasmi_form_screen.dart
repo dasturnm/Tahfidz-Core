@@ -180,7 +180,7 @@ class _TasmiFormScreenState extends ConsumerState<TasmiFormScreen> {
               Text("Penguji memberikan kode/ketukan karena santri melakukan kesalahan yang tidak disadari.", style: TextStyle(fontSize: 12)),
               SizedBox(height: 10),
               Text("Dipandu (P):", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-              Text("Santri terhenti total atau melakukan kesalahan fatal sehingga harus dibacakan potongan ayat selanjutnya.", style: TextStyle(fontSize: 12)),
+              Text("Santri terhenti total atau melakukan kesalahan fatal sehingga harus dibacakan potongan ayah selanjutnya.", style: TextStyle(fontSize: 12)),
             ],
           ),
         ),

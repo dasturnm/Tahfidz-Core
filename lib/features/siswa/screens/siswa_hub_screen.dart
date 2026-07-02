@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:tahfidz_core/core/providers/app_context_provider.dart'; // TAMBAHAN
 
 // Widgets & Screens
 import '../widgets/siswa_table_view.dart';
@@ -20,6 +21,10 @@ import '../widgets/siswa_card_print_dialog.dart';
 // Providers
 import '../providers/siswa_provider.dart';
 import '../../kelas/providers/kelas_provider.dart'; // Tambahan
+import '../../management_lembaga/providers/cabang_provider.dart'; // TAMBAHAN
+import '../../program/providers/program_provider.dart'; // TAMBAHAN
+// TAMBAHAN
+import '../../akademik/kurikulum/providers/level_provider.dart'; // TAMBAHAN
 
 class SiswaHubScreen extends ConsumerStatefulWidget {
   const SiswaHubScreen({super.key});
@@ -92,30 +97,93 @@ class _SiswaHubScreenState extends ConsumerState<SiswaHubScreen> {
   void _showFilterBottomSheet() {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true, // TAMBAHAN: Agar modal fleksibel
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text("Filter & Urutkan", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 16),
-            const Text("Fitur filter sedang dalam pengembangan.", style: TextStyle(color: Colors.grey)),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0D9488),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      builder: (context) => Consumer( // FIX: Menggunakan Consumer agar UI filter reaktif
+        builder: (context, ref, child) {
+          final selectedCabang = ref.watch(siswaFilterCabangProvider);
+          final selectedProgram = ref.watch(siswaFilterProgramProvider);
+          final selectedLevel = ref.watch(siswaFilterLevelProvider);
+
+          // AMBIL ID LEMBAGA UNTUK FAMILY PROVIDER
+          final lembagaId = ref.watch(appContextProvider).lembaga?.id ?? '';
+
+          // FIX: Sinkronisasi nama Provider dengan Logic (Poin: UI mengikuti Logic)
+          final cabangs = ref.watch(cabangListProvider).value ?? [];
+          final programs = ref.watch(programNotifierProvider).value ?? [];
+          // FIX: Memberikan parameter lembagaId karena levelListProvider adalah Family Provider
+          final levels = ref.watch(levelListProvider(lembagaId)).value ?? [];
+
+          return Container(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text("Filter & Urutkan", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    TextButton(
+                      onPressed: () {
+                        ref.read(siswaFilterCabangProvider.notifier).update(null);
+                        ref.read(siswaFilterProgramProvider.notifier).update(null);
+                        ref.read(siswaFilterLevelProvider.notifier).update(null);
+                      },
+                      child: const Text("Reset", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                    ),
+                  ],
                 ),
-                child: const Text("TUTUP", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-              ),
+                const SizedBox(height: 16),
+
+                // 1. Filter Cabang
+                _buildFilterDropdown<String>(
+                  label: "Berdasarkan Cabang",
+                  value: selectedCabang,
+                  items: cabangs.map((c) => DropdownMenuItem(value: c.id, child: Text(c.namaCabang))).toList(),
+                  onChanged: (val) => ref.read(siswaFilterCabangProvider.notifier).update(val),
+                ),
+                const SizedBox(height: 16),
+
+                // 2. Filter Program
+                _buildFilterDropdown<String>(
+                  label: "Berdasarkan Program",
+                  value: selectedProgram,
+                  items: programs.map((p) => DropdownMenuItem(value: p.id, child: Text(p.namaProgram))).toList(),
+                  onChanged: (val) {
+                    ref.read(siswaFilterProgramProvider.notifier).update(val);
+                    ref.read(siswaFilterLevelProvider.notifier).update(null); // Reset level jika program berubah
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                // 3. Filter Jenjang (Level)
+                _buildFilterDropdown<String>(
+                  label: "Berdasarkan Jenjang",
+                  value: selectedLevel,
+                  items: levels
+                      .where((l) => selectedProgram == null || l.programId == selectedProgram)
+                      .map((l) => DropdownMenuItem(value: l.id, child: Text(l.namaLevel))).toList(),
+                  onChanged: (val) => ref.read(siswaFilterLevelProvider.notifier).update(val),
+                ),
+
+                const SizedBox(height: 32),
+                SizedBox( // FIX: Karakter non-ASCII '裙' dihapus
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF0D9488),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: const Text("TERAPKAN FILTER", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -136,7 +204,7 @@ class _SiswaHubScreenState extends ConsumerState<SiswaHubScreen> {
         child: Column(
           children: [
             // 1. HEADER (Title & Floating Action Logic)
-            Padding(
+            Padding( // FIX: Karakter non-ASCII '裙' dihapus
               padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
               child: _buildHeader(),
             ),
@@ -318,5 +386,33 @@ class _SiswaHubScreenState extends ConsumerState<SiswaHubScreen> {
       // PERBAIKAN: Menyelaraskan nama Class sesuai file widget yang diimport
       return _isKelasGridView ? const ClassCardGrid() : const ClassTableView();
     }
+  }
+
+  // --- HELPER WIDGETS ---
+  Widget _buildFilterDropdown<T>({
+    required String label,
+    required T? value,
+    required List<DropdownMenuItem<T>> items,
+    required ValueChanged<T?> onChanged,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<T>(
+          initialValue: value,
+          items: items,
+          onChanged: onChanged,
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: const Color(0xFFF8FAFC),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+          ),
+          hint: Text("Pilih $label...", style: const TextStyle(fontSize: 13)),
+        ),
+      ],
+    );
   }
 }

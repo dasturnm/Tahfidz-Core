@@ -20,6 +20,7 @@ import 'package:tahfidz_core/features/mutabaah/screens/mutabaah_input_screen.dar
 import 'package:tahfidz_core/features/mutabaah/screens/mutabaah_monitoring_screen.dart';
 import 'package:tahfidz_core/features/mutabaah/screens/ranking_screen.dart';
 import 'package:tahfidz_core/features/siswa/screens/siswa_list_screen.dart'; // SAFE UPDATE: Perbaikan case sensitivity
+import 'package:tahfidz_core/features/siswa/screens/siswa_form_screen.dart'; // TAMBAHAN: Untuk rute Edit/Tambah Siswa
 import 'package:tahfidz_core/features/siswa/screens/siswa_hub_screen.dart'; // SAFE UPDATE: Hub Kelas
 import 'package:tahfidz_core/features/program/screens/program_list_screen.dart'; // SAFE UPDATE: Hub Program
 // FIX: Tambahkan import untuk fitur yang baru ditambahkan di Sidebar
@@ -28,7 +29,7 @@ import 'package:tahfidz_core/features/management_lembaga/screens/cabang_list_scr
 import 'package:tahfidz_core/features/management_lembaga/screens/tahun_ajaran_screen.dart';
 import 'package:tahfidz_core/features/management_lembaga/screens/divisi_list_screen.dart';
 import 'package:tahfidz_core/features/program/screens/agenda_akademik_screen.dart';
-import 'package:tahfidz_core/features/program/widgets/academic_calendar_tab.dart';
+import 'package:tahfidz_core/features/program/widgets/academic_calendar_tab.dart'; // FIX: Melengkapi import AcademicCalendarTab
 // REMOVED: modul_model.dart (File tidak ada, ModulModel ada di kurikulum_model.dart)
 import 'package:tahfidz_core/features/guru_staff/screens/staff_hub_screen.dart';
 // import 'package:tahfidz_core/features/kelas/screens/kelas_hub_screen.dart'; // REMOVED: File tidak ada
@@ -39,6 +40,8 @@ import 'package:tahfidz_core/features/akademik/kurikulum/models/kurikulum_model.
 import 'package:tahfidz_core/features/keuangan/screens/keuangan_screen.dart';
 import 'package:tahfidz_core/features/keuangan/screens/salary_settings_screen.dart';
 import 'package:tahfidz_core/features/keuangan/widgets/teacher_payroll_dashboard.dart';
+import 'package:tahfidz_core/features/akademik/evaluasi/screens/form_evaluasi_screen.dart'; // TAMBAHAN: Import Form Evaluasi
+import 'package:tahfidz_core/features/akademik/evaluasi/screens/kesiapan_ujian_screen.dart'; // TAMBAHAN: Import Kesiapan Ujian
 
 // SAFE UPDATE: Nama part harus identik dengan nama file fisik agar generator berfungsi
 part 'app_routes.g.dart';
@@ -54,6 +57,29 @@ GoRouter router(Ref ref) { // Ganti RouterRef jadi Ref
 
   return GoRouter(
     initialLocation: AppRouteNames.dashboard,
+    errorBuilder: (context, state) => Scaffold(
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline_rounded, color: Colors.red, size: 64),
+            const SizedBox(height: 16),
+            const Text('404 - Halaman Tidak Ditemukan', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Text(state.error?.toString() ?? 'Tautan halaman salah atau kadaluarsa.', style: const TextStyle(color: Colors.grey), textAlign: TextAlign.center),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: () => context.go(AppRouteNames.dashboard),
+              icon: const Icon(Icons.dashboard_rounded),
+              label: const Text('Kembali ke Dashboard'),
+            ),
+          ],
+        ),
+      ),
+    ),
 
     // Logika Redirect Otomatis
     redirect: (context, state) {
@@ -114,18 +140,44 @@ GoRouter router(Ref ref) { // Ganti RouterRef jadi Ref
             builder: (context, state) {
               // SAFE UPDATE: Mencegah crash jika data extra kosong
               final extra = state.extra as Map<String, dynamic>?;
+
               if (extra == null || extra['siswa'] == null) {
                 return const Scaffold(body: Center(child: Text('Data tidak lengkap, silakan pilih siswa kembali')));
               }
+
+              // FIX: Backward Compatibility & Multi-Modul Parser
+              // Mengakomodasi pengirim lama ('modul' tunggal) dan pengirim baru ('activeModuls' List)
+              List<ModulModel> parsedModuls = [];
+
+              if (extra['activeModuls'] != null) {
+                // Jika data menggunakan format Multi-Modul baru
+                parsedModuls = List<ModulModel>.from(extra['activeModuls'] as Iterable);
+              } else if (extra['modul'] != null) {
+                // Jika data berasal dari layar dengan format Singular lama (Backward Compatible)
+                parsedModuls = [extra['modul'] as ModulModel];
+              }
+
+              // Validasi akhir jika kedua key kosong
+              if (parsedModuls.isEmpty) {
+                return const Scaffold(body: Center(child: Text('Data modul tidak ditemukan, silakan pilih siswa kembali')));
+              }
+
               return MutabaahInputScreen(
                 siswa: extra['siswa'] as SiswaModel,
-                modul: extra['modul'] as ModulModel,
+                activeModuls: parsedModuls,
               );
             },
           ),
           GoRoute(
             path: AppRouteNames.siswa,
             builder: (context, state) => const SiswaListScreen(),
+          ),
+          // FIX: Daftarkan Route Form Siswa (Edit/Tambah) agar GoException hilang
+          GoRoute(
+            path: '/akademik/siswa/form', // FIXED: Menggunakan string path karena AppRouteNames.siswaForm tidak ditemukan
+            builder: (context, state) => SiswaFormScreen(
+              existingSiswa: state.extra as SiswaModel?, // FIXED: Nama parameter constructor yang benar
+            ),
           ),
           // FIX: Daftarkan Route Kelas di dalam Shell agar Sidebar TIDAK ganda
           GoRoute(
@@ -176,7 +228,29 @@ GoRouter router(Ref ref) { // Ganti RouterRef jadi Ref
           ),
           GoRoute(
             path: AppRouteNames.tasmi,
-            builder: (context, state) => const Scaffold(body: Center(child: Text('Fitur Ujian Tasmi dalam Pengembangan'))),
+            builder: (context, state) {
+              final extra = state.extra as Map<String, dynamic>?;
+
+              // FIX: Jika diakses langsung tanpa parameter extra, arahkan ke Daftar Kesiapan Ujian
+              if (extra == null || extra['modul'] == null || extra['siswaId'] == null) {
+                return const KesiapanUjianScreen();
+              }
+
+              return FormEvaluasiScreen(
+                siswaId: extra['siswaId'] as String,
+                namaSiswa: extra['namaSiswa'] as String,
+                modul: extra['modul'] as ModulModel,
+                tipeEvaluasi: (extra['tipeEvaluasi'] as String?) ?? 'TASMI',
+              );
+            },
+          ),
+          GoRoute(
+            path: '/akademik/tasmi/remedial',
+            builder: (context, state) => const Scaffold(body: Center(child: Text('Fitur Daftar Siswa Remedial dalam Pengembangan'))),
+          ),
+          GoRoute(
+            path: '/akademik/tasmi/riwayat',
+            builder: (context, state) => const Scaffold(body: Center(child: Text('Fitur Riwayat Ujian dalam Pengembangan'))),
           ),
 
           GoRoute(

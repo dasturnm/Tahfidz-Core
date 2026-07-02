@@ -23,7 +23,7 @@ class StaffHubScreen extends ConsumerStatefulWidget {
 
 class _StaffHubScreenState extends ConsumerState<StaffHubScreen> with TickerProviderStateMixin {
   bool isGridView = true; // State untuk toggle tampilan
-  late TabController _tabController; // TAMBAHAN: Untuk deteksi Tab Riwayat
+  late TabController _tabController; // TAMBAHAN: Untuk deteksi Tab RIWAYAT
 
   @override
   void initState() {

@@ -16,7 +16,7 @@ class MurojaahTaskService extends BaseService {
     int startLine = lastAbsoluteLine - totalLinesBack;
     if (startLine < 1) startLine = 1;
 
-    // Ambil koordinat Surah/Ayat dari tabel referensi data_mushaf
+    // Ambil koordinat Surah/ayah dari tabel referensi data_mushaf
     final startCoord = await _getCoordFromAbsolute(startLine);
     final endCoord = await _getCoordFromAbsolute(lastAbsoluteLine);
 
@@ -54,7 +54,7 @@ class MurojaahTaskService extends BaseService {
     };
   }
 
-  /// 3. HELPER: KONVERSI BARIS ABSOLUT KE SURAH/AYAT
+  /// 3. HELPER: KONVERSI BARIS ABSOLUT KE SURAH/ayah
   /// Rumus Posisi: $$AbsoluteLine = (Page - 1) \times 15 + Line$$
   Future<Map<String, dynamic>> _getCoordFromAbsolute(int absoluteLine) async {
     try {
@@ -64,14 +64,14 @@ class MurojaahTaskService extends BaseService {
 
       final data = await supabase
           .from('data_mushaf')
-          .select('surah_number, ayah_number, surah_name')
+          .select('surah_number, ayah_start, surah_name')
           .match({'page_number': page, 'line_number': line})
           .limit(1)
           .single();
 
       return {
         "surah": data['surah_number'],
-        "ayah": data['ayah_number'],
+        "ayah": data['ayah_start'],
         "surah_name": data['surah_name'],
         "page": page,
       };

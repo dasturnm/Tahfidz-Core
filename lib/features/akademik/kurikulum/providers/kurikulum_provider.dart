@@ -66,3 +66,25 @@ class KurikulumList extends _$KurikulumList {
     }
   }
 }
+
+// TAMBAHAN: Provider untuk dropdown berjenjang di Form Siswa
+@riverpod
+KurikulumService kurikulumService(KurikulumServiceRef ref) => KurikulumService();
+
+@riverpod
+Future<List<KurikulumModel>> kurikulumByProgram(KurikulumByProgramRef ref, String? programId) async {
+  if (programId == null) return [];
+  return ref.read(kurikulumServiceProvider).getKurikulumByProgram(programId);
+}
+
+@riverpod
+Future<List<LevelModel>> levelsByKurikulum(LevelsByKurikulumRef ref, String? kurikulumId) async {
+  if (kurikulumId == null) return [];
+  return ref.read(kurikulumServiceProvider).getLevelsByKurikulum(kurikulumId);
+}
+
+@riverpod
+Future<List<ModulModel>> modulByLevel(ModulByLevelRef ref, String? levelId) async {
+  if (levelId == null) return [];
+  return ref.read(kurikulumServiceProvider).getModulsByLevel(levelId);
+}

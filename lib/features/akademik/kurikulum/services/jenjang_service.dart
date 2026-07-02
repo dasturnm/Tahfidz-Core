@@ -12,7 +12,7 @@ class JenjangService extends BaseService {
           .from('jenjang_kurikulum')
           .select('*, level:kurikulum_level(*, modul:modul_kurikulum(*))')
           .eq('kurikulum_id', kurikulumId)
-          .order('id');
+          .order('urutan', ascending: true); // FIX: Diurutkan berdasarkan kolom urutan
       return (response as List).map((e) => JenjangModel.fromJson(e)).toList();
     } catch (e) {
       throw Exception(handleError(e));

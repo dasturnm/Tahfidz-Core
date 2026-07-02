@@ -13,8 +13,8 @@ class MushafPickerDialog extends ConsumerWidget {
   Future<Map<String, String>> _getMushafBounds({int? halaman, int? juz}) async {
     try {
       final supabase = Supabase.instance.client;
-      // FIX: Tambahkan 'id' ke dalam select agar bisa dilakukan ordering
-      var query = supabase.from('data_mushaf').select('id, surah_number, ayah_number');
+      // FIX: Menggunakan kolom koordinat verse_number untuk sinkronisasi kalkulasi weight
+      var query = supabase.from('data_mushaf').select('surah_number, verse_number');
 
       if (halaman != null) query = query.eq('page_number', halaman);
       if (juz != null) query = query.eq('juz_number', juz);
@@ -27,8 +27,8 @@ class MushafPickerDialog extends ConsumerWidget {
       final last = res.last;
 
       return {
-        'mulai': "${first['surah_number']}:${first['ayah_number']}",
-        'akhir': "${last['surah_number']}:${last['ayah_number']}",
+        'mulai': first['verse_number'].toString(),
+        'akhir': last['verse_number'].toString(),
       };
     } catch (e) {
       debugPrint("❌ Error fetching bounds: $e");
@@ -89,7 +89,7 @@ class MushafPickerDialog extends ConsumerWidget {
                 children: [
                   surahAsync.when(
                     data: (list) {
-                      // Filter Surah (Poin 3) menggunakan kolom data_mushaf
+                      // Filter Surah (Poin 3) menggunakan kolom data_mushaf (surah_name)
                       final filtered = list.where((s) =>
                       (s['surah_name'] ?? '').toString().toLowerCase().contains(search) ||
                           (s['surah_number'] ?? '').toString().contains(search)
@@ -106,11 +106,11 @@ class MushafPickerDialog extends ConsumerWidget {
                             // FIX KLIK: Memastikan Material behavior dan padding yang nyaman
                             contentPadding: const EdgeInsets.symmetric(horizontal: 8),
                             title: Text(surahName, style: const TextStyle(fontWeight: FontWeight.bold)),
-                            subtitle: Text("${s['total_ayah'] ?? 0} Ayat"),
+                            subtitle: Text("${s['total_ayah'] ?? 0} ayah"),
                             onTap: () => Navigator.pop(context, {
                               'nama': "Surah $surahName",
-                              'mulai': "${s['surah_number']}:1",
-                              'akhir': "${s['surah_number']}:${s['total_ayah'] ?? 0}",
+                              'mulai': "1", // Mengirim koordinat ayat awal surah
+                              'akhir': (s['total_ayah'] ?? 0).toString(),
                             }),
                           );
                         },

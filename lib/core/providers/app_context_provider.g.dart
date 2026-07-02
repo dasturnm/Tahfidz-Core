@@ -6,7 +6,7 @@ part of 'app_context_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$appContextHash() => r'6498b3862513200d806769a3efbc8b70897617f1';
+String _$appContextHash() => r'e21ec65177fef0f649d5bc09f7a33c2f921e8d52';
 
 /// See also [AppContext].
 @ProviderFor(AppContext)

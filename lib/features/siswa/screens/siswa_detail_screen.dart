@@ -1,17 +1,23 @@
 // Lokasi: lib/features/siswa/screens/siswa_detail_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart'; // TAMBAHAN
+import 'package:tahfidz_core/core/providers/app_context_provider.dart'; // TAMBAHAN
 import '../models/siswa_model.dart';
 import 'siswa_form_screen.dart';
 
-class SiswaDetailScreen extends StatelessWidget {
+class SiswaDetailScreen extends ConsumerWidget { // FIX: Menjadi ConsumerWidget
   final SiswaModel siswa;
 
   const SiswaDetailScreen({super.key, required this.siswa});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) { // FIX: Tambah WidgetRef
     bool isLaki = siswa.jenisKelamin == 'L';
+
+    // TAMBAHAN: Ambil data lembaga dari context
+    final appContext = ref.watch(appContextProvider);
+    final lembagaNama = appContext.lembaga?.namaLembaga ?? '-';
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -65,9 +71,12 @@ class SiswaDetailScreen extends StatelessWidget {
             _buildInfoCard(
               title: "Informasi Akademik",
               items: [
-                // FIX: Menggunakan namaKelas sesuai standarisasi model terbaru
-                _buildInfoTile(Icons.home_work_rounded, "Unit kelas", siswa.kelas?.namaKelas ?? 'Belum ada kelas'),
+                // FIX: Menampilkan detail lengkap sesuai permintaan: Lembaga, Cabang, Program, Kelas, Jenjang
+                _buildInfoTile(Icons.account_balance_rounded, "Lembaga", lembagaNama),
+                _buildInfoTile(Icons.location_on_rounded, "Cabang", siswa.cabang?.namaCabang ?? '-'),
                 _buildInfoTile(Icons.auto_awesome_rounded, "Program", siswa.program?.namaProgram ?? '-'),
+                _buildInfoTile(Icons.home_work_rounded, "Unit Kelas", siswa.kelas?.namaKelas ?? '-'),
+                _buildInfoTile(Icons.layers_rounded, "Jenjang Kurikulum", siswa.currentLevel?.namaLevel ?? '-'),
                 _buildInfoTile(Icons.trending_up_rounded, "Total Hafalan", "${siswa.totalJuzHafalan.toStringAsFixed(1)} Juz"),
               ],
             ),

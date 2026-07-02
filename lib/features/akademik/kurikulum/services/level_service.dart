@@ -12,7 +12,7 @@ class LevelService extends BaseService {
           .from('kurikulum_level')
           .select('*, modul:modul_kurikulum(*)')
           .eq('jenjang_id', jenjangId)
-          .order('id', ascending: true);
+          .order('urutan', ascending: true); // FIX: Diurutkan berdasarkan kolom urutan
       return (response as List).map((e) => LevelModel.fromJson(e)).toList();
     } catch (e) {
       throw Exception(handleError(e));

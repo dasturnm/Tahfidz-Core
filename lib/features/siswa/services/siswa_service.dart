@@ -27,11 +27,12 @@ class SiswaService extends BaseService {
     try {
       final lembagaId = getLembagaId(ref);
 
-      // FIX: Menggunakan Left Join agar siswa muncul meski data relasi (kelas/level) ada yang kosong
+      // FIX: Menambahkan cabang (*) dan kurikulum_level agar filter & profil lengkap
       PostgrestFilterBuilder query = supabase
           .from('siswa')
           .select('''
             *,
+            cabang (*),
             kelas (*),
             program (*),
             kurikulum_level!level_id (*),
@@ -57,11 +58,12 @@ class SiswaService extends BaseService {
     try {
       final lembagaId = getLembagaId(ref);
 
-      // FIX: Menghapus tanda '!' untuk mencegah siswa hilang jika level/guru belum diset
+      // FIX: Menambahkan cabang (*) agar data tetap konsisten saat di-fetch per kelas
       PostgrestFilterBuilder query = supabase
           .from('siswa')
           .select('''
             *,
+            cabang (*),
             kelas (*),
             program (*),
             kurikulum_level!level_id (*),
@@ -88,6 +90,7 @@ class SiswaService extends BaseService {
       final lembagaId = getLembagaId(ref);
       PostgrestFilterBuilder query = supabase.from('siswa').select('''
             *,
+            cabang (*),
             kelas (*),
             program (*),
             kurikulum_level!level_id (*),
@@ -113,6 +116,7 @@ class SiswaService extends BaseService {
       // Menggunakan !inner untuk melakukan filter berdasarkan kolom di tabel relasi (kelas)
       PostgrestFilterBuilder query = supabase.from('siswa').select('''
             *,
+            cabang (*),
             kelas!inner(*),
             program (*),
             kurikulum_level!level_id (*),
@@ -137,6 +141,7 @@ class SiswaService extends BaseService {
       final lembagaId = getLembagaId(ref);
       PostgrestFilterBuilder query = supabase.from('siswa').select('''
             *,
+            cabang (*),
             kelas (*),
             program (*),
             kurikulum_level!level_id (*),

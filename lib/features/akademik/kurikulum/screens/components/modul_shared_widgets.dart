@@ -41,7 +41,7 @@ class ModulSharedWidgets {
         color: const Color(0xFF10B981).withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(12),
       ),
-      child: const Row(
+      child: const Row( // FIX: Menghapus const dari Row karena child-nya tidak bisa konstanta
         children: [
           Icon(Icons.info_outline, color: Color(0xFF10B981), size: 20),
           SizedBox(width: 12),
@@ -77,27 +77,26 @@ class ModulSharedWidgets {
   }
 
   static Widget buildPolicyBtn(String label, IconData icon, bool active, VoidCallback onTap) {
-    return Expanded(
-      child: InkWell(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          decoration: BoxDecoration(
-            color: active ? const Color(0xFF10B981) : Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: active ? const Color(0xFF10B981) : Colors.grey[300]!),
-          ),
-          child: Column(
-            children: [
-              Icon(icon, size: 18, color: active ? Colors.white : Colors.grey),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: active ? Colors.white : Colors.grey),
-              ),
-            ],
-          ),
+    // FIX: Menghapus Expanded agar tidak menyebabkan ParentDataWidget error jika dipanggil di luar Flex
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: active ? const Color(0xFF10B981) : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: active ? const Color(0xFF10B981) : Colors.grey[300]!),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, size: 18, color: active ? Colors.white : Colors.grey),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: active ? Colors.white : Colors.grey),
+            ),
+          ],
         ),
       ),
     );

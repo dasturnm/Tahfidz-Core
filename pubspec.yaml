@@ -40,6 +40,7 @@ dependencies:
   image_picker: ^1.2.1
   pdf: ^3.11.3
   printing: ^5.14.2
+  shared_preferences: ^2.3.0
 
   url_launcher: any
 dev_dependencies:
@@ -53,6 +54,8 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/mushaf_peta.json
   # Pastikan folder assets didefinisikan jika ada logo lembaga
   # assets:
   #   - assets/images/

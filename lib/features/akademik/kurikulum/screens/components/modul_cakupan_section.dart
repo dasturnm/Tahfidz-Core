@@ -1,20 +1,19 @@
 // Lokasi: lib/features/akademik/kurikulum/screens/components/modul_cakupan_section.dart
-
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../models/kurikulum_model.dart';
-import '../../../../mushaf/providers/mushaf_provider.dart'; // Mundur ke folder mushaf
 import 'modul_shared_widgets.dart';
 
-class ModulCakupanSection extends ConsumerWidget {
+class ModulCakupanSection extends StatelessWidget {
   final bool isPlottingActive;
-  final List<SilabusItemModel> silabusItems;
+  final List<dynamic> silabusItems;
   final String silabusSource;
   final String selectedMetrik;
   final TextEditingController mulaiController;
   final TextEditingController akhirController;
-  final int? surahIdForAyat;
-  final ValueChanged<int?> onSurahAyatChanged;
+  final int? surahIdForAyah;
+  final List<dynamic> surahList;
+  final List<int> juzList;
+  final List<int> halamanList;
+  final Function(int) onSurahChanged;
   final VoidCallback onRangeChanged;
 
   const ModulCakupanSection({
@@ -25,139 +24,296 @@ class ModulCakupanSection extends ConsumerWidget {
     required this.selectedMetrik,
     required this.mulaiController,
     required this.akhirController,
-    required this.surahIdForAyat,
-    required this.onSurahAyatChanged,
+    this.surahIdForAyah,
+    this.surahList = const [],
+    required this.juzList,
+    required this.halamanList,
+    required this.onSurahChanged,
     required this.onRangeChanged,
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    if (isPlottingActive && silabusItems.isNotEmpty) {
-      return _buildSyllabusDropdownRange();
-    }
-
-    if (silabusSource == 'mushaf') {
-      if (selectedMetrik == 'AYAT') return _buildAyatScopeSelector(ref);
-      if (selectedMetrik == 'JUZ') return _buildDropdownRange(List.generate(30, (i) => (i + 1).toString()));
-      if (selectedMetrik == 'HALAMAN') return _buildDropdownRange(List.generate(604, (i) => (i + 1).toString()));
-      if (selectedMetrik == 'SURAH') {
-        final surahAsync = ref.watch(surahListProvider);
-        return surahAsync.maybeWhen(
-          data: (list) => _buildDropdownRange(list.map((s) => s['surah_name'].toString()).toList()),
-          orElse: () => _buildTextRange(false),
-        );
+  Widget build(BuildContext context) {
+    // 1. Cabang untuk Silabus Internal (Buku/Diniyah)
+    if (silabusSource == 'internal') {
+      // FIX: Jika plotting aktif dan ada data CSV, tampilkan Dropdown Materi (Point Penyempurnaan)
+      if (isPlottingActive && silabusItems.isNotEmpty) {
+        return _buildInternalMateriCakupan();
       }
+      return _buildNumberCakupan("Pertemuan", silabusItems.length);
     }
-    return _buildTextRange(silabusSource == 'internal' && isPlottingActive);
+
+    // 2. Cabang untuk Silabus Mushaf (Al-Qur'an)
+    // FIX: Menambahkan return yang hilang untuk kondisi Mushaf
+    switch (selectedMetrik) {
+      case 'SURAH':
+        return _buildSurahCakupan();
+      case 'JUZ':
+        return _buildDualDropdown(juzList, "Juz");
+      case 'HALAMAN':
+        return _buildDualDropdown(halamanList, "Halaman");
+      case 'AYAT':
+        return _buildAyatCakupan();
+      default:
+        return _buildNumberCakupan("Nomor", 100);
+    }
   }
 
-  Widget _buildSyllabusDropdownRange() {
-    List<String> options = silabusItems.map((e) => "${e.pertemuan}. ${e.materi}").toList();
+  Widget _buildDualDropdown(List<int> data, String label) {
     return Row(
       children: [
         Expanded(
-          child: DropdownButtonFormField<String>(
-            isExpanded: true,
-            initialValue: options.any((o) => o.startsWith("${mulaiController.text}. ")) ? options.firstWhere((o) => o.startsWith("${mulaiController.text}. ")) : null,
-            decoration: ModulSharedWidgets.inputStyle("Mulai"),
-            items: options.map((o) => DropdownMenuItem(value: o, child: Text(o, style: const TextStyle(fontSize: 10), overflow: TextOverflow.ellipsis))).toList(),
-            onChanged: (v) {
-              mulaiController.text = v!.split('.').first;
-              onRangeChanged();
-            },
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ModulSharedWidgets.buildLabel("$label Mulai"),
+              const SizedBox(height: 8),
+              _buildGenericDropdown(mulaiController, data, "Mulai"),
+            ],
           ),
         ),
-        const Padding(padding: EdgeInsets.symmetric(horizontal: 8), child: Icon(Icons.arrow_forward, color: Colors.grey, size: 16)),
+        const SizedBox(width: 16),
         Expanded(
-          child: DropdownButtonFormField<String>(
-            isExpanded: true,
-            initialValue: options.any((o) => o.startsWith("${akhirController.text}. ")) ? options.firstWhere((o) => o.startsWith("${akhirController.text}. ")) : null,
-            decoration: ModulSharedWidgets.inputStyle("Akhir"),
-            items: options.map((o) => DropdownMenuItem(value: o, child: Text(o, style: const TextStyle(fontSize: 10), overflow: TextOverflow.ellipsis))).toList(),
-            onChanged: (v) {
-              akhirController.text = v!.split('.').first;
-              onRangeChanged();
-            },
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ModulSharedWidgets.buildLabel("$label Akhir"),
+              const SizedBox(height: 8),
+              _buildGenericDropdown(akhirController, data, "Akhir"),
+            ],
           ),
         ),
       ],
     );
   }
 
-  Widget _buildAyatScopeSelector(WidgetRef ref) {
-    final surahAsync = ref.watch(surahListProvider);
-    return surahAsync.maybeWhen(
-      data: (list) => Column(
-        children: [
-          DropdownButtonFormField<int>(
-            isExpanded: true,
-            initialValue: surahIdForAyat,
-            decoration: ModulSharedWidgets.inputStyle("Pilih Surah Terlebih Dahulu"),
-            items: list.map((s) => DropdownMenuItem<int>(value: (s['surah_number'] as num?)?.toInt() ?? 0, child: Text("${s['surah_number']}. ${s['surah_name']}"))).toList(),
-            onChanged: (v) => onSurahAyatChanged(v),
-          ),
-          const SizedBox(height: 12),
-          if (surahIdForAyat != null)
-            _buildAyatRangeDropdowns(list),
-        ],
-      ),
-      orElse: () => const Text("Memuat Surah..."),
+  Widget _buildGenericDropdown(TextEditingController controller, List<int> data, String hint) {
+    return Autocomplete<String>(
+      displayStringForOption: (option) => option,
+      optionsBuilder: (TextEditingValue textEditingValue) {
+        if (textEditingValue.text.isEmpty) return data.map((e) => e.toString());
+        return data.where((e) => e.toString().contains(textEditingValue.text)).map((e) => e.toString());
+      },
+      fieldViewBuilder: (context, fieldController, focusNode, onFieldSubmitted) {
+        if (fieldController.text != controller.text) fieldController.text = controller.text;
+        return TextFormField(
+          controller: fieldController,
+          focusNode: focusNode,
+          keyboardType: TextInputType.number,
+          decoration: ModulSharedWidgets.inputStyle(hint),
+          onChanged: (v) {
+            controller.text = v;
+            onRangeChanged();
+          },
+        );
+      },
+      onSelected: (String selection) {
+        controller.text = selection;
+        onRangeChanged();
+      },
     );
   }
 
-  Widget _buildAyatRangeDropdowns(List<dynamic> surahList) {
-    final surah = surahList.firstWhere(
-          (e) => (e['surah_number'] as num?)?.toInt() == surahIdForAyat,
-      orElse: () => <String, dynamic>{},
-    );
-
-    if (surah.isEmpty) return const SizedBox();
-
-    int totalAyah = (surah['total_ayah'] as num?)?.toInt() ?? 0;
-    if (totalAyah == 0) return const Text("Data ayat tidak ditemukan (NULL)", style: TextStyle(color: Colors.red, fontSize: 10));
-
-    List<String> ayahs = List.generate(totalAyah, (i) => (i + 1).toString());
-
-    return _buildDropdownRange(ayahs);
-  }
-
-  Widget _buildDropdownRange(List<String> options) {
+  Widget _buildSurahCakupan() {
     return Row(
       children: [
         Expanded(
-          child: DropdownButtonFormField<String>(
-            isExpanded: true,
-            initialValue: options.contains(mulaiController.text) ? mulaiController.text : null,
-            decoration: ModulSharedWidgets.inputStyle("Mulai"),
-            items: options.map((o) => DropdownMenuItem(value: o, child: Text(o))).toList(),
-            onChanged: (v) {
-              mulaiController.text = v!;
-              onRangeChanged();
-            },
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ModulSharedWidgets.buildLabel("Surah Mulai"),
+              const SizedBox(height: 8),
+              _buildSurahDropdown(mulaiController),
+            ],
           ),
         ),
-        const Padding(padding: EdgeInsets.symmetric(horizontal: 12), child: Icon(Icons.arrow_forward, color: Colors.grey, size: 16)),
+        const SizedBox(width: 16),
         Expanded(
-          child: DropdownButtonFormField<String>(
-            isExpanded: true,
-            initialValue: options.contains(akhirController.text) ? akhirController.text : null,
-            decoration: ModulSharedWidgets.inputStyle("Akhir"),
-            items: options.map((o) => DropdownMenuItem(value: o, child: Text(o))).toList(),
-            onChanged: (v) {
-              akhirController.text = v!;
-              onRangeChanged();
-            },
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ModulSharedWidgets.buildLabel("Surah Akhir"),
+              const SizedBox(height: 8),
+              _buildSurahDropdown(akhirController),
+            ],
           ),
         ),
       ],
     );
   }
 
-  Widget _buildTextRange(bool isNomor) {
-    return Row(children: [
-      Expanded(child: TextFormField(controller: mulaiController, enabled: !isNomor, decoration: ModulSharedWidgets.inputStyle(isNomor ? "Auto" : "Mulai"))),
-      const Padding(padding: EdgeInsets.symmetric(horizontal: 12), child: Icon(Icons.arrow_forward, color: Colors.grey)),
-      Expanded(child: TextFormField(controller: akhirController, enabled: !isNomor, decoration: ModulSharedWidgets.inputStyle(isNomor ? "Auto" : "Akhir"))),
-    ]);
+  Widget _buildAyatCakupan() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ModulSharedWidgets.buildLabel("Pilih Surah"),
+        const SizedBox(height: 8),
+        _buildSurahDropdown(null, isForAyahParent: true),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ModulSharedWidgets.buildLabel("Ayat Mulai"),
+                  const SizedBox(height: 8),
+                  _buildAyatDropdown(mulaiController),
+                ],
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ModulSharedWidgets.buildLabel("Ayat Akhir"),
+                  const SizedBox(height: 8),
+                  _buildAyatDropdown(akhirController),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSurahDropdown(TextEditingController? controller, {bool isForAyahParent = false}) {
+    final String? currentValue = isForAyahParent ? surahIdForAyah?.toString() : controller?.text;
+    final bool isValueValid = surahList.any((s) => s['surah_number'].toString() == currentValue);
+    final String? effectiveValue = isValueValid ? currentValue : null;
+
+    return DropdownButtonFormField<String>(
+      initialValue: effectiveValue,
+      isExpanded: true,
+      decoration: ModulSharedWidgets.inputStyle("Pilih Surah"),
+      items: surahList.map((s) => DropdownMenuItem<String>(
+        value: s['surah_number'].toString(),
+        child: Text("${s['surah_number']}. ${s['surah_name']}",
+            style: const TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis),
+      )).toList(),
+      onChanged: (v) {
+        if (v != null) {
+          final int sId = int.parse(v);
+          if (isForAyahParent) {
+            onSurahChanged(sId);
+          } else {
+            controller?.text = v;
+            onRangeChanged();
+          }
+        }
+      },
+    );
+  }
+
+  Widget _buildAyatDropdown(TextEditingController controller) {
+    final surahData = surahList.firstWhere(
+          (s) => s['surah_number'].toString() == surahIdForAyah.toString(),
+      orElse: () => {'total_ayah': 1},
+    );
+
+    final int totalAyah = surahData['total_ayah'] ?? 1;
+    final List<String> ayatItems = List.generate(totalAyah, (i) => (i + 1).toString());
+
+    final bool isValueValid = ayatItems.contains(controller.text);
+    final String? effectiveValue = isValueValid ? controller.text : (ayatItems.isNotEmpty ? "1" : null);
+
+    return DropdownButtonFormField<String>(
+      initialValue: effectiveValue,
+      decoration: ModulSharedWidgets.inputStyle("Ayat"),
+      items: ayatItems.map((a) => DropdownMenuItem(
+        value: a,
+        child: Text(a, style: const TextStyle(fontSize: 12)),
+      )).toList(),
+      onChanged: (v) {
+        if (v != null) {
+          controller.text = v;
+          onRangeChanged();
+        }
+      },
+    );
+  }
+
+  Widget _buildNumberCakupan(String label, int max) {
+    final List<int> data = List.generate(max, (i) => i + 1);
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ModulSharedWidgets.buildLabel("$label Mulai"),
+              const SizedBox(height: 8),
+              _buildGenericDropdown(mulaiController, data, "1"),
+            ],
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ModulSharedWidgets.buildLabel("$label Akhir"),
+              const SizedBox(height: 8),
+              _buildGenericDropdown(akhirController, data, max.toString()),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildInternalMateriCakupan() {
+    final List<String> materiList = silabusItems.asMap().entries.map((entry) {
+      return "${entry.key + 1}. ${entry.value.materi}";
+    }).toList();
+
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ModulSharedWidgets.buildLabel("Materi Mulai"),
+              const SizedBox(height: 8),
+              _buildMateriDropdown(mulaiController, materiList),
+            ],
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ModulSharedWidgets.buildLabel("Materi Akhir"),
+              const SizedBox(height: 8),
+              _buildMateriDropdown(akhirController, materiList),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMateriDropdown(TextEditingController controller, List<String> data) {
+    final bool isValueValid = data.contains(controller.text);
+    final String? effectiveValue = isValueValid ? controller.text : (data.isNotEmpty ? data.first : null);
+
+    return DropdownButtonFormField<String>(
+      initialValue: effectiveValue,
+      isExpanded: true,
+      decoration: ModulSharedWidgets.inputStyle("Pilih Materi"),
+      items: data.map((String e) => DropdownMenuItem(
+        value: e,
+        child: Text(e, style: const TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis),
+      )).toList(),
+      onChanged: (v) {
+        if (v != null) {
+          controller.text = v;
+          onRangeChanged();
+        }
+      },
+    );
   }
 }

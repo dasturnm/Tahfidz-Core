@@ -7,8 +7,8 @@ import '../providers/jenjang_provider.dart';
 import '../providers/level_provider.dart';
 import '../models/kurikulum_model.dart';
 import 'level_list_screen.dart';
-import 'modul_detail_screen.dart';
-import 'modul_form_screen.dart'; // TAMBAHAN: Untuk bypass form
+import 'level_detail_screen.dart'; // TAMBAHAN: Untuk navigasi bypass linier
+// TAMBAHAN: Untuk bypass form
 
 class KurikulumDetailScreen extends ConsumerWidget {
   final KurikulumModel kurikulum;
@@ -56,7 +56,8 @@ class KurikulumDetailScreen extends ConsumerWidget {
                 bottom: 32,
                 right: 32,
                 child: FloatingActionButton(
-                  onPressed: () => _showAddJenjangheet(context, ref),
+                  // FIX: Ubah pemanggilan menjadi fungsi yang mendukung edit
+                  onPressed: () => _showJenjangSheet(context, ref),
                   backgroundColor: _slate,
                   child: const Icon(Icons.add, color: Colors.white),
                 ),
@@ -111,9 +112,12 @@ class KurikulumDetailScreen extends ConsumerWidget {
         ),
         title: Row(
           children: [
-            Text(
+            Expanded(
+              child: Text(
                 jenjang.namaJenjang,
-                style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: _slate)
+                style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: _slate),
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
             if (kurikulum.isLinear) ...[
               const SizedBox(width: 8),
@@ -137,44 +141,58 @@ class KurikulumDetailScreen extends ConsumerWidget {
                 : "${jenjang.level.length} Tingkatan Level",
             style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.w500)
         ),
-        trailing: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.grey, size: 14),
+        // FIX: Tambahkan tombol edit di sebelah kanan sebelum panah
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.edit_outlined, color: Colors.grey, size: 18),
+              onPressed: () => _showJenjangSheet(context, ref, existingJenjang: jenjang),
+            ),
+            const Icon(Icons.arrow_forward_ios_rounded, color: Colors.grey, size: 14),
+          ],
+        ),
         onTap: () => _handleNavigation(context, ref, jenjang),
       ),
     );
   }
 
   Future<void> _handleNavigation(BuildContext context, WidgetRef ref, JenjangModel j) async {
+    // Debugging feedback
+    debugPrint("Navigasi ke jenjang: ${j.namaJenjang} (Linear: ${kurikulum.isLinear})");
+
     if (kurikulum.isLinear) {
-      LevelModel? shadowLevel;
+      // 1. Cek apakah level sudah ada di dalam object jenjang
       if (j.level.isEmpty) {
         showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator()));
         try {
+          // Buatkan shadow level jika belum ada
           await ref.read(levelListProvider(j.id!).notifier).saveLevel(
             LevelModel(kurikulumId: kurikulum.id!, jenjangId: j.id!, namaLevel: j.namaJenjang, urutan: 0),
           );
-          final updatedLevels = await ref.refresh(levelListProvider(j.id!).future);
-          shadowLevel = updatedLevels.first;
+          // Refresh data jenjang agar level masuk ke object j
+          ref.invalidate(jenjangListProvider(kurikulum.id!));
+          await ref.read(jenjangListProvider(kurikulum.id!).future);
           if (context.mounted) Navigator.pop(context);
         } catch (e) {
           if (context.mounted) Navigator.pop(context);
           return;
         }
-      } else {
-        shadowLevel = j.level.first;
       }
 
-      if (shadowLevel.modul.isEmpty) {
-        if (context.mounted) {
-          Navigator.push(context, MaterialPageRoute(builder: (context) => ModulFormScreen(level: shadowLevel!)));
-        }
+      // 2. Bypass langsung ke LevelDetailScreen menggunakan level dari object j
+      // Kita perlu fetch data level terbaru jika tadi baru saja create
+      final levels = j.level.isNotEmpty ? j.level : (ref.read(levelListProvider(j.id!)).value ?? []);
+
+      if (!context.mounted) return;
+
+      if (levels.isNotEmpty) {
+        Navigator.push(context, MaterialPageRoute(builder: (context) => LevelDetailScreen(level: levels.first)));
       } else {
-        if (context.mounted) {
-          Navigator.push(context, MaterialPageRoute(
-            builder: (context) => ModulDetailScreen(level: shadowLevel!, modul: shadowLevel.modul.first),
-          ));
-        }
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Materi belum tersedia")));
       }
     } else {
+      // Navigasi standar untuk kurikulum hirarkis
       Navigator.push(context, MaterialPageRoute(builder: (context) => LevelListScreen(jenjang: j, isLinear: false)));
     }
   }
@@ -201,8 +219,10 @@ class KurikulumDetailScreen extends ConsumerWidget {
     );
   }
 
-  void _showAddJenjangheet(BuildContext context, WidgetRef ref) {
-    final controller = TextEditingController();
+  void _showJenjangSheet(BuildContext context, WidgetRef ref, {JenjangModel? existingJenjang}) {
+    final bool isEdit = existingJenjang != null;
+    final controller = TextEditingController(text: isEdit ? existingJenjang.namaJenjang : "");
+    final urutanController = TextEditingController(text: isEdit ? existingJenjang.urutan.toString() : "0");
 
     showModalBottomSheet(
       context: context,
@@ -226,7 +246,7 @@ class KurikulumDetailScreen extends ConsumerWidget {
                 Icon(Icons.layers_outlined, color: _emerald, size: 28),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Text("Tambah Jenjang", style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: _slate)),
+                  child: Text(isEdit ? "Edit Jenjang" : "Tambah Jenjang", style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: _slate)),
                 ),
                 IconButton(onPressed: () => Navigator.pop(ctx), icon: const Icon(Icons.close)),
               ],
@@ -250,6 +270,18 @@ class KurikulumDetailScreen extends ConsumerWidget {
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
               ),
             ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: urutanController,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: "URUTAN / SEQUENCE",
+                hintText: "Contoh: 1",
+                filled: true,
+                fillColor: const Color(0xFFF8FAFC),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+              ),
+            ),
             const SizedBox(height: 32),
             SizedBox(
               width: double.infinity,
@@ -261,8 +293,10 @@ class KurikulumDetailScreen extends ConsumerWidget {
 
                   await ref.read(jenjangListProvider(kurikulum.id!).notifier).saveJenjang(
                     JenjangModel(
+                      id: isEdit ? existingJenjang.id : null,
                       kurikulumId: kurikulum.id!,
                       namaJenjang: controller.text.trim(),
+                      urutan: int.tryParse(urutanController.text.trim()) ?? 0,
                     ),
                   );
                   if (ctx.mounted) Navigator.pop(ctx);

@@ -66,13 +66,13 @@ class MushafPageView extends StatelessWidget {
                           final int idx = entry.key;
                           final MushafLine line = entry.value;
 
-                          // Banner hanya muncul SEKALI: di baris pertama (index terkecil) yang ayahNumber == 1
-                          final int firstAyah1LineIdx = lines.indexWhere((l) => l.ayahNumber == 1);
-                          bool isStartOfSurah = line.ayahNumber == 1 && !isSpecialPage && idx == firstAyah1LineIdx;
+                          // Banner hanya muncul SEKALI: di baris pertama (index terkecil) yang ayahStart == 1
+                          final int firstAyah1LineIdx = lines.indexWhere((l) => l.ayahStart == 1);
+                          bool isStartOfSurah = line.ayahStart == 1 && !isSpecialPage && idx == firstAyah1LineIdx;
 
-                          // Nomor ayat hanya muncul di baris TERAKHIR setiap ayat
+                          // Nomor ayah hanya muncul di baris TERAKHIR setiap ayah
                           final bool isLastLineOfAyah = (idx == lines.length - 1) ||
-                              (lines[idx + 1].ayahNumber != line.ayahNumber) ||
+                              (lines[idx + 1].ayahStart != line.ayahStart) ||
                               (lines[idx + 1].surahNumber != line.surahNumber);
 
                           return isSpecialPage

@@ -6,7 +6,8 @@ import 'modul_shared_widgets.dart';
 class ModulPencapaianSection extends StatelessWidget {
   final TextEditingController targetAmountController;
   final String selectedTargetUnit;
-  final ValueChanged<String> onUnitChanged;
+  final List<String> allowedUnits; // FIX: Tambah parameter untuk filter dinamis
+  final ValueChanged<String?> onUnitChanged; // FIX: Ubah ke nullable
   final VoidCallback onDecrement;
   final VoidCallback onIncrement;
 
@@ -14,6 +15,7 @@ class ModulPencapaianSection extends StatelessWidget {
     super.key,
     required this.targetAmountController,
     required this.selectedTargetUnit,
+    required this.allowedUnits, // FIX: Tambah parameter
     required this.onUnitChanged,
     required this.onDecrement,
     required this.onIncrement,
@@ -21,8 +23,6 @@ class ModulPencapaianSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    List<String> unitOptions = ['JUZ', 'SURAH', 'HALAMAN', 'AYAT', 'NOMOR', 'MATERI'];
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -69,10 +69,10 @@ class ModulPencapaianSection extends StatelessWidget {
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
                     isExpanded: true,
-                    initialValue: unitOptions.contains(selectedTargetUnit) ? selectedTargetUnit : unitOptions.first,
+                    initialValue: allowedUnits.contains(selectedTargetUnit) ? selectedTargetUnit : (allowedUnits.isNotEmpty ? allowedUnits.first : null), // FIX: Gunakan value
                     decoration: ModulSharedWidgets.inputStyle("Satuan"),
-                    items: unitOptions.map((u) => DropdownMenuItem(value: u, child: Text(u, style: const TextStyle(fontSize: 12)))).toList(),
-                    onChanged: (v) => onUnitChanged(v!),
+                    items: allowedUnits.map((u) => DropdownMenuItem(value: u, child: Text(u, style: const TextStyle(fontSize: 12)))).toList(),
+                    onChanged: (v) => onUnitChanged(v),
                   ),
                 ],
               ),

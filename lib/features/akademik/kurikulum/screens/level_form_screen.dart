@@ -160,7 +160,7 @@ class _LevelFormScreenState extends ConsumerState<LevelFormScreen> {
       jenjangId: widget.jenjang.id!,
       kurikulumId: widget.jenjang.kurikulumId, // PERBAIKAN FATAL: Menghapus operator '!' karena variabel sudah bertipe non-nullable String
       namaLevel: _namaController.text.trim(),
-      urutan: int.parse(_urutanController.text),
+      urutan: int.tryParse(_urutanController.text.trim()) ?? 0, // PERBAIKAN: Gunakan tryParse agar lebih aman dari crash
       modul: widget.level?.modul ?? [], // Mengikuti struktur Level -> Modul
     );
 

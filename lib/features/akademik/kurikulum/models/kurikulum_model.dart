@@ -1,9 +1,13 @@
 // Lokasi: lib/features/akademik/kurikulum/models/kurikulum_model.dart
 
+// FIX: Import file modul yang baru dipisah
+import 'modul_model.dart';
+// FIX: Export agar file lain yang import kurikulum_model tidak error
+export 'modul_model.dart';
+
 // =============================================================================
 // FILE: kurikulum_model.dart
-// Berisi hierarki lengkap Kurikulum:
-// Kurikulum -> Jenjang -> Level -> Modul -> Target Metrik
+// Berisi hierarki inti Kurikulum: Kurikulum -> Jenjang -> Level
 // =============================================================================
 
 // -----------------------------------------------------------------------------
@@ -129,6 +133,7 @@ class JenjangModel {
   final String kurikulumId;
   final String namaJenjang;
   final String? deskripsi;
+  final int urutan; // TAMBAHAN: Koordinat urutan jenjang
   final List<LevelModel> level;
 
   JenjangModel({
@@ -136,6 +141,7 @@ class JenjangModel {
     required this.kurikulumId,
     required this.namaJenjang,
     this.deskripsi,
+    this.urutan = 0, // TAMBAHAN
     this.level = const [],
   });
 
@@ -144,6 +150,7 @@ class JenjangModel {
     kurikulumId: json['kurikulum_id']?.toString() ?? '',
     namaJenjang: json['nama_jenjang']?.toString() ?? '',
     deskripsi: json['deskripsi']?.toString(),
+    urutan: (json['urutan'] as num?)?.toInt() ?? 0, // TAMBAHAN
     level: (json['level'] is List)
         ? (json['level'] as List)
         .whereType<Map<String, dynamic>>()
@@ -157,6 +164,7 @@ class JenjangModel {
     'kurikulum_id': kurikulumId,
     'nama_jenjang': namaJenjang,
     'deskripsi': deskripsi,
+    'urutan': urutan, // TAMBAHAN
     'level': List<dynamic>.from(level.map((x) => x.toJson())),
   };
 
@@ -165,6 +173,7 @@ class JenjangModel {
     String? kurikulumId,
     String? namaJenjang,
     String? deskripsi,
+    int? urutan, // TAMBAHAN
     List<LevelModel>? level,
   }) {
     return JenjangModel(
@@ -172,6 +181,7 @@ class JenjangModel {
       kurikulumId: kurikulumId ?? this.kurikulumId,
       namaJenjang: namaJenjang ?? this.namaJenjang,
       deskripsi: deskripsi ?? this.deskripsi,
+      urutan: urutan ?? this.urutan, // TAMBAHAN
       level: level ?? this.level,
     );
   }
@@ -186,8 +196,6 @@ class LevelModel {
   final String jenjangId;
   final String? programId; // TAMBAHAN
   final String namaLevel;
-  final double targetTotal;
-  final String metrik;
   final int urutan;
   final List<ModulModel> modul;
   final bool isExamRequired; // TAMBAHAN: Logika Kenaikan Level
@@ -199,8 +207,6 @@ class LevelModel {
     required this.jenjangId,
     this.programId,
     required this.namaLevel,
-    this.targetTotal = 0.0,
-    this.metrik = 'Juz',
     required this.urutan,
     this.modul = const [],
     this.isExamRequired = false, // TAMBAHAN
@@ -213,8 +219,6 @@ class LevelModel {
     jenjangId: json['jenjang_id']?.toString() ?? '',
     programId: json['program_id']?.toString(),
     namaLevel: json['nama_level']?.toString() ?? '',
-    targetTotal: (json['target_total'] as num?)?.toDouble() ?? 0.0,
-    metrik: json['metrik']?.toString() ?? 'Juz',
     urutan: (json['urutan'] as num?)?.toInt() ?? 0,
     isExamRequired: json['is_exam_required'] == true, // TAMBAHAN
     examConfig: json['exam_config'] != null
@@ -234,12 +238,9 @@ class LevelModel {
     'jenjang_id': jenjangId,
     'program_id': programId,
     'nama_level': namaLevel,
-    'target_total': targetTotal,
-    'metrik': metrik,
     'urutan': urutan,
     'is_exam_required': isExamRequired,
-    if (examConfig != null) 'exam_config': examConfig!.toJson(),
-    // 'modul' dihapus untuk mencegah error schema cache saat save level
+    if (examConfig != null) 'exam_config': examConfig?.toJson(),
   };
 
   Map<String, dynamic> toJson() => mapToJson();
@@ -250,8 +251,6 @@ class LevelModel {
     String? jenjangId,
     String? programId,
     String? namaLevel,
-    double? targetTotal,
-    String? metrik,
     int? urutan,
     List<ModulModel>? modul,
     bool? isExamRequired,
@@ -263,8 +262,6 @@ class LevelModel {
       jenjangId: jenjangId ?? this.jenjangId,
       programId: programId ?? this.programId,
       namaLevel: namaLevel ?? this.namaLevel,
-      targetTotal: targetTotal ?? this.targetTotal,
-      metrik: metrik ?? this.metrik,
       urutan: urutan ?? this.urutan,
       modul: modul ?? this.modul,
       isExamRequired: isExamRequired ?? this.isExamRequired,
@@ -274,330 +271,8 @@ class LevelModel {
 }
 
 // -----------------------------------------------------------------------------
-// 4. MODUL MODEL (The Specific Target/Content)
+// 4. LEVEL EXAM CONFIG
 // -----------------------------------------------------------------------------
-class ModulModel {
-  final String? id;
-  final String levelId;
-  final String namaModul;
-  final String tipe;
-  final int targetPertemuan;
-  final double targetAmount; // Target per pertemuan (Contoh: 10 baris)
-  final String? silabus;
-  final List<SilabusItemModel> silabusContent;
-  final bool isSystemGenerated;
-  final String jenisMetrik;
-  final String? mulaiKoordinat;
-  final String? akhirKoordinat;
-  final double kkm;
-  // TAMBAHAN FINAL BLUEPRINT
-  final String silabusSource; // 'mushaf' | 'internal'
-  final bool isStrict; // 🛡️ Wajib Sesuai Target
-  final bool isAllowBelowTarget; // 🔓 Toleransi Minimum
-  final bool isAccumulated; // 📉 Akumulasi Hutang
-  final bool isSingleBurden; // 🚫 Beban Tunggal (Tanpa Rapel)
-  final int sabqiAmount; // Jumlah Murajaah Sabqi (Besaran)
-  final String sabqiUnit; // Satuan Sabqi
-  final String manzilType; // 'fixed' | 'percentage'
-  final double manzilAmount; // Angka atau % beban Manzil
-  final String targetAmountUnit; // Satuan Pencapaian Harian
-  final bool isPlottingActive; // Toggle Plotting Materi
-  final bool showSabqiInMutabaah; // Toggle visibilitas Sabqi Guru
-  final bool showManzilInDashboard; // TAMBAHAN: Toggle checklist Manzil Siswa
-
-  // Aspek Tasmi'
-  final int bobotItqon;
-  final int bobotMakhraj;
-  final int bobotTajwid;
-  final int bobotNada;
-  final int bobotAdab;
-  final int bobotPenampilan;
-  final int bobotTebakSurah;
-  final Map<String, dynamic>? tasmiSettings; // Aturan Pinalti & Grading
-  final List<TargetMetrikModel> targetMetrik; // TAMBAHAN: Relasi Target Metrik
-
-  ModulModel({
-    this.id,
-    required this.levelId,
-    required this.namaModul,
-    required this.tipe,
-    this.targetPertemuan = 30,
-    this.targetAmount = 0.0,
-    this.silabus,
-    this.silabusContent = const [],
-    this.isSystemGenerated = false,
-    this.jenisMetrik = 'HALAMAN',
-    this.mulaiKoordinat,
-    this.akhirKoordinat,
-    this.kkm = 80,
-    // DEFAULTS FINAL BLUEPRINT
-    this.silabusSource = 'mushaf',
-    this.isStrict = false,
-    this.isAllowBelowTarget = true,
-    this.isAccumulated = false,
-    this.isSingleBurden = true,
-    this.sabqiAmount = 0,
-    this.sabqiUnit = 'HALAMAN',
-    this.manzilType = 'fixed',
-    this.manzilAmount = 0.0,
-    this.targetAmountUnit = 'HALAMAN',
-    this.isPlottingActive = false,
-    this.showSabqiInMutabaah = true,
-    this.showManzilInDashboard = true,
-    this.bobotItqon = 0,
-    this.bobotMakhraj = 0,
-    this.bobotTajwid = 0,
-    this.bobotNada = 0,
-    this.bobotAdab = 0,
-    this.bobotPenampilan = 0,
-    this.bobotTebakSurah = 0,
-    this.tasmiSettings,
-    this.targetMetrik = const [],
-  });
-
-  factory ModulModel.fromJson(Map<String, dynamic> json) => ModulModel(
-    id: (json['id'] == null || json['id'].toString() == 'null') ? null : json['id'].toString(),
-    levelId: json['level_id']?.toString() ?? '',
-    namaModul: json['nama_modul']?.toString() ?? '',
-    tipe: json['tipe']?.toString() ?? 'HAFALAN',
-    targetPertemuan: (json['target_pertemuan'] as num?)?.toInt() ?? 30,
-    targetAmount: (json['target_amount'] as num?)?.toDouble() ?? 0.0,
-    silabus: json['silabus']?.toString(),
-    silabusContent: (json['silabus_content'] is List)
-        ? (json['silabus_content'] as List)
-        .whereType<Map<String, dynamic>>()
-        .map((x) => SilabusItemModel.fromJson(x))
-        .toList()
-        : const [],
-    isSystemGenerated: json['is_system_generated'] == true,
-    jenisMetrik: json['jenis_metrik']?.toString() ?? 'HALAMAN',
-    mulaiKoordinat: json['mulai_koordinat']?.toString(),
-    akhirKoordinat: json['akhir_koordinat']?.toString(),
-    kkm: (json['kkm'] as num?)?.toDouble() ?? 80.0,
-    silabusSource: json['silabus_source']?.toString() ?? 'mushaf',
-    isStrict: json['is_strict'] == true,
-    isAllowBelowTarget: json['is_allow_below_target'] ?? true,
-    isAccumulated: json['is_accumulated'] == true,
-    isSingleBurden: json['is_single_burden'] ?? true,
-    sabqiAmount: (json['sabqi_amount'] as num?)?.toInt() ?? 0,
-    sabqiUnit: json['sabqi_unit']?.toString() ?? 'HALAMAN',
-    manzilType: json['manzil_type']?.toString() ?? 'fixed',
-    manzilAmount: (json['manzil_amount'] as num?)?.toDouble() ?? 0.0,
-    targetAmountUnit: json['target_amount_unit']?.toString() ?? 'HALAMAN',
-    isPlottingActive: json['is_plotting_active'] == true,
-    showSabqiInMutabaah: json['show_sabqi_in_mutabaah'] ?? true,
-    showManzilInDashboard: json['show_manzil_in_dashboard'] ?? true,
-    bobotItqon: (json['bobot_itqon'] as num?)?.toInt() ?? 0,
-    bobotMakhraj: (json['bobot_makhraj'] as num?)?.toInt() ?? 0,
-    bobotTajwid: (json['bobot_tajwid'] as num?)?.toInt() ?? 0,
-    bobotNada: (json['bobot_nada'] as num?)?.toInt() ?? 0,
-    bobotAdab: (json['bobot_adab'] as num?)?.toInt() ?? 0,
-    bobotPenampilan: (json['bobot_penampilan'] as num?)?.toInt() ?? 0,
-    bobotTebakSurah: (json['bobot_tebak_surah'] as num?)?.toInt() ?? 0,
-    tasmiSettings: json['tasmi_settings'] as Map<String, dynamic>?,
-    targetMetrik: (json['target_metrik_kurikulum'] is List)
-        ? (json['target_metrik_kurikulum'] as List)
-        .whereType<Map<String, dynamic>>()
-        .map((x) => TargetMetrikModel.fromJson(x))
-        .toList()
-        : const [],
-  );
-
-  Map<String, dynamic> toJson() => {
-    if (id != null && id!.isNotEmpty) 'id': id,
-    'level_id': levelId,
-    'nama_modul': namaModul,
-    'tipe': tipe,
-    'target_pertemuan': targetPertemuan,
-    'target_amount': targetAmount,
-    'silabus': silabus,
-    'silabus_content': List<dynamic>.from(silabusContent.map((x) => x.toJson())),
-    'is_system_generated': isSystemGenerated,
-    'jenis_metrik': jenisMetrik,
-    'mulai_koordinat': mulaiKoordinat,
-    'akhir_koordinat': akhirKoordinat,
-    'kkm': kkm,
-    'silabus_source': silabusSource,
-    'is_strict': isStrict,
-    'is_allow_below_target': isAllowBelowTarget,
-    'is_accumulated': isAccumulated,
-    'is_single_burden': isSingleBurden,
-    'sabqi_amount': sabqiAmount,
-    'sabqi_unit': sabqiUnit,
-    'manzil_type': manzilType,
-    'manzil_amount': manzilAmount,
-    'target_amount_unit': targetAmountUnit,
-    'is_plotting_active': isPlottingActive,
-    'show_sabqi_in_mutabaah': showSabqiInMutabaah,
-    'show_manzil_in_dashboard': showManzilInDashboard,
-    'tasmi_settings': tasmiSettings,
-    // 'target_metrik_kurikulum' dihapus untuk mencegah error schema cache saat save modul
-  };
-
-  ModulModel copyWith({
-    String? id,
-    String? levelId,
-    String? namaModul,
-    String? tipe,
-    int? targetPertemuan,
-    double? targetAmount,
-    String? silabus,
-    List<SilabusItemModel>? silabusContent,
-    bool? isSystemGenerated,
-    String? jenisMetrik,
-    String? mulaiKoordinat,
-    String? akhirKoordinat,
-    double? kkm,
-    String? silabusSource,
-    bool? isStrict,
-    bool? isAllowBelowTarget,
-    bool? isAccumulated,
-    bool? isSingleBurden,
-    int? sabqiAmount,
-    String? sabqiUnit,
-    String? manzilType,
-    double? manzilAmount,
-    String? targetAmountUnit,
-    bool? isPlottingActive,
-    bool? showSabqiInMutabaah,
-    bool? showManzilInDashboard,
-    int? bobotItqon,
-    int? bobotMakhraj,
-    int? bobotTajwid,
-    int? bobotNada,
-    int? bobotAdab,
-    int? bobotPenampilan,
-    int? bobotTebakSurah,
-    Map<String, dynamic>? tasmiSettings,
-    List<TargetMetrikModel>? targetMetrik,
-  }) {
-    return ModulModel(
-      id: id ?? this.id,
-      levelId: levelId ?? this.levelId,
-      namaModul: namaModul ?? this.namaModul,
-      tipe: tipe ?? this.tipe,
-      targetPertemuan: targetPertemuan ?? this.targetPertemuan,
-      targetAmount: targetAmount ?? this.targetAmount,
-      silabus: silabus ?? this.silabus,
-      silabusContent: silabusContent ?? this.silabusContent,
-      isSystemGenerated: isSystemGenerated ?? this.isSystemGenerated,
-      jenisMetrik: jenisMetrik ?? this.jenisMetrik,
-      mulaiKoordinat: mulaiKoordinat ?? this.mulaiKoordinat,
-      akhirKoordinat: akhirKoordinat ?? this.akhirKoordinat,
-      kkm: kkm ?? this.kkm,
-      silabusSource: silabusSource ?? this.silabusSource,
-      isStrict: isStrict ?? this.isStrict,
-      isAllowBelowTarget: isAllowBelowTarget ?? this.isAllowBelowTarget,
-      isAccumulated: isAccumulated ?? this.isAccumulated,
-      isSingleBurden: isSingleBurden ?? this.isSingleBurden,
-      sabqiAmount: sabqiAmount ?? this.sabqiAmount,
-      sabqiUnit: sabqiUnit ?? this.sabqiUnit,
-      manzilType: manzilType ?? this.manzilType,
-      manzilAmount: manzilAmount ?? this.manzilAmount,
-      targetAmountUnit: targetAmountUnit ?? this.targetAmountUnit,
-      isPlottingActive: isPlottingActive ?? this.isPlottingActive,
-      showSabqiInMutabaah: showSabqiInMutabaah ?? this.showSabqiInMutabaah,
-      showManzilInDashboard: showManzilInDashboard ?? this.showManzilInDashboard,
-      bobotItqon: bobotItqon ?? this.bobotItqon,
-      bobotMakhraj: bobotMakhraj ?? this.bobotMakhraj,
-      bobotTajwid: bobotTajwid ?? this.bobotTajwid,
-      bobotNada: bobotNada ?? this.bobotNada,
-      bobotAdab: bobotAdab ?? this.bobotAdab,
-      bobotPenampilan: bobotPenampilan ?? this.bobotPenampilan,
-      bobotTebakSurah: bobotTebakSurah ?? this.bobotTebakSurah,
-      tasmiSettings: tasmiSettings ?? this.tasmiSettings,
-      targetMetrik: targetMetrik ?? this.targetMetrik,
-    );
-  }
-}
-
-// -----------------------------------------------------------------------------
-// 5. SUPPORTING MODELS (Silabus & Target Metrik)
-// -----------------------------------------------------------------------------
-class SilabusItemModel {
-  final int pertemuan;
-  final String materi;
-  final String? keterangan;
-
-  SilabusItemModel({
-    required this.pertemuan,
-    required this.materi,
-    this.keterangan,
-  });
-
-  factory SilabusItemModel.fromJson(Map<String, dynamic> json) => SilabusItemModel(
-    pertemuan: (json['pertemuan'] as num?)?.toInt() ?? 0,
-    materi: json['materi']?.toString() ?? '',
-    keterangan: json['keterangan']?.toString(),
-  );
-
-  Map<String, dynamic> toJson() => {
-    'pertemuan': pertemuan,
-    'materi': materi,
-    'keterangan': keterangan,
-  };
-}
-
-class TargetMetrikModel {
-  final String? id;
-  final String modulId;
-  final String jenisMetrik;
-  final String satuan;
-  final String mulai;
-  final String akhir;
-  final double kkm;
-
-  TargetMetrikModel({
-    this.id,
-    required this.modulId,
-    this.jenisMetrik = 'JUZ',
-    required this.satuan,
-    required this.mulai,
-    required this.akhir,
-    this.kkm = 80.0,
-  });
-
-  factory TargetMetrikModel.fromJson(Map<String, dynamic> json) => TargetMetrikModel(
-    id: (json['id'] == null || json['id'].toString() == 'null') ? null : json['id'].toString(),
-    modulId: json['modul_id']?.toString() ?? '',
-    jenisMetrik: json['jenis_metrik']?.toString() ?? 'JUZ',
-    satuan: json['satuan']?.toString() ?? '',
-    mulai: json['mulai']?.toString() ?? '',
-    akhir: json['akhir']?.toString() ?? '',
-    kkm: (json['kkm'] as num?)?.toDouble() ?? 80.0,
-  );
-
-  Map<String, dynamic> toJson() => {
-    if (id != null && id!.isNotEmpty) 'id': id,
-    'modul_id': modulId,
-    'jenis_metrik': jenisMetrik,
-    'satuan': satuan,
-    'mulai': mulai,
-    'akhir': akhir,
-    'kkm': kkm,
-  };
-
-  TargetMetrikModel copyWith({
-    String? id,
-    String? modulId,
-    String? jenisMetrik,
-    String? satuan,
-    String? mulai,
-    String? akhir,
-    double? kkm,
-  }) {
-    return TargetMetrikModel(
-      id: id ?? this.id,
-      modulId: modulId ?? this.modulId,
-      jenisMetrik: jenisMetrik ?? this.jenisMetrik,
-      satuan: satuan ?? this.satuan,
-      mulai: mulai ?? this.mulai,
-      akhir: akhir ?? this.akhir,
-      kkm: kkm ?? this.kkm,
-    );
-  }
-}
-
 class LevelExamConfig {
   final String type; // 'tasmi' | 'checklist'
   final double volume;

@@ -6,6 +6,7 @@ import '../models/siswa_model.dart';
 import '../services/siswa_service.dart';
 import '../../kelas/models/kelas_model.dart'; // Tambahan untuk tipe data
 import '../../kelas/providers/kelas_provider.dart'; // Tambahan untuk akses data kelas
+import '../../mutabaah/providers/mutabaah_provider.dart'; // TAMBAHAN: Sinkronisasi Multi-Modul
 
 part 'siswa_provider.g.dart';
 
@@ -15,6 +16,73 @@ class SiswaSearch extends _$SiswaSearch {
   @override
   String build() => '';
   void updateQuery(String query) => state = query;
+}
+
+// --- NEW: PROVIDER FILTER CABANG (Reactive) ---
+@riverpod
+class SiswaFilterCabang extends _$SiswaFilterCabang {
+  @override
+  String? build() => null;
+  void update(String? id) => state = id;
+}
+
+// --- NEW: PROVIDER FILTER PROGRAM (Reactive) ---
+@riverpod
+class SiswaFilterProgram extends _$SiswaFilterProgram {
+  @override
+  String? build() => null;
+  void update(String? id) => state = id;
+}
+
+// --- NEW: PROVIDER FILTER KURIKULUM (Reactive) ---
+@riverpod
+class SiswaFilterKurikulum extends _$SiswaFilterKurikulum {
+  @override
+  String? build() => null;
+  void update(String? id) => state = id;
+}
+
+// --- NEW: PROVIDER FILTER LEVEL (Reactive) ---
+@riverpod
+class SiswaFilterLevel extends _$SiswaFilterLevel {
+  @override
+  String? build() => null;
+  void update(String? id) => state = id;
+}
+
+// --- NEW: PROVIDER FILTERED SISWA (The Solution) ---
+@riverpod
+List<SiswaModel> filteredSiswa(FilteredSiswaRef ref) {
+  // 1. Ambil data mentah dari database
+  final allSiswa = ref.watch(siswaListProvider).value ?? [];
+
+  // 2. Ambil semua state filter
+  final query = ref.watch(siswaSearchProvider).toLowerCase();
+  final cabangId = ref.watch(siswaFilterCabangProvider);
+  final programId = ref.watch(siswaFilterProgramProvider);
+  final kurikulumId = ref.watch(siswaFilterKurikulumProvider); // TAMBAHAN
+  final levelId = ref.watch(siswaFilterLevelProvider);
+
+  // 3. Terapkan logika penyaringan (Search & Multiple Filters)
+  return allSiswa.where((s) {
+    // A. Filter Pencarian (Nama atau NISN)
+    final matchesQuery = s.namaLengkap.toLowerCase().contains(query) ||
+        (s.nisn?.contains(query) ?? false);
+
+    // B. Filter Cabang
+    final matchesCabang = cabangId == null || s.cabangId == cabangId;
+
+    // C. Filter Program
+    final matchesProgram = programId == null || s.programId == programId;
+
+    // D. Filter Kurikulum (TAMBAHAN)
+    final matchesKurikulum = kurikulumId == null || s.kurikulumId == kurikulumId;
+
+    // E. Filter Level (Jenjang)
+    final matchesLevel = levelId == null || s.levelId == levelId;
+
+    return matchesQuery && matchesCabang && matchesProgram && matchesKurikulum && matchesLevel;
+  }).toList();
 }
 
 // --- PROVIDER FILTER KELAS (Reactive Filter) ---
@@ -74,6 +142,12 @@ class SiswaList extends _$SiswaList {
     state = const AsyncValue.loading();
     try {
       await _siswaervice.updateSiswa(updatedSiswa);
+
+      // TAMBAHAN: Paksa refresh daftar modul jika Level/Data Siswa berubah
+      if (updatedSiswa.id != null) {
+        ref.invalidate(activeModulsBySiswaProvider(updatedSiswa.id!));
+      }
+
       ref.invalidateSelf();
       await future;
       return true;
@@ -158,6 +232,23 @@ class SiswaList extends _$SiswaList {
       lembagaId: lembagaId,
       onComplete: () => ref.invalidateSelf(),
     );
+  }
+
+  // TAMBAHAN: Metode pembaruan state lokal instan untuk mendukung transisi 3-tahap akademik secara reaktif di UI tanpa reload
+  void updateAcademicStateLocal(String siswaId, String newState) {
+    if (state.value == null) return;
+
+    final currentList = state.value!;
+    final index = currentList.indexWhere((s) => s.id == siswaId);
+
+    if (index != -1) {
+      final updatedList = List<SiswaModel>.from(currentList);
+      updatedList[index] = updatedList[index].copyWith(
+        academicState: newState,
+        isReadyForExam: newState == 'exam_ready',
+      );
+      state = AsyncValue.data(updatedList);
+    }
   }
 
   // --- HELPER COMPATIBILITY (Untuk UI existing Coach) ---

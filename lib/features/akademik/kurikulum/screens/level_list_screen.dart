@@ -179,6 +179,7 @@ class _LevelListScreenState extends ConsumerState<LevelListScreen> {
 
   void _showAddLevelheet(BuildContext context, {LevelModel? levelToEdit}) {
     final nameController = TextEditingController(text: levelToEdit?.namaLevel);
+    final urutanController = TextEditingController(text: levelToEdit?.urutan.toString() ?? '1'); // TAMBAHAN: Controller untuk urutan
 
     showModalBottomSheet(
       context: context,
@@ -223,6 +224,25 @@ class _LevelListScreenState extends ConsumerState<LevelListScreen> {
               style: const TextStyle(color: Colors.grey, fontSize: 13),
             ),
             const SizedBox(height: 32),
+
+            // TAMBAHAN: Form Input Urutan Level
+            const Text(
+                "URUTAN LEVEL (ANGKA)",
+                style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.grey, letterSpacing: 1.2)
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: urutanController,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                hintText: "Contoh: 1",
+                filled: true,
+                fillColor: const Color(0xFFF8FAFC),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+              ),
+            ),
+            const SizedBox(height: 16),
+
             Text(
                 widget.isLinear ? "NAMA KONTAINER" : "NAMA LEVEL",
                 style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.grey, letterSpacing: 1.2)
@@ -252,9 +272,7 @@ class _LevelListScreenState extends ConsumerState<LevelListScreen> {
                     jenjangId: widget.jenjang.id!,
                     programId: levelToEdit?.programId,
                     namaLevel: nameController.text.trim(),
-                    targetTotal: levelToEdit?.targetTotal ?? 0,
-                    metrik: levelToEdit?.metrik ?? 'Juz',
-                    urutan: levelToEdit?.urutan ?? 0,
+                    urutan: int.tryParse(urutanController.text.trim()) ?? 0, // PERBAIKAN: Parsing dari input urutan
                     isExamRequired: levelToEdit?.isExamRequired ?? false,
                     examConfig: levelToEdit?.examConfig,
                   );

@@ -1,5 +1,3 @@
-// Lokasi: lib/features/mutabaah/screens/mutabaah_stats_dashboard.dart
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../siswa/models/siswa_model.dart';
@@ -31,9 +29,11 @@ class MutabaahStatsDashboard extends ConsumerWidget {
     const Color emerald = Color(0xFF10B981);
     const Color slate = Color(0xFF1E293B);
 
-    // Hitung persentase target level
-    double targetTotal = currentLevel.targetTotal;
-    double progressPercent = (stats['monthly_pages'] / targetTotal).clamp(0.0, 1.0);
+    // FIX: Hitung persentase target level secara dinamis dari akumulasi total halaman seluruh modul
+    final double targetTotal = currentLevel.modul.fold(0.0, (sum, m) => sum + m.totalHalaman);
+    final double progressPercent = targetTotal > 0
+        ? (stats['monthly_pages'] / targetTotal).clamp(0.0, 1.0)
+        : 0.0;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -75,19 +75,19 @@ class MutabaahStatsDashboard extends ConsumerWidget {
               children: [
                 Expanded(
                   child: _buildSmallStatCard(
-                      "Rerata Nilai",
-                      "${stats['avg_score'].toStringAsFixed(1)}",
-                      Icons.auto_awesome_rounded,
-                      Colors.orange
+                    "Rerata Nilai",
+                    "${stats['avg_score'].toStringAsFixed(1)}",
+                    Icons.auto_awesome_rounded,
+                    Colors.orange,
                   ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
                   child: _buildSmallStatCard(
-                      "Total Setoran",
-                      "${stats['total_records']} Kali",
-                      Icons.history_edu_rounded,
-                      Colors.blue
+                    "Total Setoran",
+                    "${stats['total_records']} Kali",
+                    Icons.history_edu_rounded,
+                    Colors.blue,
                   ),
                 ),
               ],
@@ -98,6 +98,7 @@ class MutabaahStatsDashboard extends ConsumerWidget {
             const SizedBox(height: 12),
             _buildInsightCard(progressPercent, isDelayed),
             const SizedBox(height: 32),
+
             SizedBox(
               width: double.infinity,
               height: 56,
@@ -184,7 +185,7 @@ class MutabaahStatsDashboard extends ConsumerWidget {
             children: [
               Text(
                 isDelayed ? "Target Pelunasan Hutang" : "Target Level Bulan Ini",
-                style: TextStyle(color: isDelayed ? Colors.orange[200] : Colors.white70, fontSize: 13, fontWeight: isDelayed ? FontWeight.bold : FontWeight.normal),
+                style: TextStyle(color: isDelayed ? Colors.orange[7] : Colors.white70, fontSize: 13, fontWeight: isDelayed ? FontWeight.bold : FontWeight.normal),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -194,7 +195,7 @@ class MutabaahStatsDashboard extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 12),
-          Text("${current.toStringAsFixed(1)} / $target Halaman", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 24)),
+          Text("${current.toStringAsFixed(1)} / ${target.toInt()} Halaman", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 24)),
           const SizedBox(height: 20),
           ClipRRect(
             borderRadius: BorderRadius.circular(10),

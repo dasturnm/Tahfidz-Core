@@ -68,4 +68,16 @@ class Auth extends _$Auth {
     await ref.read(authServiceProvider).signOut();
     state = AuthState();
   }
+
+  Future<void> loginWithGoogle() async {
+    state = AuthState(isLoading: true);
+    try {
+      final success = await ref.read(authServiceProvider).signInWithGoogle();
+      if (!success) {
+        state = AuthState(isLoading: false, errorMessage: "Google Login dibatalkan atau gagal");
+      }
+    } catch (e) {
+      state = AuthState(isLoading: false, errorMessage: e.toString());
+    }
+  }
 }

@@ -2,8 +2,13 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart'; // TAMBAHAN
+import 'package:tahfidz_core/core/constants/app_routes.dart'; // TAMBAHAN
 import '../providers/siswa_provider.dart';
-import '../screens/siswa_form_screen.dart'; // Dibutuhkan untuk navigasi edit
+import '../models/siswa_model.dart'; // TAMBAHAN
+import '../../mutabaah/providers/mutabaah_provider.dart'; // TAMBAHAN
+// TAMBAHAN
+// Dibutuhkan untuk navigasi edit
 
 class SiswaTableView extends ConsumerStatefulWidget {
   const SiswaTableView({super.key});
@@ -13,16 +18,60 @@ class SiswaTableView extends ConsumerStatefulWidget {
 }
 
 class _SiswaTableViewState extends ConsumerState<SiswaTableView> {
-  // FIX: Blok initState dihapus untuk mencegah looping state (Skipped 208 frames).
-  // AsyncNotifier (siswaListProvider) sudah otomatis memanggil build() saat pertama kali di-watch.
+  // TAMBAHAN: Fungsi Navigasi Pintar 1-Klik
+  Future<void> _navigateToMutabaah(SiswaModel siswa) async {
+    // FIX: Tampilkan loading dialog dengan rootNavigator true agar aman saat di-pop (Aturan v2026.03.22)
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      useRootNavigator: true,
+      builder: (_) => const Center(child: CircularProgressIndicator(color: Color(0xFF0D9488))),
+    );
+
+    try {
+      final moduls = await ref.read(activeModulsBySiswaProvider(siswa.id!).future);
+
+      if (!mounted) return;
+      // FIX: Gunakan rootNavigator: true untuk menutup dialog secara spesifik agar tidak me-pop halaman (Fix Error popped the last page)
+      Navigator.of(context, rootNavigator: true).pop();
+
+      if (moduls.isEmpty) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Siswa belum memiliki modul aktif.")));
+          }
+        });
+        return;
+      }
+
+      // FIX: Navigasi menggunakan GoRouter agar sinkron dengan app_routes.dart
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          context.push(
+            AppRouteNames.mutabaahInput,
+            extra: <String, dynamic>{ // FIX: Type Casting Trap GoRouter
+              'siswa': siswa,
+              'activeModuls': moduls,
+            },
+          );
+        }
+      });
+    } catch (e) {
+      // FIX: Gunakan rootNavigator: true pada catch block
+      if (mounted) Navigator.of(context, rootNavigator: true).pop();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    // FIX: Menggunakan siswaListProvider (AsyncValue) untuk reaktivitas modern
-    final state = ref.watch(siswaListProvider);
-    final siswaList = state.value ?? [];
+    // FIX: Menggunakan filteredSiswaProvider untuk mendukung fitur Search & Filter (Point Penyempurnaan)
+    final state = ref.watch(filteredSiswaProvider);
+    final siswaList = state;
 
-    if (state.isLoading && siswaList.isEmpty) {
+    // Periksa loading dari list utama jika data masih kosong
+    final isMainLoading = ref.watch(siswaListProvider).isLoading;
+
+    if (isMainLoading && siswaList.isEmpty) {
       return const Center(child: CircularProgressIndicator(color: Color(0xFF0D9488)));
     }
 
@@ -68,145 +117,150 @@ class _SiswaTableViewState extends ConsumerState<SiswaTableView> {
                       bool isLakiLaki = siswa.jenisKelamin == 'L';
                       String inisial = siswa.namaLengkap.isNotEmpty ? siswa.namaLengkap[0].toUpperCase() : '?';
 
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                        child: Row(
-                          children: [
-                            // A. SISWA - Flex 3
-                            Expanded(
-                              flex: 3,
-                              child: Row(
-                                children: [
-                                  _buildAvatar(inisial, isLakiLaki),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(siswa.namaLengkap,
-                                            style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 12, color: Color(0xFF1E293B)),
-                                            maxLines: 1, overflow: TextOverflow.ellipsis),
-                                        Text("NIS: ${siswa.nisn ?? '-'}  •  ${isLakiLaki ? 'IKHWAN' : 'AKHWAT'}",
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFF94A3B8))),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-
-                            // B. KELAS / LEVEL - Flex 2
-                            Expanded(
-                              flex: 2,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // FIX: Menggunakan namaKelas sesuai standarisasi model terbaru
-                                  Text(siswa.kelas?.namaKelas ?? 'Tanpa Kelas',
-                                      style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF475569)),
-                                      maxLines: 1, overflow: TextOverflow.ellipsis),
-                                  const Text("LEVEL 1 (JUZ 30)",
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Color(0xFF14B8A6))),
-                                ],
-                              ),
-                            ),
-
-                            // C. PROGRESS HAFALAN - Flex 2
-                            Expanded(
-                              flex: 2,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Text('${siswa.totalJuzHafalan.toStringAsFixed(1)} ',
-                                          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF1E293B))),
-                                      const Text('Juz', style: TextStyle(fontSize: 8, color: Color(0xFF94A3B8))),
-                                      const Spacer(),
-                                      if (siswa.lastSurah != null)
-                                        Expanded(
-                                          child: Text('Last: ${siswa.lastSurah}:${siswa.lastAyat}',
-                                              textAlign: TextAlign.right,
+                      return InkWell( // TAMBAHAN: Shortcut 1-Klik
+                        onTap: () => _navigateToMutabaah(siswa),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                          child: Row(
+                            children: [
+                              // A. SISWA - Flex 3
+                              Expanded(
+                                flex: 3,
+                                child: Row(
+                                  children: [
+                                    _buildAvatar(inisial, isLakiLaki),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(siswa.namaLengkap,
+                                              style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 12, color: Color(0xFF1E293B)),
+                                              maxLines: 1, overflow: TextOverflow.ellipsis),
+                                          Text("NIS: ${siswa.nisn ?? '-'}  •  ${isLakiLaki ? 'IKHWAN' : 'AKHWAT'}",
                                               maxLines: 1,
                                               overflow: TextOverflow.ellipsis,
-                                              style: const TextStyle(fontSize: 7, fontStyle: FontStyle.italic, color: Color(0xFF94A3B8))),
-                                        ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 8),
-                                  LinearProgressIndicator(
-                                    value: (siswa.totalJuzHafalan / 30).clamp(0.0, 1.0),
-                                    backgroundColor: const Color(0xFFF1F5F9),
-                                    color: const Color(0xFF0D9488),
-                                    minHeight: 4,
-                                    borderRadius: const BorderRadius.all(Radius.circular(2)),
-                                  ),
-                                ],
+                                              style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFF94A3B8))),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
 
-                            const SizedBox(width: 12),
-
-                            // D. STATUS & AKSI - Flex 2
-                            Expanded(
-                              flex: 2,
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.end,
-                                children: [
-                                  _buildStatusBadge(siswa.status),
-                                  PopupMenuButton<String>(
-                                    padding: const EdgeInsets.all(0),
-                                    icon: const Icon(Icons.more_vert_rounded, color: Color(0xFF94A3B8), size: 20),
-                                    onSelected: (value) {
-                                      if (value == 'wa') {
-                                        // Logic WhatsApp
-                                      } else if (value == 'edit') {
-                                        Navigator.push(context, MaterialPageRoute(builder: (context) => SiswaFormScreen(existingSiswa: siswa)));
-                                      } else if (value == 'detail') {
-                                        // Logic Detail
-                                      }
-                                    },
-                                    itemBuilder: (context) => [
-                                      const PopupMenuItem(
-                                        value: 'wa',
-                                        child: Row(
-                                          children: [
-                                            Icon(Icons.chat_bubble_outline_rounded, color: Colors.green, size: 18),
-                                            SizedBox(width: 10),
-                                            Text("WhatsApp", style: TextStyle(fontSize: 13)),
-                                          ],
-                                        ),
-                                      ),
-                                      const PopupMenuItem(
-                                        value: 'edit',
-                                        child: Row(
-                                          children: [
-                                            Icon(Icons.edit_outlined, color: Colors.grey, size: 18),
-                                            SizedBox(width: 10),
-                                            Text("Edit Data", style: TextStyle(fontSize: 13)),
-                                          ],
-                                        ),
-                                      ),
-                                      const PopupMenuItem(
-                                        value: 'detail',
-                                        child: Row(
-                                          children: [
-                                            Icon(Icons.info_outline_rounded, color: Color(0xFF6366F1), size: 18),
-                                            SizedBox(width: 10),
-                                            Text("Detail", style: TextStyle(fontSize: 13)),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
+                              // B. KELAS / LEVEL - Flex 2
+                              Expanded(
+                                flex: 2,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // FIX: Menggunakan namaKelas sesuai standarisasi model terbaru
+                                    Text(siswa.kelas?.namaKelas ?? 'Tanpa Kelas',
+                                        style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF475569)),
+                                        maxLines: 1, overflow: TextOverflow.ellipsis),
+                                    // FIX: Menampilkan Jenjang Kurikulum secara dinamis (Point Penyempurnaan)
+                                    Text(siswa.currentLevel?.namaLevel ?? 'TANPA JENJANG',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Color(0xFF14B8A6))),
+                                  ],
+                                ),
                               ),
-                            ),
-                          ],
+
+                              // C. PROGRESS HAFALAN - Flex 2
+                              Expanded(
+                                flex: 2,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Text('${siswa.totalJuzHafalan.toStringAsFixed(1)} ',
+                                            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF1E293B))),
+                                        const Text('Juz', style: TextStyle(fontSize: 8, color: Color(0xFF94A3B8))),
+                                        const Spacer(),
+                                        if (siswa.lastSurah != null)
+                                          Expanded(
+                                            child: Text('Last: ${siswa.lastSurah}:${siswa.lastAyah}',
+                                                textAlign: TextAlign.right,
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: const TextStyle(fontSize: 7, fontStyle: FontStyle.italic, color: Color(0xFF94A3B8))),
+                                          ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    LinearProgressIndicator(
+                                      value: (siswa.totalJuzHafalan / 30).clamp(0.0, 1.0),
+                                      backgroundColor: const Color(0xFFF1F5F9),
+                                      color: const Color(0xFF0D9488),
+                                      minHeight: 4,
+                                      borderRadius: const BorderRadius.all(Radius.circular(2)),
+                                    ),
+                                  ],
+                                ),
+                              ),
+
+                              const SizedBox(width: 12),
+
+                              // D. STATUS & AKSI - Flex 2
+                              Expanded(
+                                flex: 2,
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    _buildStatusBadge(siswa.status),
+                                    PopupMenuButton<String>(
+                                      padding: const EdgeInsets.all(0),
+                                      icon: const Icon(Icons.more_vert_rounded, color: Color(0xFF94A3B8), size: 20),
+                                      onSelected: (value) {
+                                        if (value == 'wa') {
+                                          // Logic WhatsApp
+                                        } else if (value == 'edit') {
+                                          // FIXED: Menggunakan literal path agar sesuai dengan router yang terdaftar
+                                          context.push('/akademik/siswa/form', extra: siswa);
+                                        } else if (value == 'detail') {
+                                          // Logic Detail
+                                        }
+                                      },
+                                      itemBuilder: (context) => [
+                                        const PopupMenuItem(
+                                          value: 'wa',
+                                          child: Row(
+                                            children: [
+                                              Icon(Icons.chat_bubble_outline_rounded, color: Colors.green, size: 18),
+                                              SizedBox(width: 10),
+                                              Text("WhatsApp", style: TextStyle(fontSize: 13)),
+                                            ],
+                                          ),
+                                        ),
+                                        const PopupMenuItem(
+                                          value: 'edit',
+                                          child: Row(
+                                            children: [
+                                              Icon(Icons.edit_outlined, color: Colors.grey, size: 18),
+                                              SizedBox(width: 10), // FIXED: Typo diperbaiki
+                                              Text("Edit Data", style: TextStyle(fontSize: 13)),
+                                            ],
+                                          ),
+                                        ),
+                                        const PopupMenuItem(
+                                          value: 'detail',
+                                          child: Row(
+                                            children: [
+                                              Icon(Icons.info_outline_rounded, color: Color(0xFF6366F1), size: 18),
+                                              SizedBox(width: 10),
+                                              Text("Detail", style: TextStyle(fontSize: 13)),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       );
                     },

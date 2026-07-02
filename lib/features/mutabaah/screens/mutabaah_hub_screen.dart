@@ -9,6 +9,7 @@ import '../providers/mutabaah_provider.dart';
 import '../models/mutabaah_model.dart';
 // FIX: Tambahkan import agar ModulModel dikenali
 import '../../siswa/providers/siswa_provider.dart';
+// TAMBAHAN
 
 
 class MutabaahHubScreen extends ConsumerStatefulWidget {
@@ -327,7 +328,6 @@ class _MutabaahHubScreenState extends ConsumerState<MutabaahHubScreen> {
   // FIX: Mengubah BuildContext parentContext agar lebih eksplisit, dan menyimpan NavigatorState di awal
   void _showModulPocketSelector(BuildContext parentContext, WidgetRef ref, dynamic s) async {
     // 1. Ambil NavigatorState SEBELUM proses async dimulai.
-    // Ini menjamin kita punya akses ke Navigator yang aman, terlepas dari apa yang terjadi pada context layar.
     final navigator = Navigator.of(parentContext, rootNavigator: true);
 
     // 2. Tampilkan loading
@@ -352,44 +352,15 @@ class _MutabaahHubScreenState extends ConsumerState<MutabaahHubScreen> {
         return;
       }
 
-      // Jika hanya ada 1 modul (Sekuensial / Belum ada hutang), langsung ke input
-      if (activeModuls.length == 1) {
-        if (parentContext.mounted) parentContext.push(AppRouteNames.mutabaahInput, extra: {'siswa': s, 'modul': activeModuls.first});
-        return;
-      }
-
-      // Jika ada > 1 modul (Tipe A / Carry-over), tampilkan pemilih kantong
+      // FIX: Multi-Modul System (V2026). Langsung kirim seluruh List modul aktif ke Form.
+      // Tidak perlu lagi memilih kantong, form akan otomatis menyesuaikan isinya (Mushaf/Internal).
       if (parentContext.mounted) {
-        showModalBottomSheet(
-          context: parentContext,
-          backgroundColor: Colors.transparent,
-          builder: (ctx) => Container(
-            padding: const EdgeInsets.all(32),
-            decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text("Pilih Kantong Input", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                const Text("Siswa memiliki modul yang belum tuntas.", style: TextStyle(color: Colors.grey, fontSize: 13)),
-                const SizedBox(height: 24),
-                ...List.generate(activeModuls.length, (index) {
-                  final m = activeModuls[index];
-                  final bool isHutang = index < activeModuls.length - 1;
-                  return ListTile(
-                    leading: Icon(isHutang ? Icons.history_edu_rounded : Icons.star_rounded, color: isHutang ? Colors.orange : _emerald),
-                    title: Text(m.namaModul, style: const TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text(isHutang ? "KANTONG HUTANG" : "KANTONG BERJALAN", style: TextStyle(color: isHutang ? Colors.orange : _emerald, fontWeight: FontWeight.bold, fontSize: 10)),
-                    trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
-                    onTap: () {
-                      Navigator.pop(ctx);
-                      parentContext.push(AppRouteNames.mutabaahInput, extra: {'siswa': s, 'modul': m});
-                    },
-                  );
-                }),
-              ],
-            ),
-          ),
+        parentContext.push(
+          AppRouteNames.mutabaahInput,
+          extra: {
+            'siswa': s,
+            'activeModuls': activeModuls, // Mengirim List modul secara utuh
+          },
         );
       }
     } catch (e) {

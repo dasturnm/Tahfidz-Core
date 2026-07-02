@@ -3,21 +3,74 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart'; // Tambahan untuk integrasi WA
+import 'package:go_router/go_router.dart'; // TAMBAHAN
+import 'package:tahfidz_core/core/constants/app_routes.dart'; // TAMBAHAN
 import '../providers/siswa_provider.dart';
+import '../models/siswa_model.dart'; // TAMBAHAN: Import Model
+import '../../mutabaah/providers/mutabaah_provider.dart'; // TAMBAHAN: Untuk getActiveModuls
+// TAMBAHAN: Untuk Navigasi
 // PERBAIKAN: Menghapus import '../screens/siswa_form_screen.dart'; yang tidak digunakan
 import '../screens/siswa_detail_screen.dart';
 
 class SiswaGridView extends ConsumerWidget {
   const SiswaGridView({super.key});
 
+  // TAMBAHAN: Fungsi Navigasi Pintar 1-Klik
+  Future<void> _navigateToMutabaah(BuildContext context, WidgetRef ref, SiswaModel siswa) async {
+    // 1. Tampilkan Loading Dialog (FIX: Gunakan useRootNavigator: true agar aman saat di-pop)
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      useRootNavigator: true,
+      builder: (_) => const Center(child: CircularProgressIndicator(color: Color(0xFF0D9488))),
+    );
+
+    try {
+      // 2. Ambil Modul Aktif secara reaktif
+      final moduls = await ref.read(activeModulsBySiswaProvider(siswa.id!).future);
+
+      if (!context.mounted) return;
+      // FIX: Gunakan rootNavigator: true untuk menutup dialog secara spesifik agar tidak me-pop halaman utama
+      Navigator.of(context, rootNavigator: true).pop();
+
+      if (moduls.isEmpty) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("Siswa ini belum memiliki modul aktif di levelnya.")),
+            );
+          }
+        });
+        return;
+      }
+
+      // 3. Pindah ke Layar Mutabaah menggunakan GoRouter (Multi-Modul)
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (context.mounted) {
+          context.push(
+            AppRouteNames.mutabaahInput,
+            extra: <String, dynamic>{ // FIX: Type Casting Trap GoRouter
+              'siswa': siswa,
+              'activeModuls': moduls,
+            },
+          );
+        }
+      });
+    } catch (e) {
+      // FIX: Gunakan rootNavigator: true pada catch block
+      if (context.mounted) Navigator.of(context, rootNavigator: true).pop();
+      debugPrint("Error Navigation: $e");
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // FIX: Menggunakan siswaListProvider hasil generator
-    final state = ref.watch(siswaListProvider);
-    final siswaList = state.value ?? [];
+    // FIX: Menggunakan filteredSiswaProvider untuk mendukung fitur Search & Filter (Point Penyempurnaan)
+    final siswaList = ref.watch(filteredSiswaProvider);
+    final isMainLoading = ref.watch(siswaListProvider).isLoading;
 
     // FIX: Menyesuaikan pengecekan loading dan data dari AsyncValue
-    if (state.isLoading && siswaList.isEmpty) {
+    if (isMainLoading && siswaList.isEmpty) {
       return const Center(child: CircularProgressIndicator(color: Color(0xFF0D9488)));
     }
 
@@ -39,90 +92,99 @@ class SiswaGridView extends ConsumerWidget {
         bool isLakiLaki = siswa.jenisKelamin == 'L';
         String inisial = siswa.namaLengkap.isNotEmpty ? siswa.namaLengkap[0].toUpperCase() : '?';
 
-        return Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: Colors.grey.withValues(alpha: 0.1)), // PERBAIKAN: withValues
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.03), // PERBAIKAN: withValues
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 1. BAGIAN ATAS (Avatar & Status)
-              Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _buildAvatar(inisial, isLakiLaki),
-                    _buildStatusBadge(siswa.status),
-                  ],
+        return InkWell( // TAMBAHAN: Shortcut 1-Klik
+          onTap: () => _navigateToMutabaah(context, ref, siswa),
+          borderRadius: BorderRadius.circular(24),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: Colors.grey.withValues(alpha: 0.1)), // PERBAIKAN: withValues
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.03), // PERBAIKAN: withValues
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
                 ),
-              ),
-
-              // 2. INFORMASI SISWA
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      siswa.namaLengkap,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14, color: Color(0xFF1E293B)),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      "NIS: ${siswa.nisn ?? '-'}",
-                      style: const TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 12),
-                    // FIX: Menggunakan namaKelas sesuai standarisasi model terbaru
-                    _buildClassInfo(siswa.kelas?.namaKelas ?? 'Tanpa Kelas'),
-                  ],
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 1. BAGIAN ATAS (Avatar & Status)
+                Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _buildAvatar(inisial, isLakiLaki),
+                      _buildStatusBadge(siswa.status),
+                    ],
+                  ),
                 ),
-              ),
 
-              const Spacer(),
-
-              // 3. PROGRESS BAR KECIL
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text("PROGRESS", style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Colors.grey)),
-                        Text("${siswa.totalJuzHafalan.toStringAsFixed(1)} Juz",
-                            style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Color(0xFF0D9488))),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    LinearProgressIndicator(
-                      value: (siswa.totalJuzHafalan / 30).clamp(0.0, 1.0),
-                      backgroundColor: const Color(0xFFF1F5F9),
-                      color: const Color(0xFF0D9488),
-                      minHeight: 4,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ],
+                // 2. INFORMASI SISWA
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        siswa.namaLengkap,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14, color: Color(0xFF1E293B)),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        "NIS: ${siswa.nisn ?? '-'}",
+                        style: const TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 12),
+                      // FIX: Menampilkan Kelas dan Jenjang Kurikulum secara dinamis (Point Penyempurnaan)
+                      _buildClassInfo(siswa.kelas?.namaKelas ?? 'Tanpa Kelas'),
+                      const SizedBox(height: 4),
+                      Text(
+                        siswa.currentLevel?.namaLevel ?? 'TANPA JENJANG',
+                        style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Color(0xFF14B8A6)),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
 
-              const SizedBox(height: 16),
+                const Spacer(),
 
-              // 4. TOMBOL AKSI (WHATSAPP & DETAIL)
-              _buildActionButtons(context, siswa),
-            ],
+                // 3. PROGRESS BAR KECIL
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Column(
+                    children: [
+                      Row( // FIX: Karakter non-ASCII '裙' telah dihapus
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text("PROGRESS", style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Colors.grey)),
+                          Text("${siswa.totalJuzHafalan.toStringAsFixed(1)} Juz",
+                              style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Color(0xFF0D9488))),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      LinearProgressIndicator(
+                        value: (siswa.totalJuzHafalan / 30).clamp(0.0, 1.0),
+                        backgroundColor: const Color(0xFFF1F5F9),
+                        color: const Color(0xFF0D9488),
+                        minHeight: 4,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // 4. TOMBOL AKSI (WHATSAPP & DETAIL)
+                _buildActionButtons(context, siswa),
+              ],
+            ),
           ),
         );
       },

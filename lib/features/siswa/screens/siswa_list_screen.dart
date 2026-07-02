@@ -2,8 +2,9 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart'; // FIX: Tambah import GoRouter (Point Penyempurnaan)
+// TAMBAHAN: Untuk AppRouteNames
 import '../providers/siswa_provider.dart';
-import 'siswa_form_screen.dart';
 import '../widgets/enroll_kurikulum_dialog.dart';
 
 class SiswaListScreen extends ConsumerWidget {
@@ -67,6 +68,7 @@ class SiswaListScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     // REAKTIF: Watch data siswa (v2026.03.22)
     final state = ref.watch(siswaListProvider);
+    final filteredData = ref.watch(filteredSiswaProvider); // FIX: Gunakan filteredSiswaProvider agar fitur pencarian berfungsi
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
@@ -116,8 +118,8 @@ class SiswaListScreen extends ConsumerWidget {
             ),
           ),
         ),
-        data: (data) {
-          if (data.isEmpty) {
+        data: (_) { // FIX: Abaikan data mentah, gunakan filteredData reaktif agar search berfungsi
+          if (filteredData.isEmpty) {
             return const Center(child: Text("Belum ada data siswa"));
           }
           return RefreshIndicator(
@@ -125,9 +127,9 @@ class SiswaListScreen extends ConsumerWidget {
             onRefresh: () => ref.refresh(siswaListProvider.future),
             child: ListView.builder(
               padding: const EdgeInsets.all(16),
-              itemCount: data.length,
+              itemCount: filteredData.length,
               itemBuilder: (context, index) {
-                final siswa = data[index];
+                final siswa = filteredData[index];
                 // FIX: Menggunakan waliKelas sesuai properti di KelasModel (v2026.03.22)
                 final waliKelas = siswa.kelas?.waliKelas?.namaLengkap ??
                     'Belum ada wali kelas';
@@ -184,6 +186,16 @@ class SiswaListScreen extends ConsumerWidget {
                               fontWeight: FontWeight.bold,
                               color: Color(0xFF10B981)),
                         ),
+                        // FIX: Menampilkan Jenjang Kurikulum secara dinamis (v2026.03.22)
+                        Text(
+                          "Jenjang: ${siswa.currentLevel?.namaLevel ?? '-'}",
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w900,
+                              color: Color(0xFF14B8A6)),
+                        ),
                         Text(
                           "Wali: $waliKelas",
                           maxLines: 1,
@@ -198,13 +210,8 @@ class SiswaListScreen extends ConsumerWidget {
                       padding: EdgeInsets.zero,
                       icon: const Icon(Icons.edit, color: Colors.grey, size: 20),
                       onPressed: () {
-                        if (!context.mounted) return;
-                        Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => SiswaFormScreen(
-                                  existingSiswa: siswa),
-                            ));
+                        // FIX: Gunakan path literal untuk sinkronisasi rute sistem (v2026.03.22)
+                        context.push('/akademik/siswa/form', extra: siswa);
                       },
                     ),
                   ),
@@ -218,11 +225,8 @@ class SiswaListScreen extends ConsumerWidget {
         backgroundColor: const Color(0xFF10B981),
         child: const Icon(Icons.add, color: Colors.white),
         onPressed: () {
-          if (!context.mounted) return;
-          Navigator.push(
-              context,
-              MaterialPageRoute(
-                  builder: (context) => const SiswaFormScreen()));
+          // FIX: Gunakan path literal (Aturan v2026.03.22)
+          context.push('/akademik/siswa/form');
         },
       ),
     );

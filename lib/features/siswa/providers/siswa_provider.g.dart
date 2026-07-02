@@ -6,6 +6,23 @@ part of 'siswa_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
+String _$filteredSiswaHash() => r'd19784524ea45341598276990296eed64d892f2a';
+
+/// See also [filteredSiswa].
+@ProviderFor(filteredSiswa)
+final filteredSiswaProvider = AutoDisposeProvider<List<SiswaModel>>.internal(
+  filteredSiswa,
+  name: r'filteredSiswaProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$filteredSiswaHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef FilteredSiswaRef = AutoDisposeProviderRef<List<SiswaModel>>;
 String _$filteredKelasHash() => r'e2e72f6c628b0e997dc06b80bae556b4137d9156';
 
 /// Copied from Dart SDK
@@ -172,7 +189,73 @@ final siswaSearchProvider =
 );
 
 typedef _$SiswaSearch = AutoDisposeNotifier<String>;
-String _$siswaListHash() => r'fba84edce0a7b27f6b215d2189e107a53b01588f';
+String _$siswaFilterCabangHash() => r'5269ab108005f000e4937482e11a1209b19b870e';
+
+/// See also [SiswaFilterCabang].
+@ProviderFor(SiswaFilterCabang)
+final siswaFilterCabangProvider =
+    AutoDisposeNotifierProvider<SiswaFilterCabang, String?>.internal(
+  SiswaFilterCabang.new,
+  name: r'siswaFilterCabangProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$siswaFilterCabangHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+typedef _$SiswaFilterCabang = AutoDisposeNotifier<String?>;
+String _$siswaFilterProgramHash() =>
+    r'86c6aa1ac7ba0a022a955605690b26c3f1efe73e';
+
+/// See also [SiswaFilterProgram].
+@ProviderFor(SiswaFilterProgram)
+final siswaFilterProgramProvider =
+    AutoDisposeNotifierProvider<SiswaFilterProgram, String?>.internal(
+  SiswaFilterProgram.new,
+  name: r'siswaFilterProgramProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$siswaFilterProgramHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+typedef _$SiswaFilterProgram = AutoDisposeNotifier<String?>;
+String _$siswaFilterKurikulumHash() =>
+    r'a6c4ef55cf85e85327f6500212660cc14af67f0a';
+
+/// See also [SiswaFilterKurikulum].
+@ProviderFor(SiswaFilterKurikulum)
+final siswaFilterKurikulumProvider =
+    AutoDisposeNotifierProvider<SiswaFilterKurikulum, String?>.internal(
+  SiswaFilterKurikulum.new,
+  name: r'siswaFilterKurikulumProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$siswaFilterKurikulumHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+typedef _$SiswaFilterKurikulum = AutoDisposeNotifier<String?>;
+String _$siswaFilterLevelHash() => r'e10ac9d9d73a5126c40433ce6da556f55eda8d14';
+
+/// See also [SiswaFilterLevel].
+@ProviderFor(SiswaFilterLevel)
+final siswaFilterLevelProvider =
+    AutoDisposeNotifierProvider<SiswaFilterLevel, String?>.internal(
+  SiswaFilterLevel.new,
+  name: r'siswaFilterLevelProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$siswaFilterLevelHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+typedef _$SiswaFilterLevel = AutoDisposeNotifier<String?>;
+String _$siswaListHash() => r'4833992d766f3c42176b42e02ea40599d66ebcf1';
 
 /// See also [SiswaList].
 @ProviderFor(SiswaList)

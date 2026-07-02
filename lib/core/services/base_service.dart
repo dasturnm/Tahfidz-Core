@@ -3,6 +3,8 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tahfidz_core/core/providers/app_context_provider.dart';
+import 'dart:convert'; // TAMBAHAN: Untuk manipulasi encoding/decoding JSON cache
+import 'package:shared_preferences/shared_preferences.dart'; // TAMBAHAN: Kompatibel penuh untuk Web & Mobile Offline Fallback
 
 class BaseService {
   final SupabaseClient supabase = Supabase.instance.client;
@@ -51,7 +53,7 @@ class BaseService {
     required PostgrestFilterBuilder query,
     required String lembagaId,
   }) {
-    // FIX: Gunakan toSafeId untuk mencegah hang jika ID bernilai 'null' atau kosong
+    // FIX: Gunakan toSafeId to mencegah hang jika ID bernilai 'null' atau kosong
     final safeId = toSafeId(lembagaId);
     if (safeId == null) return query;
 
@@ -167,5 +169,30 @@ class BaseService {
       return error.message;
     }
     return error.toString();
+  }
+
+  /// 💾 POIN 6: SIMPAN DATA CACHE LOKAL MASTER DATA (Web & Mobile Compatible)
+  Future<void> saveToCache(String key, dynamic data) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final String jsonStr = jsonEncode(data);
+      await prefs.setString(key, jsonStr);
+    } catch (e) {
+      // Fail-safe: abaikan jika penyimpanan cache lokal gagal agar aplikasi tidak crash
+    }
+  }
+
+  /// 💾 POIN 6: AMBIL DATA CACHE LOKAL MASTER DATA (Fallback Offline saat Internet Putus)
+  Future<dynamic> getFromCache(String key) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final String? jsonStr = prefs.getString(key);
+      if (jsonStr != null) {
+        return jsonDecode(jsonStr);
+      }
+    } catch (e) {
+      // Fail-safe: kembalikan null jika pembacaan cache bermasalah
+    }
+    return null;
   }
 }

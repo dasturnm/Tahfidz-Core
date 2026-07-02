@@ -94,7 +94,7 @@ class LevelGridView extends StatelessWidget {
                           const SizedBox(width: 6),
                           Expanded(
                             child: Text(
-                              "Target: ${l.targetTotal} ${l.metrik}",
+                              "Target: Per Modul",
                               style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                             ),
                           ),

@@ -18,7 +18,8 @@ class _ModulTasmiSettingSectionState extends State<ModulTasmiSettingSection> {
   double _calculateTotalBobot() {
     double total = 0;
     widget.settings.forEach((key, value) {
-      if (value['active'] == true) {
+      // FIX: Cek tipe data terlebih dahulu untuk menghindari crash bila nilainya bertipe bool primitif root tingkat atas
+      if (value is Map && value['active'] == true) {
         total += (value['bobot'] as num?)?.toDouble() ?? 0.0;
       }
     });
@@ -27,32 +28,34 @@ class _ModulTasmiSettingSectionState extends State<ModulTasmiSettingSection> {
 
   void _updateSetting(String aspect, String field, dynamic value) {
     final newSettings = Map<String, dynamic>.from(widget.settings);
-    if (!newSettings.containsKey(aspect)) {
+    if (!newSettings.containsKey(aspect) || newSettings[aspect] is! Map) {
       newSettings[aspect] = {'active': true, 'bobot': 0.0};
     }
     newSettings[aspect][field] = value;
     widget.onChanged(newSettings);
   }
 
-  void _addCustomAspect() {
+  // FIX: Menambahkan parameter opsi isDeductive untuk membedakan kategori pembuatan aspek baru
+  void _addCustomAspect({bool isDeductive = false}) {
     final newSettings = Map<String, dynamic>.from(widget.settings);
     int index = 1;
-    while (newSettings.containsKey('custom_$index')) {
+    while (newSettings.containsKey('custom_${isDeductive ? "deductive_" : ""}$index')) {
       index++;
     }
-    newSettings['custom_$index'] = {
+    newSettings['custom_${isDeductive ? "deductive_" : ""}$index'] = {
       'active': true,
       'bobot': 0.0,
       'is_custom': true,
+      'is_deductive': isDeductive,
       'name': 'Aspek Baru $index'
     };
     widget.onChanged(newSettings);
   }
 
   void _removeCustomAspect(String aspectKey) {
-    final newSettings = Map<String, dynamic>.from(widget.settings);
-    newSettings.remove(aspectKey);
-    widget.onChanged(newSettings);
+    // FIX: Kirim sinyal null (Tombstone) murni untuk key spesifik ini saja,
+    // agar controller tahu bahwa map harus meremove key ini alih-alih menimpanya dalam spread operator.
+    widget.onChanged({aspectKey: null});
   }
 
   @override
@@ -66,8 +69,11 @@ class _ModulTasmiSettingSectionState extends State<ModulTasmiSettingSection> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text("PENGATURAN GRADASI NILAI",
-                style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13, color: Color(0xFF1E293B))),
+            const Expanded(
+              child: Text("PENGATURAN GRADASI NILAI",
+                  style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13, color: Color(0xFF1E293B))),
+            ),
+            const SizedBox(width: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
@@ -115,6 +121,47 @@ class _ModulTasmiSettingSectionState extends State<ModulTasmiSettingSection> {
               _buildInput('makhraj', 'pinalti_salah', "S (-)"),
             ]),
 
+        // Custom Deductive Aspects (Kategori A)
+        // FIX: Merender aspek kustom pinalti K dan S saja di area Kategori A
+        ...widget.settings.entries.where((e) => e.value is Map && e.value['is_custom'] == true && e.value['is_deductive'] == true).map((e) {
+          return _buildAspectCard(e.key, e.value['name'] ?? "Aspek Custom", isDeductive: true, isCustom: true,
+              inputs: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      TextFormField(
+                        initialValue: e.value['name'],
+                        decoration: const InputDecoration(labelText: "Nama Aspek", border: OutlineInputBorder(), isDense: true),
+                        onChanged: (v) => _updateSetting(e.key, 'name', v),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _buildInput(e.key, 'bobot', "Bobot %"),
+                          _buildInput(e.key, 'pinalti_kurang', "K (-)"),
+                          _buildInput(e.key, 'pinalti_salah', "S (-)"),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ]);
+        }),
+
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          onPressed: () => _addCustomAspect(isDeductive: true),
+          icon: const Icon(Icons.add),
+          label: const Text("Tambah Aspek Penilaian (Deduktif)"),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: const Color(0xFF10B981),
+            side: const BorderSide(color: Color(0xFF10B981)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        ),
+
         const SizedBox(height: 24),
 
         // KATEGORI B: KOMULATIF (SKOR LANGSUNG)
@@ -124,7 +171,8 @@ class _ModulTasmiSettingSectionState extends State<ModulTasmiSettingSection> {
         _buildAspectCard('adab', "Adab Tilawah", isDeductive: false, inputs: [_buildInput('adab', 'bobot', "Bobot %")]),
 
         // Custom Aspects
-        ...widget.settings.entries.where((e) => e.value['is_custom'] == true).map((e) {
+        // FIX: Tambahkan filter e.value['is_deductive'] != true agar aspek komulatif murni masuk ke Kategori B
+        ...widget.settings.entries.where((e) => e.value is Map && e.value['is_custom'] == true && e.value['is_deductive'] != true).map((e) {
           return _buildAspectCard(e.key, e.value['name'] ?? "Aspek Custom", isDeductive: false, isCustom: true,
               inputs: [
                 Expanded(
@@ -142,7 +190,7 @@ class _ModulTasmiSettingSectionState extends State<ModulTasmiSettingSection> {
 
         const SizedBox(height: 12),
         OutlinedButton.icon(
-          onPressed: _addCustomAspect,
+          onPressed: () => _addCustomAspect(isDeductive: false),
           icon: const Icon(Icons.add),
           label: const Text("Tambah Aspek Penilaian"),
           style: OutlinedButton.styleFrom(
@@ -167,7 +215,13 @@ class _ModulTasmiSettingSectionState extends State<ModulTasmiSettingSection> {
           ListTile(
             onTap: () => setState(() => _showInstructions = !_showInstructions),
             leading: const Icon(Icons.menu_book_rounded, color: Colors.blue),
-            title: const Text("Panduan Terminologi Ujian", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.blue)),
+            // PERUBAHAN: Menjadikan judul panduan terminologi lembaran evaluasi bersifat dinamis sesuai kondisi silabusSource
+            title: Text(
+              widget.settings['silabus_source'] == 'internal'
+                  ? "Panduan Lembaran Evaluasi Silabus Internal"
+                  : "Panduan Lembaran Evaluasi Silabus Mushaf",
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.blue),
+            ),
             trailing: Icon(_showInstructions ? Icons.expand_less : Icons.expand_more, color: Colors.blue),
           ),
           if (_showInstructions)
@@ -181,7 +235,7 @@ class _ModulTasmiSettingSectionState extends State<ModulTasmiSettingSection> {
                   SizedBox(height: 4),
                   Text("• T (Tawaquf): Salah Sedang/Dengan Teguran (Santri terhenti dan butuh pancingan kata).", style: TextStyle(fontSize: 11, color: Colors.blueGrey)),
                   SizedBox(height: 4),
-                  Text("• P (Fath/Talqin): Salah Berat/Dipandu (Santri tidak bisa lanjut dan harus dibacakan ayatnya/pindah).", style: TextStyle(fontSize: 11, color: Colors.blueGrey)),
+                  Text("• P (Fath/Talqin): Salah Berat/Dipandu (Santri tidak bisa lanjut dan harus dibacakan ayahnya/pindah).", style: TextStyle(fontSize: 11, color: Colors.blueGrey)),
                   SizedBox(height: 8),
                   Text("• K (Kurang Tepat): Kesalahan minor pada panjang pendek atau makhraj ringan.", style: TextStyle(fontSize: 11, color: Colors.blueGrey)),
                   SizedBox(height: 4),
@@ -195,8 +249,10 @@ class _ModulTasmiSettingSectionState extends State<ModulTasmiSettingSection> {
   }
 
   Widget _buildAspectCard(String key, String title, {required bool isDeductive, required List<Widget> inputs, bool isCustom = false}) {
-    final data = widget.settings[key] ?? {'active': true};
-    final bool isActive = data['active'] ?? true;
+    final rawData = widget.settings[key];
+    // FIX: Normalisasi data jika nilainya bukan Map (misal bool primitif) agar default active bekerja aman
+    final data = rawData is Map ? rawData : {'active': false};
+    final bool isActive = data['active'] ?? false;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -237,7 +293,9 @@ class _ModulTasmiSettingSectionState extends State<ModulTasmiSettingSection> {
   }
 
   Widget _buildInput(String catKey, String fieldKey, String label) {
-    final data = widget.settings[catKey] ?? {};
+    final rawData = widget.settings[catKey];
+    // FIX: Pastikan data bertipe Map sebelum accessing sub-key
+    final data = rawData is Map ? rawData : {};
     final value = data[fieldKey] ?? 0.0;
 
     return Expanded(
@@ -250,7 +308,7 @@ class _ModulTasmiSettingSectionState extends State<ModulTasmiSettingSection> {
           decoration: InputDecoration(
             labelText: label,
             labelStyle: const TextStyle(fontSize: 11),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            border: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(8))),
             isDense: true,
             contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
           ),

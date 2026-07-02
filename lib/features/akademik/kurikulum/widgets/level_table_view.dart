@@ -51,7 +51,7 @@ class LevelTableView extends StatelessWidget {
                         child: Text(l.namaLevel, style: TextStyle(color: primaryColor, fontWeight: FontWeight.w600)),
                       )
                   ),
-                  DataCell(Text("${l.targetTotal} ${l.metrik}")),
+                  const DataCell(Text("Per Modul")),
                   DataCell(Text("${l.modul.length} Materi")), // PERBAIKAN: Sync ke model singular 'modul'
                   DataCell(
                     IconButton(

@@ -3,6 +3,8 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:tahfidz_core/core/services/base_service.dart';
 import 'package:tahfidz_core/features/akademik/kurikulum/models/kurikulum_model.dart';
+import 'dart:convert';
+import 'package:flutter/services.dart';
 // FIX: Import model pendukung dihapus karena semua model (Jenjang, Level, Modul)
 // sudah disatukan di dalam kurikulum_model.dart
 
@@ -25,7 +27,7 @@ class KurikulumService extends BaseService {
       // PENYEMPURNAAN: Sertakan target_metrik_kurikulum dalam select
       PostgrestFilterBuilder query = supabase
           .from('kurikulum')
-          .select('*, jenjang:jenjang_kurikulum(*, level:kurikulum_level(*, modul:modul_kurikulum(*, target_metrik_kurikulum(*))))');
+          .select('*, jenjang:jenjang_kurikulum(*, level:kurikulum_level(*, modul:modul_kurikulum(*, target_metrik_kurikulum(*), modul_evaluasi_template(*)))))');
 
       // Filter Lembaga via Helper BaseService
       // FIX: Casting eksplisit ke PostgrestList untuk menghindari error invalid_assignment
@@ -54,8 +56,40 @@ class KurikulumService extends BaseService {
     }
   }
 
+  /// 🔍 FETCH KURIKULUM BY PROGRAM (BARU)
+  /// Mengambil daftar kurikulum berdasarkan Program ID
+  Future<List<KurikulumModel>> getKurikulumByProgram(String programId) async {
+    try {
+      final response = await supabase
+          .from('kurikulum')
+          .select('*')
+          .eq('program_id', programId)
+          .order('nama_kurikulum', ascending: true);
+
+      return (response as List).map((e) => KurikulumModel.fromJson(e)).toList();
+    } catch (e) {
+      throw Exception(handleError(e));
+    }
+  }
+
+  /// 🔍 FETCH LEVELS BY KURIKULUM (BARU)
+  /// Mengambil daftar level berdasarkan Kurikulum ID (untuk dropdown berjenjang)
+  Future<List<LevelModel>> getLevelsByKurikulum(String kurikulumId) async {
+    try {
+      final response = await supabase
+          .from('kurikulum_level')
+          .select('*, jenjang:jenjang_kurikulum(*)')
+          .eq('kurikulum_id', kurikulumId)
+          .order('urutan', ascending: true);
+
+      return (response as List).map((e) => LevelModel.fromJson(e)).toList();
+    } catch (e) {
+      throw Exception(handleError(e));
+    }
+  }
+
   /// 🔍 FETCH LEVELS BY PROGRAM
-  /// Mengambil daftar level berdasarkan Program ID (untuk dropdown di Form Siswa/Mutabaah)
+  /// Mengambil daftar level berdasarkan Program ID
   Future<List<LevelModel>> getLevelsByProgram(String programId) async {
     try {
       final response = await supabase
@@ -65,6 +99,22 @@ class KurikulumService extends BaseService {
           .order('urutan', ascending: true);
 
       return (response as List).map((e) => LevelModel.fromJson(e)).toList();
+    } catch (e) {
+      throw Exception(handleError(e));
+    }
+  }
+
+  /// 🔍 FETCH MODULS BY LEVEL (BARU)
+  /// Mengambil daftar modul berdasarkan Level ID
+  Future<List<ModulModel>> getModulsByLevel(String levelId) async {
+    try {
+      final response = await supabase
+          .from('modul_kurikulum')
+          .select('*')
+          .eq('level_id', levelId)
+          .order('urutan', ascending: true);
+
+      return (response as List).map((e) => ModulModel.fromJson(e)).toList();
     } catch (e) {
       throw Exception(handleError(e));
     }
@@ -136,10 +186,64 @@ class KurikulumService extends BaseService {
           }
 
           for (var modul in level.modul) {
+            // FIX LOCAL LOOKUP: Membaca skema koordinat sekuensial dari asset JSON lokal (Offline-First)
+            final String jsonContent = await rootBundle.loadString('assets/mushaf_peta.json');
+            final List<dynamic> localRows = json.decode(jsonContent) as List<dynamic>;
+
+            final surahRows = localRows.where((r) {
+              final sNum = int.tryParse(r['surah_number']?.toString() ?? '') ?? 0;
+              return sNum == modul.surahId;
+            }).toList();
+
+            Map<String, dynamic>? startRes;
+            Map<String, dynamic>? endRes;
+
+            if (surahRows.isNotEmpty) {
+              final startMatches = surahRows.where((r) {
+                final start = int.tryParse(r['ayah_start']?.toString() ?? '') ?? 0;
+                final end = int.tryParse(r['ayah_end']?.toString() ?? '') ?? 0;
+                return start <= modul.ayahStart && end >= modul.ayahStart;
+              }).toList();
+              if (startMatches.isNotEmpty) {
+                startMatches.sort((a, b) => (int.tryParse(a['koordinat_baris']?.toString() ?? '') ?? 0)
+                    .compareTo(int.tryParse(b['koordinat_baris']?.toString() ?? '') ?? 0));
+                startRes = startMatches.first;
+              }
+
+              final endMatches = surahRows.where((r) {
+                final start = int.tryParse(r['ayah_start']?.toString() ?? '') ?? 0;
+                final end = int.tryParse(r['ayah_end']?.toString() ?? '') ?? 0;
+                return start <= modul.ayahEnd && end >= modul.ayahEnd;
+              }).toList();
+              if (endMatches.isNotEmpty) {
+                endMatches.sort((a, b) => (int.tryParse(a['koordinat_baris']?.toString() ?? '') ?? 0)
+                    .compareTo(int.tryParse(b['koordinat_baris']?.toString() ?? '') ?? 0));
+                endRes = endMatches.first;
+              }
+            }
+
+            int calculatedTotalBaris = 0;
+
+            if (startRes != null && endRes != null) {
+              final startKoor = int.tryParse(startRes['koordinat_baris']?.toString() ?? '') ?? 0;
+              final endKoor = int.tryParse(endRes['koordinat_baris']?.toString() ?? '') ?? 0;
+
+              final minKoor = startKoor < endKoor ? startKoor : endKoor;
+              final maxKoor = startKoor < endKoor ? endKoor : startKoor;
+
+              calculatedTotalBaris = surahRows.where((r) {
+                final koor = int.tryParse(r['koordinat_baris']?.toString() ?? '') ?? 0;
+                return koor >= minKoor && koor <= maxKoor;
+              }).length;
+            }
+
             // FIX: Menggunakan cleanData() & proteksi dari field nested
+            // Tambahkan calculatedTotalBaris ke dalam payload data modul
             final modulData = cleanData(modul.toJson())
               ..remove('target_metrik_kurikulum')
-              ..['level_id'] = levelId;
+              ..remove('modul_evaluasi_template')
+              ..['level_id'] = levelId
+              ..['total_baris'] = calculatedTotalBaris;
 
             String modulId;
             if (modul.id == null) {
@@ -157,6 +261,16 @@ class KurikulumService extends BaseService {
                 await supabase.from('target_metrik_kurikulum').insert(targetData..remove('id'));
               } else {
                 await supabase.from('target_metrik_kurikulum').update(targetData).eq('id', target.id!);
+              }
+            }
+
+            // SIMPAN: Template Evaluasi Silabus Internal (TAMBAHAN)
+            for (var template in modul.evaluasiTemplates) {
+              final templateData = cleanData(template.toJson())..['modul_id'] = modulId;
+              if (template.id == null || template.id!.isEmpty) {
+                await supabase.from('modul_evaluasi_template').insert(templateData..remove('id'));
+              } else {
+                await supabase.from('modul_evaluasi_template').update(templateData).eq('id', template.id!);
               }
             }
           }

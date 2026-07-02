@@ -8,7 +8,8 @@ import '../models/siswa_model.dart';
 import '../providers/siswa_provider.dart';
 import '../../program/providers/program_provider.dart'; // FIX: Migrasi ke programNotifierProvider
 import '../../kelas/providers/kelas_provider.dart';
-import '../../akademik/kurikulum/providers/level_provider.dart'; // FIX: Menggunakan level_provider spesifik
+// FIX: Menggunakan level_provider spesifik
+import '../../akademik/kurikulum/providers/kurikulum_provider.dart'; // TAMBAHAN: Import provider kurikulum
 import 'package:tahfidz_core/core/providers/app_context_provider.dart';
 
 class SiswaFormScreen extends ConsumerStatefulWidget {
@@ -31,7 +32,9 @@ class _SiswaFormScreenState extends ConsumerState<SiswaFormScreen> {
   String _status = 'aktif';
   DateTime? _tglLahir;
   String? _selectedProgramId;
+  String? _selectedKurikulumId; // TAMBAHAN
   String? _selectedLevelId;
+  String? _selectedModulId; // TAMBAHAN
   String? _selectedKelasId; // PERBAIKAN: Label Kelas
 
   bool _isSaving = false;
@@ -53,8 +56,10 @@ class _SiswaFormScreenState extends ConsumerState<SiswaFormScreen> {
       _status = s.status;
       _tglLahir = s.tglLahir;
       _selectedProgramId = s.programId;
-      _selectedLevelId = s.levelId ?? s.currentLevelId; // FIX: Gunakan field levelId baru
-      _selectedKelasId = s.kelasId; // PERBAIKAN: Label Kelas
+      _selectedKurikulumId = s.kurikulumId; // TAMBAHAN
+      _selectedLevelId = s.levelId ?? s.currentLevelId;
+      _selectedModulId = s.currentModulId; // TAMBAHAN
+      _selectedKelasId = s.kelasId;
     }
   }
 
@@ -95,7 +100,6 @@ class _SiswaFormScreenState extends ConsumerState<SiswaFormScreen> {
 
     setState(() => _isSaving = true);
 
-    // FIX: Menggunakan provider yang sesuai dengan import core
     final lembagaId = ref.read(appContextProvider).lembaga?.id ?? '';
 
     if (lembagaId.isEmpty) {
@@ -106,7 +110,6 @@ class _SiswaFormScreenState extends ConsumerState<SiswaFormScreen> {
       return;
     }
 
-    // 🔥 SMART MAPPING: Sinkronisasi dengan properti asli SiswaModel
     final siswaData = SiswaModel(
       id: widget.existingSiswa?.id,
       lembagaId: lembagaId,
@@ -117,20 +120,20 @@ class _SiswaFormScreenState extends ConsumerState<SiswaFormScreen> {
       alamat: _alamatController.text.trim().isEmpty ? null : _alamatController.text.trim(),
       status: _status,
       programId: _selectedProgramId,
-      levelId: _selectedLevelId, // TAMBAHAN: Sinkron dengan field baru
+      kurikulumId: _selectedKurikulumId, // TAMBAHAN
+      levelId: _selectedLevelId,
       currentLevelId: _selectedLevelId,
-      kelasId: _selectedKelasId, // PERBAIKAN: Label Kelas
+      currentModulId: _selectedModulId, // TAMBAHAN
+      kelasId: _selectedKelasId,
       totalJuzHafalan: widget.existingSiswa?.totalJuzHafalan ?? 0,
       lastSurah: widget.existingSiswa?.lastSurah,
-      lastAyat: widget.existingSiswa?.lastAyat,
+      lastAyah: widget.existingSiswa?.lastAyah,
     );
 
     bool success;
     if (widget.existingSiswa == null) {
-      // FIX: Menggunakan notifier dari siswaListProvider
       success = await ref.read(siswaListProvider.notifier).addSiswa(siswaData);
     } else {
-      // FIX: Menggunakan notifier dari siswaListProvider
       success = await ref.read(siswaListProvider.notifier).updateSiswa(siswaData);
     }
 
@@ -150,7 +153,6 @@ class _SiswaFormScreenState extends ConsumerState<SiswaFormScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            // FIX: Mengambil error dari state AsyncValue siswaListProvider
             content: Text(ref.read(siswaListProvider).error?.toString() ?? 'Terjadi kesalahan'),
             backgroundColor: Colors.red,
           ),
@@ -162,15 +164,16 @@ class _SiswaFormScreenState extends ConsumerState<SiswaFormScreen> {
   @override
   Widget build(BuildContext context) {
     final isEditing = widget.existingSiswa != null;
-
-    // FIX (Aturan 7): Menggunakan programNotifierProvider (AsyncValue)
     final programsAsync = ref.watch(programNotifierProvider);
-
-    // FIX: Menggunakan kelasListProvider hasil generator
     final kelasAsync = ref.watch(kelasListProvider);
 
-    // 🔥 REAKTIF: Watch levels berdasarkan program yang dipilih menggunakan provider baru
-    final levelsAsync = ref.watch(levelsByProgramProvider(_selectedProgramId));
+    // 🔥 DATA DYNAMIC
+    final kurikulumAsync = ref.watch(kurikulumByProgramProvider(_selectedProgramId));
+    final levelsAsync = ref.watch(levelsByKurikulumProvider(_selectedKurikulumId));
+    final modulsAsync = ref.watch(modulByLevelProvider(_selectedLevelId));
+
+    final selectedKurikulum = (kurikulumAsync.value ?? []).where((k) => k.id == _selectedKurikulumId).firstOrNull;
+    bool isLinear = selectedKurikulum?.isLinear ?? false;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -279,7 +282,6 @@ class _SiswaFormScreenState extends ConsumerState<SiswaFormScreen> {
                 _buildDropdown(
                   label: 'Program Akademik',
                   value: _selectedProgramId,
-                  // FIX: Mengambil status loading dari AsyncValue
                   hint: programsAsync.isLoading ? 'Memuat program...' : 'Pilih Program',
                   items: [
                     const DropdownMenuItem(value: null, child: Text('Tanpa Program')),
@@ -294,74 +296,90 @@ class _SiswaFormScreenState extends ConsumerState<SiswaFormScreen> {
                   onChanged: (val) {
                     setState(() {
                       _selectedProgramId = val?.toString();
-                      _selectedLevelId = null; // 🛡️ SAFE SYNC: Reset level saat program berubah
-                      // 🛡️ SAFE SYNC: Reset Kelas jika tidak cocok dengan Program baru
-                      if (_selectedKelasId != null && _selectedProgramId != null) {
-                        final allKelas = kelasAsync.value ?? [];
-                        final currentKelas = allKelas.where((k) => k.id == _selectedKelasId).firstOrNull;
-                        if (currentKelas != null && currentKelas.programId != _selectedProgramId) {
-                          _selectedKelasId = null;
-                        }
-                      }
+                      _selectedKurikulumId = null;
+                      _selectedLevelId = null;
+                      _selectedModulId = null;
                     });
                   },
                 ),
-                const SizedBox(height: 16),
 
+                // TAMBAHAN: Dropdown Kurikulum
+                const SizedBox(height: 16),
+                _buildDropdown(
+                  label: 'Kurikulum',
+                  value: _selectedKurikulumId,
+                  hint: kurikulumAsync.isLoading ? 'Memuat kurikulum...' : 'Pilih Kurikulum',
+                  items: kurikulumAsync.maybeWhen(
+                    data: (list) => list.map((k) => DropdownMenuItem(
+                        value: k.id,
+                        child: Text(k.namaKurikulum, overflow: TextOverflow.ellipsis)
+                    )).toList(),
+                    orElse: () => [],
+                  ),
+                  onChanged: (val) => setState(() {
+                    _selectedKurikulumId = val?.toString();
+                    _selectedLevelId = null;
+                    _selectedModulId = null;
+                  }),
+                ),
+
+                const SizedBox(height: 16),
                 Row(
                   children: [
                     Expanded(
                       child: _buildDropdown(
-                        label: 'Level Kurikulum',
+                        label: isLinear ? 'Jenjang' : 'Level',
                         value: _selectedLevelId,
-                        // FIX: Mengambil data reaktif dari LevelListProvider
-                        hint: levelsAsync.isLoading ? 'Memuat...' : 'Pilih Level',
-                        items: [
-                          const DropdownMenuItem(value: null, child: Text('Pilih Level')),
-                          ...levelsAsync.maybeWhen(
-                            data: (list) => list.map((l) => DropdownMenuItem(
-                              value: l.id,
-                              child: Text(l.namaLevel),
-                            )).toList(),
-                            orElse: () => [],
-                          ),
-                        ],
-                        onChanged: (val) => setState(() => _selectedLevelId = val?.toString()),
+                        hint: levelsAsync.isLoading ? 'Memuat...' : 'Pilih ${isLinear ? 'Jenjang' : 'Level'}',
+                        items: levelsAsync.maybeWhen(
+                          data: (list) => list.map((l) => DropdownMenuItem(
+                            value: l.id,
+                            child: Text(l.namaLevel),
+                          )).toList(),
+                          orElse: () => [],
+                        ),
+                        onChanged: (val) => setState(() {
+                          _selectedLevelId = val?.toString();
+                          _selectedModulId = null;
+                        }),
                       ),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
                       child: _buildDropdown(
-                        label: 'Unit Kelas',
-                        value: _selectedKelasId,
-                        // FIX: Menangani status loading dan data dari AsyncValue
-                        hint: kelasAsync.isLoading ? 'Memuat...' : 'Pilih Kelas',
-                        items: [
-                          const DropdownMenuItem(value: null, child: Text('Belum Ada')),
-                          // 🛡️ REACTIVE FILTER: Hanya tampilkan kelas yang sesuai program pilihan
-                          ...(kelasAsync.value ?? [])
-                              .where((c) => _selectedProgramId == null || c.programId == _selectedProgramId)
-                              .map((c) {
-                            // FIX: Menggunakan namaKelas sesuai standarisasi model terbaru
-                            return DropdownMenuItem(value: c.id, child: Text(c.namaKelas, overflow: TextOverflow.ellipsis));
-                          }),
-                        ],
-                        onChanged: (val) {
-                          setState(() {
-                            _selectedKelasId = val?.toString();
-                            // 🛡️ AUTO-ASSIGN: Jika Kelas dipilih, kunci Program-nya
-                            if (_selectedKelasId != null) {
-                              final pickedKelas = (kelasAsync.value ?? []).firstWhere((k) => k.id == _selectedKelasId);
-                              _selectedProgramId = pickedKelas.programId;
-                            }
-                          });
-                        },
+                        label: 'Modul Awal',
+                        value: _selectedModulId,
+                        hint: modulsAsync.isLoading ? 'Memuat...' : 'Pilih Modul',
+                        items: modulsAsync.maybeWhen(
+                          data: (list) => list.map((m) => DropdownMenuItem(
+                            value: m.id,
+                            child: Text(m.namaModul),
+                          )).toList(),
+                          orElse: () => [],
+                        ),
+                        onChanged: (val) => setState(() => _selectedModulId = val?.toString()),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
 
+                const SizedBox(height: 16),
+                _buildDropdown(
+                  label: 'Unit Kelas',
+                  value: _selectedKelasId,
+                  hint: kelasAsync.isLoading ? 'Memuat...' : 'Pilih Kelas',
+                  items: [
+                    const DropdownMenuItem(value: null, child: Text('Belum Ada')),
+                    ...(kelasAsync.value ?? [])
+                        .where((c) => _selectedProgramId == null || c.programId == _selectedProgramId)
+                        .map((c) {
+                      return DropdownMenuItem(value: c.id, child: Text(c.namaKelas, overflow: TextOverflow.ellipsis));
+                    }),
+                  ],
+                  onChanged: (val) => setState(() => _selectedKelasId = val?.toString()),
+                ),
+
+                const SizedBox(height: 16),
                 _buildDropdown(
                   label: 'Status Siswa',
                   value: _status,
@@ -474,10 +492,9 @@ class _SiswaFormScreenState extends ConsumerState<SiswaFormScreen> {
         ),
         const SizedBox(height: 8),
         DropdownButtonFormField<Object>(
-          // FIX: Menggunakan value agar reaktif terhadap perubahan state
-          initialValue: items.any((item) => item.value == value) ? value : null,
           items: items,
           onChanged: onChanged,
+          initialValue: value,
           isExpanded: true,
           icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF94A3B8)),
           style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1E293B), fontSize: 14),

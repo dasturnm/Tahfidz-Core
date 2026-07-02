@@ -1,4 +1,3 @@
-import 'dart:io'; // Ditambahkan untuk cek ukuran file
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart'; // Wajib tambah ini di pubspec.yaml
@@ -58,9 +57,8 @@ class _LembagaProfileScreenState extends ConsumerState<LembagaProfileScreen> {
 
     if (image == null) return;
 
-    // VALIDASI: Cek ukuran file maksimal 1MB
-    final file = File(image.path);
-    final fileSizeInBytes = file.lengthSync();
+    // VALIDASI: Cek ukuran file maksimal 1MB menggunakan method lintas platform milik XFile
+    final fileSizeInBytes = await image.length();
     if (fileSizeInBytes > 1 * 1024 * 1024) { // 1 MB
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -71,8 +69,14 @@ class _LembagaProfileScreenState extends ConsumerState<LembagaProfileScreen> {
 
     setState(() => _isSaving = true);
     try {
-      // Panggil fungsi upload di notifier (kita akan buat ini di app_context_provider)
-      await ref.read(appContextProvider.notifier).uploadLembagaLogo(image.path);
+      // Ekstrak file menjadi biner Uint8List yang kompatibel dengan Web & Mobile
+      final bytes = await image.readAsBytes();
+
+      // Panggil fungsi upload di notifier dengan menyuplai named parameters baru
+      await ref.read(appContextProvider.notifier).uploadLembagaLogo(
+        fileBytes: bytes,
+        fileName: image.name,
+      );
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

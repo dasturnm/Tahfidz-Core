@@ -1,6 +1,5 @@
 // Lokasi: lib/core/providers/app_context_provider.dart
 
-import 'dart:io';
 import 'package:flutter/foundation.dart'; // FIX: Tambahkan untuk debugPrint
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -149,7 +148,10 @@ class AppContext extends _$AppContext {
   }
 
   // --- FUNGSI UPLOAD LOGO ---
-  Future<void> uploadLembagaLogo(String filePath) async {
+  Future<void> uploadLembagaLogo({
+    required Uint8List fileBytes,
+    required String fileName,
+  }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) throw Exception("Silakan login kembali.");
 
@@ -160,19 +162,18 @@ class AppContext extends _$AppContext {
     }
 
     // Ambil ekstensi asli (jpg/png) agar sesuai dengan SQL Policy
-    final String extension = filePath.split('.').last.toLowerCase();
-    final fileName = 'logo_${state.lembaga!.id}.$extension';
-    final file = File(filePath);
+    final String extension = fileName.split('.').last.toLowerCase();
+    final targetFileName = 'logo_${state.lembaga!.id}.$extension';
 
-    // 1. Upload ke Storage Bucket 'logos'
-    await _supabase.storage.from('logos').upload(
-      fileName,
-      file,
+    // 1. Upload ke Storage Bucket 'logos' menggunakan bytes agar kompatibel dengan Web
+    await _supabase.storage.from('logos').uploadBinary(
+      targetFileName,
+      fileBytes,
       fileOptions: const FileOptions(upsert: true),
     );
 
     // 2. Ambil Public URL
-    final String publicUrl = _supabase.storage.from('logos').getPublicUrl(fileName);
+    final String publicUrl = _supabase.storage.from('logos').getPublicUrl(targetFileName);
 
     // 3. Update URL di tabel lembaga
     await updateLembaga(

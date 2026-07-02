@@ -126,6 +126,13 @@ class AuthService extends BaseService {
     );
   }
 
+  // --- TAMBAHAN: LOGIN WITH GOOGLE ---
+  Future<bool> signInWithGoogle() async {
+    return await supabase.auth.signInWithOAuth(
+      OAuthProvider.google,
+    );
+  }
+
   // --- 4. REGISTER LEMBAGA (Untuk Super Admin / Pendaftaran Awal) ---
   Future<void> registerLembaga({
     required String namaLembaga,
