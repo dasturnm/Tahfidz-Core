@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:tahfidz_core/core/constants/app_roles.dart'; // TAMBAHKAN INI
 import '../../../core/constants/app_routes.dart';
 import '../../../core/providers/app_context_provider.dart';
@@ -252,45 +253,61 @@ class _MainLayoutScreenState extends ConsumerState<MainLayoutScreen> {
 
   Widget _buildUserCard(AppContextState contextState) {
     final profile = contextState.profile;
+    final authUser = Supabase.instance.client.auth.currentUser;
 
-    // Tampilkan "Memuat..." jika data profil belum sedia, agar tidak langsung mem-fallback ke "User"
+    final String googleName = authUser?.userMetadata?['full_name'] ?? "";
+    final String email = authUser?.email ?? "Email tidak tersedia";
+    final String avatarUrl = authUser?.userMetadata?['avatar_url'] ?? "";
+
+    // Prioritas: Database Profile -> Google Auth Name -> Default "User"
     final String displayName = (profile?.namaLengkap != null && profile!.namaLengkap.isNotEmpty)
         ? profile.namaLengkap
-        : (contextState.isLoading ? "Memuat profil..." : "User");
+        : (googleName.isNotEmpty ? googleName : (contextState.isLoading ? "Memuat profil..." : "User"));
 
     final initial = (displayName != "Memuat profil..." && displayName != "User")
         ? displayName[0].toUpperCase()
         : "?";
 
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: Colors.grey.shade100)),
-      ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            backgroundColor: const Color(0xFFCCFBF1),
-            child: Text(initial, style: const TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.bold)),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(displayName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13), overflow: TextOverflow.ellipsis),
-                Text(contextState.isLoading ? "..." : (contextState.role?.toUpperCase() ?? "GUEST"), style: const TextStyle(color: Colors.grey, fontSize: 11)),
-              ],
+    return InkWell(
+      onTap: () {
+        // Bisa diklik. Aksi navigasi ke profil bisa ditambahkan di sini.
+      },
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          border: Border(top: BorderSide(color: Colors.grey.shade100)),
+        ),
+        child: Row(
+          children: [
+            CircleAvatar(
+              backgroundColor: const Color(0xFFCCFBF1),
+              backgroundImage: avatarUrl.isNotEmpty ? NetworkImage(avatarUrl) : null,
+              child: avatarUrl.isEmpty
+                  ? Text(initial, style: const TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.bold))
+                  : null,
             ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout, size: 18, color: Colors.redAccent),
-            onPressed: () {
-              // Pemanggilan standar logout provider
-              ref.read(authProvider.notifier).logout();
-            },
-          )
-        ],
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(displayName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13), overflow: TextOverflow.ellipsis),
+                  Text(email, style: const TextStyle(color: Colors.grey, fontSize: 11), overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: 4),
+                  Text(contextState.isLoading ? "..." : (contextState.role?.toUpperCase() ?? "GUEST"), style: const TextStyle(color: Color(0xFF10B981), fontSize: 10, fontWeight: FontWeight.bold)),
+                ],
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.logout, size: 18, color: Colors.redAccent),
+              onPressed: () {
+                // Pemanggilan standar logout provider
+                ref.read(authProvider.notifier).logout();
+              },
+            )
+          ],
+        ),
       ),
     );
   }
