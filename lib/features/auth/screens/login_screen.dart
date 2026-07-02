@@ -1,7 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:tahfidz_core/features/auth/providers/auth_provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:tahfidz_core/features/auth/providers/auth_provider.dart' hide AuthState;
 import 'package:tahfidz_core/core/widgets/app_button.dart';
 import 'package:tahfidz_core/features/auth/screens/register_lembaga_screen.dart';
 // Import halaman lupa password (pastikan path ini sesuai nanti)
@@ -19,11 +22,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _rememberMe = false;
+  late final StreamSubscription<AuthState> _authSubscription;
 
   @override
   void initState() {
     super.initState();
     _loadSavedIdentity();
+
+    _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      final AuthChangeEvent event = data.event;
+      if (event == AuthChangeEvent.signedIn) {
+        if (mounted) {
+          context.go('/dashboard');
+        }
+      }
+    });
   }
 
   Future<void> _loadSavedIdentity() async {
@@ -66,6 +79,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   void dispose() {
+    _authSubscription.cancel();
     _identityController.dispose();
     _passwordController.dispose();
     super.dispose();

@@ -7,6 +7,7 @@ import 'package:tahfidz_core/core/constants/app_roles.dart'; // TAMBAHKAN INI
 import '../../../core/constants/app_routes.dart';
 import '../../../core/providers/app_context_provider.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../auth/widgets/user_profile_menu.dart';
 
 class MainLayoutScreen extends ConsumerStatefulWidget {
   final Widget child;
@@ -48,6 +49,10 @@ class _MainLayoutScreenState extends ConsumerState<MainLayoutScreen> {
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
         title: const Text("Tahfidz Core", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+        actions: const [
+          UserProfileMenu(),
+          SizedBox(width: 16),
+        ],
       )
           : null,
       drawer: isMobile ? Drawer(child: _buildSidebarContent(contextState)) : null,
