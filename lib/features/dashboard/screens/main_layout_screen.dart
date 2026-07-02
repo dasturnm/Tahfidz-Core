@@ -270,7 +270,7 @@ class _MainLayoutScreenState extends ConsumerState<MainLayoutScreen> {
 
     return InkWell(
       onTap: () {
-        // Bisa diklik. Aksi navigasi ke profil bisa ditambahkan di sini.
+        context.go('/profile');
       },
       child: Container(
         padding: const EdgeInsets.all(20),

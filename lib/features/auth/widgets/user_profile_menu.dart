@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:go_router/go_router.dart';
+import 'package:tahfidz_core/core/providers/app_context_provider.dart';
 
-class UserProfileMenu extends StatelessWidget {
+class UserProfileMenu extends ConsumerWidget {
   const UserProfileMenu({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final user = Supabase.instance.client.auth.currentUser;
 
     if (user == null) {
@@ -20,7 +22,9 @@ class UserProfileMenu extends StatelessWidget {
       );
     }
 
-    final nama = user.userMetadata?['full_name'] ?? 'Pengguna';
+    final contextState = ref.watch(appContextProvider);
+    final nama = contextState.profile?.namaLengkap ?? user.userMetadata?['full_name'] ?? 'Pengguna';
+    final role = (contextState.role ?? "User").toUpperCase();
     final email = user.email ?? 'Email tidak tersedia';
     final avatarUrl = user.userMetadata?['avatar_url'] ?? '';
 
@@ -33,7 +37,9 @@ class UserProfileMenu extends StatelessWidget {
         child: avatarUrl.isEmpty ? const Icon(Icons.person, size: 20) : null,
       ),
       onSelected: (value) async {
-        if (value == 'logout') {
+        if (value == 'profile') {
+          context.go('/profile');
+        } else if (value == 'logout') {
           await Supabase.instance.client.auth.signOut();
           if (context.mounted) {
             context.go('/login');
@@ -53,6 +59,14 @@ class UserProfileMenu extends StatelessWidget {
                   color: Colors.black87,
                 ),
               ),
+              Text(
+                role,
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: Color(0xFF10B981),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               const SizedBox(height: 4),
               Text(
                 email,
@@ -65,6 +79,16 @@ class UserProfileMenu extends StatelessWidget {
           ),
         ),
         const PopupMenuDivider(),
+        const PopupMenuItem<String>(
+          value: 'profile',
+          child: Row(
+            children: [
+              Icon(Icons.person_outline, size: 20),
+              SizedBox(width: 12),
+              Text('Profil Saya'),
+            ],
+          ),
+        ),
         const PopupMenuItem<String>(
           value: 'logout',
           child: Row(

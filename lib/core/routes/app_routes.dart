@@ -25,6 +25,7 @@ import 'package:tahfidz_core/features/siswa/screens/siswa_hub_screen.dart'; // S
 import 'package:tahfidz_core/features/program/screens/program_list_screen.dart'; // SAFE UPDATE: Hub Program
 // FIX: Tambahkan import untuk fitur yang baru ditambahkan di Sidebar
 import 'package:tahfidz_core/features/management_lembaga/screens/lembaga_profile_screen.dart';
+import 'package:tahfidz_core/features/auth/screens/user_account_screen.dart';
 import 'package:tahfidz_core/features/management_lembaga/screens/cabang_list_screen.dart';
 import 'package:tahfidz_core/features/management_lembaga/screens/tahun_ajaran_screen.dart';
 import 'package:tahfidz_core/features/management_lembaga/screens/divisi_list_screen.dart';
@@ -98,7 +99,6 @@ GoRouter router(Ref ref) { // Ganti RouterRef jadi Ref
         return AppRouteNames.dashboard;
       }
 
-      // CATATAN: Paksaan redirect ke setup lembaga DILONGGARKAN agar Dashboard bisa diakses
       return null;
     },
 
@@ -146,18 +146,14 @@ GoRouter router(Ref ref) { // Ganti RouterRef jadi Ref
               }
 
               // FIX: Backward Compatibility & Multi-Modul Parser
-              // Mengakomodasi pengirim lama ('modul' tunggal) dan pengirim baru ('activeModuls' List)
               List<ModulModel> parsedModuls = [];
 
               if (extra['activeModuls'] != null) {
-                // Jika data menggunakan format Multi-Modul baru
                 parsedModuls = List<ModulModel>.from(extra['activeModuls'] as Iterable);
               } else if (extra['modul'] != null) {
-                // Jika data berasal dari layar dengan format Singular lama (Backward Compatible)
                 parsedModuls = [extra['modul'] as ModulModel];
               }
 
-              // Validasi akhir jika kedua key kosong
               if (parsedModuls.isEmpty) {
                 return const Scaffold(body: Center(child: Text('Data modul tidak ditemukan, silakan pilih siswa kembali')));
               }
@@ -174,15 +170,15 @@ GoRouter router(Ref ref) { // Ganti RouterRef jadi Ref
           ),
           // FIX: Daftarkan Route Form Siswa (Edit/Tambah) agar GoException hilang
           GoRoute(
-            path: '/akademik/siswa/form', // FIXED: Menggunakan string path karena AppRouteNames.siswaForm tidak ditemukan
+            path: '/akademik/siswa/form',
             builder: (context, state) => SiswaFormScreen(
-              existingSiswa: state.extra as SiswaModel?, // FIXED: Nama parameter constructor yang benar
+              existingSiswa: state.extra as SiswaModel?,
             ),
           ),
           // FIX: Daftarkan Route Kelas di dalam Shell agar Sidebar TIDAK ganda
           GoRoute(
             path: AppRouteNames.kelas,
-            builder: (context, state) => const SiswaHubScreen(), // SAFE UPDATE: Diarahkan ke SiswaHub sesuai struktur Hub Anda
+            builder: (context, state) => const SiswaHubScreen(),
           ),
           GoRoute(
             path: AppRouteNames.mushafIndex,
@@ -195,6 +191,10 @@ GoRouter router(Ref ref) { // Ganti RouterRef jadi Ref
           ),
 
           // SAFE UPDATE: Daftarkan Route untuk modul lembaga yang baru ditambahkan di Sidebar
+          GoRoute(
+            path: '/profile', // Sesuai yang dipanggil di UserProfileMenu
+            builder: (context, state) => const UserAccountScreen(),
+          ),
           GoRoute(
             path: AppRouteNames.profilLembaga,
             builder: (context, state) => const LembagaProfileScreen(),
