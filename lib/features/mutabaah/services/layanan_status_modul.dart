@@ -29,14 +29,25 @@ class LayananStatusModul {
         final currentSurah = int.tryParse(lastRecordResponse['materi_silabus_aktif']?.toString().split(':').first ?? '0') ?? 0;
         final currentAyat = int.tryParse(lastRecordResponse['materi_silabus_aktif']?.toString().split(':').last ?? '0') ?? 0;
 
-        return currentSurah > targetSurah || (currentSurah == targetSurah && currentAyat >= targetAyat);
+        // Evaluasi berbasis batas fisik ayat dan surah akhir (mushaf alur maju)
+        if (currentSurah > targetSurah) {
+          return true;
+        } else if (currentSurah == targetSurah) {
+          return currentAyat >= targetAyat;
+        }
+        return false;
       }
 
-      // Skenario B: Modul berbasis Kitab / Materi CSV Internal
-      if (lastRecordResponse['internal_end'] != null && lastRecordResponse['achieved_amount'] != null) {
+      // Skenario B: Modul berbasis Kitab / Materi CSV Internal / Silabus Floating
+      if (lastRecordResponse['internal_end'] != null) {
         final currentEnd = int.tryParse(lastRecordResponse['internal_end'].toString()) ?? 0;
-        final totalTarget = modul.totalBaris > 0 ? modul.totalBaris : (modul.targetAmount * modul.targetPertemuan).toInt();
-        return currentEnd >= totalTarget;
+
+        // Cukup melihat titik tunggal batas akhir cakupan materi dari modul
+        int titikAkhirTarget = modul.totalBaris > 0
+            ? modul.totalBaris
+            : (modul.silabusContent.isNotEmpty ? modul.silabusContent.length : modul.materiSilabus.length);
+
+        return currentEnd >= titikAkhirTarget;
       }
 
       return false;
