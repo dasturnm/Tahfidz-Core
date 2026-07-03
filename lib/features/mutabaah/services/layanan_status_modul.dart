@@ -38,19 +38,29 @@ class LayananStatusModul {
         return false;
       }
 
-      // Skenario B: Modul berbasis Kitab / Materi CSV Internal / Silabus Floating
-      if (lastRecordResponse['internal_end'] != null) {
-        final currentEnd = int.tryParse(lastRecordResponse['internal_end'].toString()) ?? 0;
+      // Skenario B: Modul berbasis Kitab / Materi CSV Internal / Silabus Floating (Murni bersandarkan internal_end)
+      final int titikAkhirTarget = modul.totalBaris > 0
+          ? modul.totalBaris
+          : (modul.silabusContent.isNotEmpty ? modul.silabusContent.length : modul.materiSilabus.length);
 
-        // Cukup melihat titik tunggal batas akhir cakupan materi dari modul
-        int titikAkhirTarget = modul.totalBaris > 0
-            ? modul.totalBaris
-            : (modul.silabusContent.isNotEmpty ? modul.silabusContent.length : modul.materiSilabus.length);
+      // Ambil nilai internal_end tertinggi dari record yang BERSTATUS LANJUT (status_keputusan == 1)
+      final maxInternalEndResponse = await _supabase
+          .from('mutabaah_records')
+          .select('internal_end')
+          .match({'siswa_id': siswaId, 'modul_id': modul.id ?? ''})
+          .eq('status_keputusan', 1) // Kunci: Hanya hitung yang LANJUT, status ULANG otomatis terabaikan
+          .order('internal_end', ascending: false)
+          .limit(1)
+          .maybeSingle();
 
-        return currentEnd >= titikAkhirTarget;
+      if (maxInternalEndResponse == null || maxInternalEndResponse['internal_end'] == null) {
+        return false;
       }
 
-      return false;
+      final int maxCurrentEnd = int.tryParse(maxInternalEndResponse['internal_end'].toString()) ?? 0;
+
+      // Modul dianggap tuntas konten jika titik internal_end tertinggi yang sah sudah mencapai atau melewati target materi
+      return maxCurrentEnd >= titikAkhirTarget;
     } catch (_) {
       return false;
     }
