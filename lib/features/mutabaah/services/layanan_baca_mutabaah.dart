@@ -83,7 +83,7 @@ class LayananBacaMutabaah {
     try {
       final siswaData = await supabase
           .from('siswa')
-          .select('level_id')
+          .select('level_id, is_ready_for_exam, ready_modul_id')
           .eq('id', siswaId)
           .single();
 
@@ -128,12 +128,35 @@ class LayananBacaMutabaah {
       List<ModulModel> unpassedModuls = dailyModuls.isEmpty ? allModuls : dailyModuls;
       debugPrint("DEBUG [Audit]: Modul aktif sebelum filter kelulusan: ${unpassedModuls.length}");
 
-      final passedModulsResponse = await supabase
-          .from('mutabaah_records')
-          .select('modul_id')
-          .match({'siswa_id': siswaId, 'is_passed_target': true});
+      final bool isReadyForExam = siswaData['is_ready_for_exam'] == true;
+      final String? readyModulId = siswaData['ready_modul_id']?.toString();
 
-      final Set<String> passedIds = (passedModulsResponse as List).map((m) => m['modul_id'].toString()).toSet();
+      if (isReadyForExam && readyModulId != null) {
+        final readyModul = unpassedModuls.where((m) => m.id == readyModulId).toList();
+        if (readyModul.isNotEmpty) return readyModul;
+      }
+
+      final Set<String> passedIds = {};
+
+      for (var modul in unpassedModuls) {
+        if (modul.isExamRequired) {
+          final evaluasiLulus = await supabase
+              .from('siswa_evaluasi_nilai')
+              .select('id')
+              .match({'siswa_id': siswaId, 'modul_id': modul.id!, 'is_lulus': true})
+              .limit(1)
+              .maybeSingle();
+
+          if (evaluasiLulus != null) {
+            passedIds.add(modul.id!);
+          }
+        } else {
+          final projection = await _mainService._kecerdasanAkademik.getModuleProjection(siswaId, modul);
+          if (projection.isCompleted) {
+            passedIds.add(modul.id!);
+          }
+        }
+      }
 
       unpassedModuls = unpassedModuls.where((m) => !passedIds.contains(m.id)).toList();
 

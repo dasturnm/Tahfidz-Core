@@ -244,30 +244,6 @@ final activeModulsBySiswaProvider = FutureProvider.family<List<ModulModel>, Stri
   final service = ref.read(mutabaahServiceProvider);
   final List<ModulModel> activeModuls = await service.getActiveModuls(ref, siswaId);
 
-  // FIX: Amankan modul jika siswa sudah berstatus is_ready_for_exam agar tidak hilang dari list
-  final supabase = Supabase.instance.client;
-  final siswaStatus = await supabase
-      .from('siswa')
-      .select('is_ready_for_exam, ready_modul_id')
-      .eq('id', siswaId)
-      .maybeSingle();
-
-  if (siswaStatus != null && siswaStatus['is_ready_for_exam'] == true && siswaStatus['ready_modul_id'] != null) {
-    final readyModulId = siswaStatus['ready_modul_id'].toString();
-    bool alreadyExists = activeModuls.any((m) => m.id == readyModulId);
-
-    if (!alreadyExists) {
-      final modulRes = await supabase
-          .from('modul_kurikulum')
-          .select('*, level:level_id(kurikulum_id, urutan)')
-          .eq('id', readyModulId)
-          .maybeSingle();
-
-      if (modulRes != null) {
-        return [...activeModuls, ModulModel.fromJson(modulRes)];
-      }
-    }
-  }
   return activeModuls;
 });
 

@@ -138,7 +138,12 @@ class _ModulInputScreenState extends ConsumerState<MutabaahInputScreen> with Tic
     const Color emerald = Color(0xFF10B981);
     const Color slate = Color(0xFF1E293B);
 
+    bool hasSubmittableModul = widget.activeModuls.any((m) {
+      return !(m.isExamRequired && _currentSiswa.isReadyForExam && _currentSiswa.readyModulId == m.id!);
+    });
+
     bool isAllSwitchesReady = widget.activeModuls.isNotEmpty &&
+        hasSubmittableModul &&
         widget.activeModuls.every((m) {
           final isExamReady = m.isExamRequired && _currentSiswa.isReadyForExam && _currentSiswa.readyModulId == m.id!;
           return isExamReady || _switchStates[m.id!] != 0;
@@ -171,7 +176,7 @@ class _ModulInputScreenState extends ConsumerState<MutabaahInputScreen> with Tic
           );
         }).toList(),
       ),
-      bottomNavigationBar: Container(
+      bottomNavigationBar: hasSubmittableModul ? Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
             color: Colors.white,
@@ -194,7 +199,7 @@ class _ModulInputScreenState extends ConsumerState<MutabaahInputScreen> with Tic
                 style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 14)),
           ),
         ),
-      ),
+      ) : null,
     );
   }
 

@@ -244,7 +244,7 @@ class ModulModel {
     'is_allow_below_target': isAllowBelowTarget,
     'is_accumulated': isAccumulated,
     'is_single_burden': isSingleBurden,
-    'sabqiAmount': sabqiAmount,
+    'sabqi_amount': sabqiAmount,
     'sabqi_amount_unit': sabqiAmountUnit,
     'manzil_type': manzilType,
     'manzil_amount': manzilAmount,

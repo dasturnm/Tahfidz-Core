@@ -1,4 +1,3 @@
-// Lokasi: lib/features/mutabaah/services/layanan_kecerdasan_akademik.dart
 part of 'mutabaah_service.dart';
 
 class LayananKecerdasanAkademik {
@@ -19,7 +18,7 @@ class LayananKecerdasanAkademik {
       final modul = ModulModel.fromJson(modulData);
       final projection = await getModuleProjection(siswaId, modul);
 
-      if (modul.isCumulativeExam && modul.cumulativeRange > 0) {
+      if (modul.isExamRequired && modul.isCumulativeExam && modul.cumulativeRange > 0) {
         double rangeVol = modul.cumulativeRange.toDouble();
         double currentVol = projection.currentAchieved;
 
@@ -36,12 +35,15 @@ class LayananKecerdasanAkademik {
 
       final recordsResponse = await supabase
           .from('mutabaah_records')
-          .select('data_payload, internal_end')
+          .select('data_payload, internal_end, status_keputusan')
           .match({'siswa_id': siswaId, 'modul_id': modulId})
           .order('created_at', ascending: false);
 
       final recordsList = recordsResponse as List;
-      bool targetPertemuanHabis = recordsList.length >= modul.targetPertemuan;
+      final int jumlahPertemuanLanjut = recordsList.where((record) {
+        return ((record['status_keputusan'] as num?)?.toInt() ?? 0) == 1;
+      }).length;
+      bool targetPertemuanHabis = jumlahPertemuanLanjut >= modul.targetPertemuan;
       bool volumeTercapai = projection.remainingVolume <= 0;
 
       bool boundaryReached = false;
@@ -50,44 +52,49 @@ class LayananKecerdasanAkademik {
         final payload = latestRecord['data_payload'] as Map<String, dynamic>? ?? {};
         final String silabusSource = modulData['silabus_source']?.toString() ?? '';
         final String tipeModul = modulData['tipe']?.toString().toUpperCase() ?? '';
+        final int statusKeputusan = (latestRecord['status_keputusan'] as num?)?.toInt() ?? 0;
 
         if (silabusSource == 'internal' || tipeModul == 'INTERNAL' || tipeModul == 'AKADEMIK') {
-          int targetEnd = (modulData['akhir_koordinat'] as num?)?.toInt() ?? 0;
+          int targetEnd = int.tryParse(modulData['akhir_koordinat']?.toString() ?? '0') ?? 0;
           int lastEnd = (latestRecord['internal_end'] as num?)?.toInt() ??
               int.tryParse(payload['halaman_akhir']?.toString() ?? '0') ?? 0;
-          boundaryReached = lastEnd >= targetEnd;
+          boundaryReached = (lastEnd >= targetEnd) && (statusKeputusan == 1);
         } else {
-          int targetSurah = (modulData['surah_akhir'] as num?)?.toInt() ?? (modulData['end_surah'] as num?)?.toInt() ?? 0;
-          int targetAyah = (modulData['ayah_akhir'] as num?)?.toInt() ?? (modulData['end_ayah'] as num?)?.toInt() ?? 0;
+          int targetSurah = int.tryParse(modulData['surah_akhir']?.toString() ?? modulData['end_surah']?.toString() ?? '0') ?? 0;
+          int targetAyah = int.tryParse(modulData['ayah_akhir']?.toString() ?? modulData['end_ayah']?.toString() ?? '0') ?? 0;
           int lastSurah = int.tryParse(payload['end_surah']?.toString() ?? '0') ?? 0;
           int lastAyah = int.tryParse(payload['end_ayah']?.toString() ?? '0') ?? 0;
-          int startSurah = (modulData['surah_mulai'] as num?)?.toInt() ?? (modulData['start_surah'] as num?)?.toInt() ?? 1;
+          int startSurah = int.tryParse(modulData['surah_mulai']?.toString() ?? modulData['start_surah']?.toString() ?? '1') ?? 1;
 
+          bool isPassedBoundary = false;
           if (startSurah > targetSurah) {
             if (lastSurah < targetSurah) {
-              boundaryReached = true;
+              isPassedBoundary = true;
             } else if (lastSurah == targetSurah) {
-              boundaryReached = lastAyah >= targetAyah;
+              isPassedBoundary = lastAyah >= targetAyah;
             }
           } else {
             if (lastSurah > targetSurah) {
-              boundaryReached = true;
+              isPassedBoundary = true;
             } else if (lastSurah == targetSurah) {
-              boundaryReached = lastAyah >= targetAyah;
+              isPassedBoundary = lastAyah >= targetAyah;
             }
           }
+          boundaryReached = isPassedBoundary && (statusKeputusan == 1);
         }
       }
 
-      // FIX BOUNDARY CHECK: Menggunakan gerbang logika OR agar pencapaian koordinat fisik materi (boundaryReached)
-      // atau volume selesai (volumeTercapai) langsung memicu status kelulusan harian menuju mode ujian.
       if (volumeTercapai || targetPertemuanHabis || boundaryReached) {
-        String targetState = modul.isTasmiRequired ? 'tasmi_mode' : 'exam_ready';
-        await supabase.from('siswa').update({
-          'is_ready_for_exam': true,
-          'ready_modul_id': modulId,
-          'academic_state': targetState,
-        }).eq('id', siswaId);
+        if (modul.isExamRequired) {
+          String targetState = modul.isTasmiRequired ? 'tasmi_mode' : 'exam_ready';
+          await supabase.from('siswa').update({
+            'is_ready_for_exam': true,
+            'ready_modul_id': modulId,
+            'academic_state': targetState,
+          }).eq('id', siswaId);
+        } else {
+          await _evaluateStudentPromotion(siswaId);
+        }
       }
     } catch (e) {
       print("Error _evaluateExamReadiness: $e");
@@ -104,26 +111,32 @@ class LayananKecerdasanAkademik {
       final kurikulumId = currentLevelData['kurikulum_id'];
       final currentUrutan = currentLevelData['urutan'];
 
-      final modulsInLevel = await supabase.from('modul_kurikulum').select('id, tipe').eq('level_id', currentLevelId);
+      final modulsInLevel = await supabase.from('modul_kurikulum').select('*').eq('level_id', currentLevelId);
       if (modulsInLevel.isEmpty) return;
-      final modulIds = (modulsInLevel as List)
-          .where((m) => m['tipe']?.toString().trim().toUpperCase() != 'TASMI\'')
-          .map((m) => m['id'].toString())
-          .toList();
-
-      final passedRecords = await supabase
-          .from('mutabaah_records')
-          .select('modul_id')
-          .match({'siswa_id': siswaId, 'modul_id': modulIds})
-          .match({'is_passed_target': true});
-
-      final passedModulIds = (passedRecords as List).map((m) => m['modul_id'].toString()).toSet();
 
       bool allPassed = true;
-      for (var id in modulIds) {
-        if (!passedModulIds.contains(id)) {
-          allPassed = false;
-          break;
+      for (var m in modulsInLevel as List) {
+        final modul = ModulModel.fromJson(m);
+        if (modul.tipe.trim().toUpperCase() == 'TASMI\'') continue;
+
+        if (modul.isExamRequired) {
+          final evaluasiLulus = await supabase
+              .from('siswa_evaluasi_nilai')
+              .select('id')
+              .match({'siswa_id': siswaId, 'modul_id': modul.id!, 'is_lulus': true})
+              .limit(1)
+              .maybeSingle();
+
+          if (evaluasiLulus == null) {
+            allPassed = false;
+            break;
+          }
+        } else {
+          final projection = await getModuleProjection(siswaId, modul);
+          if (!projection.isCompleted) {
+            allPassed = false;
+            break;
+          }
         }
       }
 
@@ -190,14 +203,19 @@ class LayananKecerdasanAkademik {
     try {
       final response = await supabase
           .from('mutabaah_records')
-          .select('achieved_amount')
+          .select('achieved_amount, status_keputusan')
           .match({'siswa_id': siswaId, 'modul_id': modul.id!});
 
       double currentAchieved = 0.0;
       final records = response as List;
 
+      int acceptedRecordCount = 0;
       for (var record in records) {
-        currentAchieved += (record['achieved_amount'] as num?)?.toDouble() ?? 0.0;
+        final int statusKeputusan = (record['status_keputusan'] as num?)?.toInt() ?? 0;
+        if (statusKeputusan == 1) {
+          currentAchieved += (record['achieved_amount'] as num?)?.toDouble() ?? 0.0;
+          acceptedRecordCount++;
+        }
       }
 
       double totalTarget = modul.targetAmount * modul.targetPertemuan;
@@ -221,8 +239,8 @@ class LayananKecerdasanAkademik {
       if (remainingVolume < 0) remainingVolume = 0;
 
       double averageVelocity = modul.targetAmount;
-      if (records.isNotEmpty && currentAchieved > 0) {
-        averageVelocity = currentAchieved / records.length;
+      if (acceptedRecordCount > 0 && currentAchieved > 0) {
+        averageVelocity = currentAchieved / acceptedRecordCount;
       }
       if (averageVelocity <= 0) averageVelocity = 1.0;
 

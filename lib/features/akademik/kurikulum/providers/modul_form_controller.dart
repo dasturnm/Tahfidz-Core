@@ -324,7 +324,13 @@ class ModulFormController extends _$ModulFormController {
           } else {
             summaryValueForMeetings = m.silabusContent.length.toDouble();
           }
+        } else {
+          // Logika Internal: Tanpa plotting materi, gunakan angka koordinat inklusif
+          int mulai = int.tryParse(m.mulaiKoordinat ?? '1') ?? 1;
+          int akhir = int.tryParse(m.akhirKoordinat ?? '1') ?? 1;
+          summaryValueForMeetings = ((akhir - mulai).abs() + 1).toDouble();
         }
+        computedHalaman = summaryValueForMeetings; // Simpan total unit ke computedHalaman agar reaktif di UI ringkasan
       }
 
       // FIX: Rumus Ringkasan Akademik

@@ -68,31 +68,38 @@ extension PengontrolInputMutabaah on _ModulInputScreenState {
 
   void _calculateProgress(ModulModel modul) async {
     final mId = modul.id!;
-    if (_startSurah[mId] == null || _startAyahs[mId] == null || _endSurah[mId] == null || _endAyahs[mId] == null) return;
-
     setState(() => _loadingMap[mId] = true);
     try {
-      final calculator = MushafCalculator();
-      final result = await calculator.calculateVolume(
-        sSurah: _startSurah[mId]!,
-        sAyah: _startAyahs[mId]!,
-        eSurah: _endSurah[mId]!,
-        eAyah: _endAyahs[mId]!,
-        targetAmount: modul.targetAmount,
-        previousDebt: modul.isAccumulated ? (_debtsMap[mId] ?? 0.0) : 0.0,
-        targetUnit: modul.targetAmountUnit,
-      );
+      final String tipe = modul.tipe.trim().toUpperCase();
+      if (modul.silabusSource == 'internal' || tipe == 'INTERNAL' || tipe == 'AKADEMIK') {
+        final intStart = int.tryParse(_halamanAwalControllers[mId]?.text ?? '0') ?? 0;
+        final intEnd = int.tryParse(_halamanAkhirControllers[mId]?.text ?? '0') ?? 0;
+        final double vol = (intEnd >= intStart) ? (intEnd - intStart + 1).toDouble() : 0.0;
+        if (mounted) setState(() { _pagesMap[mId] = vol; _targetsMetMap[mId] = (vol >= modul.targetAmount); });
+      } else {
+        if (_startSurah[mId] == null || _startAyahs[mId] == null || _endSurah[mId] == null || _endAyahs[mId] == null) return;
+        final calculator = MushafCalculator();
+        final result = await calculator.calculateVolume(
+          sSurah: _startSurah[mId]!,
+          sAyah: _startAyahs[mId]!,
+          eSurah: _endSurah[mId]!,
+          eAyah: _endAyahs[mId]!,
+          targetAmount: modul.targetAmount,
+          previousDebt: modul.isAccumulated ? (_debtsMap[mId] ?? 0.0) : 0.0,
+          targetUnit: modul.targetAmountUnit,
+        );
 
-      if (mounted) {
-        setState(() {
-          _pagesMap[mId] = (result['calculated_pages'] as num?)?.toDouble() ?? 0.0;
-          _linesMap[mId] = (result['calculated_lines'] as num?)?.toDouble() ?? 0.0;
-          _ayahsMap[mId] = (result['calculated_ayahs'] as num?)?.toDouble() ?? 0.0;
-          _surahsMap[mId] = (result['calculated_surahs'] as num?)?.toDouble() ?? 0.0;
-          _juzsMap[mId] = (result['calculated_juzs'] as num?)?.toDouble() ?? 0.0;
-          _pagesUniqueMap[mId] = (result['calculated_pages_unique'] as num?)?.toDouble() ?? 0.0;
-          _targetsMetMap[mId] = result['is_target_met'] ?? true;
-        });
+        if (mounted) {
+          setState(() {
+            _pagesMap[mId] = (result['calculated_pages'] as num?)?.toDouble() ?? 0.0;
+            _linesMap[mId] = (result['calculated_lines'] as num?)?.toDouble() ?? 0.0;
+            _ayahsMap[mId] = (result['calculated_ayahs'] as num?)?.toDouble() ?? 0.0;
+            _surahsMap[mId] = (result['calculated_surahs'] as num?)?.toDouble() ?? 0.0;
+            _juzsMap[mId] = (result['calculated_juzs'] as num?)?.toDouble() ?? 0.0;
+            _pagesUniqueMap[mId] = (result['calculated_pages_unique'] as num?)?.toDouble() ?? 0.0;
+            _targetsMetMap[mId] = result['is_target_met'] ?? true;
+          });
+        }
       }
     } catch (e) { debugPrint("Error: $e"); } finally {
       if (mounted) setState(() => _loadingMap[mId] = false);

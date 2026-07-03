@@ -244,7 +244,7 @@ class _ModulFormScreenState extends ConsumerState<ModulFormScreen> {
                         },
                         onRangeChanged: () => notifier.recalculate(),
                       ),
-                      if (m.silabusSource == 'mushaf') _buildMaterialSummary(state, notifier),
+                      _buildMaterialSummary(state, notifier),
                       const SizedBox(height: 32),
                       ModulPencapaianSection(
                         targetAmountController: _targetAmountController,
@@ -522,6 +522,7 @@ class _ModulFormScreenState extends ConsumerState<ModulFormScreen> {
   }
 
   Widget _buildMaterialSummary(ModulFormState state, ModulFormController notifier) {
+    final bool isInternal = state.modul.silabusSource == 'internal';
     return Container(
       margin: const EdgeInsets.only(top: 16),
       padding: const EdgeInsets.all(16),
@@ -536,15 +537,24 @@ class _ModulFormScreenState extends ConsumerState<ModulFormScreen> {
             ],
           ),
           const Divider(),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _summaryItem("Juz", state.totalJuz.toStringAsFixed(2).replaceAll(RegExp(r"([.]*0+)(?!.*\d)"), "")),
-              _summaryItem("Hal", state.totalHalaman.toStringAsFixed(2).replaceAll(RegExp(r"([.]*0+)(?!.*\d)"), "")),
-              _summaryItem("Surah", state.totalSurah.toString(), tooltip: "Setiap bagian surah yang ada di dalam Juz/Halaman yang dipilih dihitung sebagai 1 surah."),
-              _summaryItem("Baris", state.totalBaris.toString(), tooltip: "Nama Surah dan Basmalah tidak dihitung sebagai total baris"),
-            ],
-          ),
+          if (isInternal)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _summaryItem("Total Materi/Halaman", state.totalHalaman.toStringAsFixed(0)),
+                _summaryItem("Estimasi Pertemuan", state.modul.targetPertemuan.toString()),
+              ],
+            )
+          else
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _summaryItem("Juz", state.totalJuz.toStringAsFixed(2).replaceAll(RegExp(r"([.]*0+)(?!.*\d)"), "")),
+                _summaryItem("Hal", state.totalHalaman.toStringAsFixed(2).replaceAll(RegExp(r"([.]*0+)(?!.*\d)"), "")),
+                _summaryItem("Surah", state.totalSurah.toString(), tooltip: "Setiap bagian surah yang ada di dalam Juz/Halaman yang dipilih dihitung sebagai 1 surah."),
+                _summaryItem("Baris", state.totalBaris.toString(), tooltip: "Nama Surah dan Basmalah tidak dihitung sebagai total baris"),
+              ],
+            ),
         ],
       ),
     );

@@ -28,11 +28,13 @@ class EvaluasiService extends BaseService {
       await supabase.from('siswa_evaluasi_nilai').insert(data);
 
       // TAMBAHAN OPSI B: Reset kembali flag kesiapan ujian di profil siswa setelah dievaluasi (Pembersihan Antrean)
-      await supabase.from('siswa').update({
-        'is_ready_for_exam': false,
-        'ready_modul_id': null,
-        'academic_state': 'daily', // TAMBAHAN: Reset kembali ke daily agar gembok input harian terbuka kembali
-      }).eq('id', record.siswaId);
+      if (record.isLulus) {
+        await supabase.from('siswa').update({
+          'is_ready_for_exam': false,
+          'ready_modul_id': null,
+          'academic_state': 'daily', // TAMBAHAN: Reset kembali ke daily agar gembok input harian terbuka kembali
+        }).eq('id', record.siswaId);
+      }
     } catch (e) {
       throw Exception(handleError(e));
     }
