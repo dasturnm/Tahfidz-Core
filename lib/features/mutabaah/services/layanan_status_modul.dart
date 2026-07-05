@@ -7,60 +7,36 @@ class LayananStatusModul {
   /// Mengecek apakah konten materi di dalam modul sudah habis dipelajari secara fisik
   Future<bool> isContentCompleted(String siswaId, ModulModel modul) async {
     try {
-      // Ambil setoran mutabaah terakhir milik siswa untuk modul ini
-      final lastRecordResponse = await _supabase
+      // 1. Ambil setoran terakhir yang BUKAN status "ULANG" (-1)
+      final lastRecord = await _supabase
           .from('mutabaah_records')
           .select()
           .eq('siswa_id', siswaId)
           .eq('modul_id', modul.id ?? '')
-          .neq('status_keputusan', -1) // Kecualikan status "ULANG"
+          .neq('status_keputusan', -1) // EXCLUDE REPEAT RECORDS
           .order('created_at', ascending: false)
           .limit(1)
           .maybeSingle();
 
-      if (lastRecordResponse == null) return false;
+      if (lastRecord == null) return false;
 
-      // Skenario A: Modul berbasis Al-Quran / Alur Mushaf (Koordinat Surah & Ayat)
-      final String tipeModul = modul.tipe.trim().toUpperCase();
-      if (tipeModul != 'INTERNAL' && tipeModul != 'AKADEMIK') {
-        int targetSurah = modul.surahId;
-        int targetAyat = modul.ayahEnd;
+      if (modul.silabusSource == 'mushaf') {
+        // PARSING COORDINATES (Contoh modul: "2:286")
+        final targetParts = modul.akhirKoordinat!.split(':');
+        final targetSurah = int.parse(targetParts[0]);
+        final targetAyat = int.parse(targetParts[1]);
 
-        final currentSurah = int.tryParse(lastRecordResponse['materi_silabus_aktif']?.toString().split(':').first ?? '0') ?? 0;
-        final currentAyat = int.tryParse(lastRecordResponse['materi_silabus_aktif']?.toString().split(':').last ?? '0') ?? 0;
+        final currentSurah = lastRecord['surah_id'] as int;
+        final currentAyay = lastRecord['ayah_end'] as int;
 
-        // Evaluasi berbasis batas fisik ayat dan surah akhir (mushaf alur maju)
-        if (currentSurah > targetSurah) {
-          return true;
-        } else if (currentSurah == targetSurah) {
-          return currentAyat >= targetAyat;
-        }
-        return false;
+        // VALIDASI KOORDINAT FISIK
+        if (currentSurah > targetSurah) return true;
+        return (currentSurah == targetSurah && currentAyay >= targetAyat);
+      } else {
+        // VALIDASI INTERNAL (Keputusan Lanjut + Mencapai Baris Terakhir)
+        final totalCakupan = modul.silabusContent.length;
+        return (lastRecord['internal_end'] >= totalCakupan && lastRecord['status_keputusan'] == 1);
       }
-
-      // Skenario B: Modul berbasis Kitab / Materi CSV Internal / Silabus Floating (Murni bersandarkan internal_end)
-      final int titikAkhirTarget = modul.totalBaris > 0
-          ? modul.totalBaris
-          : (modul.silabusContent.isNotEmpty ? modul.silabusContent.length : modul.materiSilabus.length);
-
-      // Ambil nilai internal_end tertinggi dari record yang BERSTATUS LANJUT (status_keputusan == 1)
-      final maxInternalEndResponse = await _supabase
-          .from('mutabaah_records')
-          .select('internal_end')
-          .match({'siswa_id': siswaId, 'modul_id': modul.id ?? ''})
-          .eq('status_keputusan', 1) // Kunci: Hanya hitung yang LANJUT, status ULANG otomatis terabaikan
-          .order('internal_end', ascending: false)
-          .limit(1)
-          .maybeSingle();
-
-      if (maxInternalEndResponse == null || maxInternalEndResponse['internal_end'] == null) {
-        return false;
-      }
-
-      final int maxCurrentEnd = int.tryParse(maxInternalEndResponse['internal_end'].toString()) ?? 0;
-
-      // Modul dianggap tuntas konten jika titik internal_end tertinggi yang sah sudah mencapai atau melewati target materi
-      return maxCurrentEnd >= titikAkhirTarget;
     } catch (_) {
       return false;
     }
@@ -82,7 +58,7 @@ class LayananStatusModul {
     }
   }
 
-  /// Menentukan apakah modul benar-benar tuntas secara administratif dan boleh ditinggalkan
+  /// Menentukan apakah modul benar-benar tuntas secara administratif and boleh ditinggalkan
   Future<bool> isFinalCompleted(String siswaId, ModulModel modul) async {
     final contentDone = await isContentCompleted(siswaId, modul);
     if (!contentDone) return false;

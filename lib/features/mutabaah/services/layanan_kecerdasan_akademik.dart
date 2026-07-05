@@ -16,83 +16,16 @@ class LayananKecerdasanAkademik {
           .single();
 
       final modul = ModulModel.fromJson(modulData);
-      final projection = await getModuleProjection(siswaId, modul);
 
-      if (modul.isExamRequired && modul.isCumulativeExam && modul.cumulativeRange > 0) {
-        double rangeVol = modul.cumulativeRange.toDouble();
-        double currentVol = projection.currentAchieved;
+      // GUNAKAN HELPER STATUS (KOORDINAT BASED)
+      final isPhysicalDone = await LayananStatusModul().isContentCompleted(siswaId, modul);
 
-        if (currentVol.floor() >= rangeVol.toInt() && (currentVol.floor() % rangeVol.toInt() == 0)) {
-          String targetState = modul.isTasmiRequired ? 'tasmi_mode' : 'exam_ready';
-          await supabase.from('siswa').update({
-            'is_ready_for_exam': true,
-            'ready_modul_id': modulId,
-            'academic_state': targetState,
-          }).eq('id', siswaId);
-          return;
-        }
-      }
-
-      final recordsResponse = await supabase
-          .from('mutabaah_records')
-          .select('data_payload, internal_end, status_keputusan')
-          .match({'siswa_id': siswaId, 'modul_id': modulId})
-          .order('created_at', ascending: false);
-
-      final recordsList = recordsResponse as List;
-      final int jumlahPertemuanLanjut = recordsList.where((record) {
-        return ((record['status_keputusan'] as num?)?.toInt() ?? 0) == 1;
-      }).length;
-      bool targetPertemuanHabis = jumlahPertemuanLanjut >= modul.targetPertemuan;
-      bool volumeTercapai = projection.remainingVolume <= 0;
-
-      bool boundaryReached = false;
-      if (recordsList.isNotEmpty) {
-        final latestRecord = recordsList.first;
-        final payload = latestRecord['data_payload'] as Map<String, dynamic>? ?? {};
-        final String silabusSource = modulData['silabus_source']?.toString() ?? '';
-        final String tipeModul = modulData['tipe']?.toString().toUpperCase() ?? '';
-        final int statusKeputusan = (latestRecord['status_keputusan'] as num?)?.toInt() ?? 0;
-
-        if (silabusSource == 'internal' || tipeModul == 'INTERNAL' || tipeModul == 'AKADEMIK') {
-          int targetEnd = int.tryParse(modulData['akhir_koordinat']?.toString() ?? '0') ?? 0;
-          int lastEnd = (latestRecord['internal_end'] as num?)?.toInt() ??
-              int.tryParse(payload['halaman_akhir']?.toString() ?? '0') ?? 0;
-          boundaryReached = (lastEnd >= targetEnd) && (statusKeputusan == 1);
-        } else {
-          int targetSurah = int.tryParse(modulData['surah_akhir']?.toString() ?? modulData['end_surah']?.toString() ?? '0') ?? 0;
-          int targetAyah = int.tryParse(modulData['ayah_akhir']?.toString() ?? modulData['end_ayah']?.toString() ?? '0') ?? 0;
-          int lastSurah = int.tryParse(payload['end_surah']?.toString() ?? '0') ?? 0;
-          int lastAyah = int.tryParse(payload['end_ayah']?.toString() ?? '0') ?? 0;
-          int startSurah = int.tryParse(modulData['surah_mulai']?.toString() ?? modulData['start_surah']?.toString() ?? '1') ?? 1;
-
-          bool isPassedBoundary = false;
-          if (startSurah > targetSurah) {
-            if (lastSurah < targetSurah) {
-              isPassedBoundary = true;
-            } else if (lastSurah == targetSurah) {
-              isPassedBoundary = lastAyah >= targetAyah;
-            }
-          } else {
-            if (lastSurah > targetSurah) {
-              isPassedBoundary = true;
-            } else if (lastSurah == targetSurah) {
-              isPassedBoundary = lastAyah >= targetAyah;
-            }
-          }
-          boundaryReached = isPassedBoundary && (statusKeputusan == 1);
-        }
-      }
-
-      if (volumeTercapai || targetPertemuanHabis || boundaryReached) {
+      if (isPhysicalDone) {
         if (modul.isExamRequired) {
-          String targetState = modul.isTasmiRequired ? 'tasmi_mode' : 'exam_ready';
-          await supabase.from('siswa').update({
-            'is_ready_for_exam': true,
-            'ready_modul_id': modulId,
-            'academic_state': targetState,
-          }).eq('id', siswaId);
+          // Hanya ubah ke exam_ready jika syarat fisik tuntas & modul wajib ujian
+          await supabase.from('siswa').update({'academic_state': 'exam_ready'}).eq('id', siswaId);
         } else {
+          // Jika tidak wajib ujian, langsung pemicu promosi ke modul berikutnya
           await _evaluateStudentPromotion(siswaId);
         }
       }

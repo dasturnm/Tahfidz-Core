@@ -242,8 +242,10 @@ final mutabaahSessionProvider = StateProvider<MutabaahRecord?>((ref) => null);
 // Mengambil modul berdasarkan kebijakan promotion_policy Kurikulum (Flexible/Strict)
 final activeModulsBySiswaProvider = FutureProvider.family<List<ModulModel>, String>((ref, siswaId) async {
   final service = ref.read(mutabaahServiceProvider);
-  final List<ModulModel> activeModuls = await service.getActiveModuls(ref, siswaId);
+  // Ambil data modul yang benar-benar aktif (termasuk yang sedang 'Locked' untuk ujian)
+  final activeModuls = await service.getActiveModuls(ref, siswaId);
 
+  // Pastikan data reaktif terhadap perubahan status akademik siswa di database
   return activeModuls;
 });
 

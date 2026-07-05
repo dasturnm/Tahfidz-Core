@@ -83,7 +83,7 @@ class LayananBacaMutabaah {
     try {
       final siswaData = await supabase
           .from('siswa')
-          .select('level_id, is_ready_for_exam, ready_modul_id')
+          .select('level_id')
           .eq('id', siswaId)
           .single();
 
@@ -92,82 +92,21 @@ class LayananBacaMutabaah {
         throw Exception("Siswa belum memiliki Level. Pastikan Level Kurikulum diisi pada profil siswa.");
       }
 
-      final levelData = await supabase
-          .from('kurikulum_level')
-          .select('kurikulum_id')
-          .eq('id', levelId)
-          .single();
-
-      final kurikulumId = levelData['kurikulum_id'];
-
-      final kurikulumData = await supabase
-          .from('kurikulum')
-          .select('promotion_policy')
-          .eq('id', kurikulumId)
-          .maybeSingle();
-
-      final String policy = kurikulumData?['promotion_policy'] ?? 'flexible';
-
-      final allModulsResponse = await supabase
+      // Query modul yang belum 'Final Completed'
+      // Modul yang materinya selesai (isContentCompleted) tapi belum lulus ujian (isExamPassed)
+      // HARUS TETAP MUNCUL agar tidak terjadi layar kosong "Belum punya modul aktif"
+      final allPossibleModuls = await supabase
           .from('modul_kurikulum')
-          .select('*, level:level_id(kurikulum_id, urutan)')
-          .eq('level_id', levelId)
-          .order('urutan', ascending: true);
+          .select('*, level:level_id(*)')
+          .eq('level_id', levelId);
 
-      List<ModulModel> allModuls = (allModulsResponse as List)
-          .map((m) => ModulModel.fromJson(m))
-          .toList();
-
-      debugPrint("DEBUG [Audit]: Ditemukan ${allModuls.length} modul di Level $levelId");
-      for (var m in allModuls) {
-        debugPrint(" -> Modul: ${m.namaModul} | Tipe: ${m.tipe} | ID: ${m.id}");
+      List<ModulModel> activeList = [];
+      for (var mJson in allPossibleModuls as List) {
+        final m = ModulModel.fromJson(mJson);
+        final isFinal = await LayananStatusModul().isFinalCompleted(siswaId, m);
+        if (!isFinal) activeList.add(m);
       }
-
-      List<ModulModel> dailyModuls = allModuls.where((m) => m.tipe.trim().toUpperCase() != 'TASMI\'').toList();
-
-      List<ModulModel> unpassedModuls = dailyModuls.isEmpty ? allModuls : dailyModuls;
-      debugPrint("DEBUG [Audit]: Modul aktif sebelum filter kelulusan: ${unpassedModuls.length}");
-
-      final bool isReadyForExam = siswaData['is_ready_for_exam'] == true;
-      final String? readyModulId = siswaData['ready_modul_id']?.toString();
-
-      if (isReadyForExam && readyModulId != null) {
-        final readyModul = unpassedModuls.where((m) => m.id == readyModulId).toList();
-        if (readyModul.isNotEmpty) return readyModul;
-      }
-
-      final Set<String> passedIds = {};
-
-      for (var modul in unpassedModuls) {
-        if (modul.isExamRequired) {
-          final evaluasiLulus = await supabase
-              .from('siswa_evaluasi_nilai')
-              .select('id')
-              .match({'siswa_id': siswaId, 'modul_id': modul.id!, 'is_lulus': true})
-              .limit(1)
-              .maybeSingle();
-
-          if (evaluasiLulus != null) {
-            passedIds.add(modul.id!);
-          }
-        } else {
-          final projection = await _mainService._kecerdasanAkademik.getModuleProjection(siswaId, modul);
-          if (projection.isCompleted) {
-            passedIds.add(modul.id!);
-          }
-        }
-      }
-
-      unpassedModuls = unpassedModuls.where((m) => !passedIds.contains(m.id)).toList();
-
-      if (unpassedModuls.isEmpty) return [];
-
-      if (policy == 'flexible') {
-        return unpassedModuls;
-      } else {
-        int currentActiveUrutan = unpassedModuls.first.urutan;
-        return unpassedModuls.where((m) => m.urutan == currentActiveUrutan).toList();
-      }
+      return activeList;
     } catch (e) {
       throw Exception(_mainService.handleError(e));
     }
