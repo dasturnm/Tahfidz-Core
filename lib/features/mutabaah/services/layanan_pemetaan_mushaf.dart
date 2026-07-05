@@ -86,7 +86,7 @@ class LayananPemetaanMushaf {
           .limit(1)
           .maybeSingle();
 
-      if (modul != null && (modul.silabusSource == 'internal' || modul.tipe == 'INTERNAL' || modul.tipe == 'AKADEMIK')) {
+      if (modul != null && (modul.silabusSource == 'internal' || modul.tipe == 'INTERNAL' || modul.tipe == 'AKADEMIK' || modul.tipe == 'DINIYAH')) {
         if (lastRecordData != null) {
           final payload = lastRecordData['data_payload'] as Map<String, dynamic>? ?? {};
           final int statusKeputusan = (lastRecordData['status_keputusan'] as num?)?.toInt() ?? 0;
@@ -277,7 +277,7 @@ class LayananPemetaanMushaf {
 
   Future<List<String>> getRemainingMateri(String siswaId, ModulModel modul) async {
     try {
-      if (modul.silabusSource != 'internal' && modul.tipe != 'INTERNAL') return [];
+      if (modul.silabusSource != 'internal' && modul.tipe != 'INTERNAL' && modul.tipe != 'DINIYAH') return [];
 
       final response = await supabase
           .from('mutabaah_records')

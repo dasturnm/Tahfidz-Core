@@ -306,6 +306,15 @@ extension PengontrolInputMutabaah on _ModulInputScreenState {
 
     if (label == "HALAMAN AKHIR") {
       startNumber = int.tryParse(_halamanAwalControllers[mId]!.text) ?? 1;
+    } else if (modul.silabusContent.isNotEmpty) {
+      // LOGIKA INDEX-BASED: Mengambil index materi selanjutnya dari silabusContent
+      int lastIdx = (_pertemuanSebelumnyaMap[mId] ?? -1);
+      final bool isPreviousUlang = _catatanControllers['${mId}_is_ulang_prev']?.text == 'true';
+      int nextIdx = isPreviousUlang ? lastIdx : (lastIdx + 1);
+
+      // Proteksi agar tidak melebihi panjang silabus
+      startNumber = (nextIdx >= modul.silabusContent.length) ? modul.silabusContent.length : (nextIdx + 1);
+      max = modul.silabusContent.length;
     } else {
       if (_pertemuanSebelumnyaMap[mId] != null) {
         final bool isPreviousUlang = _catatanControllers['${mId}_is_ulang_prev']?.text == 'true';

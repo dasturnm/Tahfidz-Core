@@ -1,4 +1,3 @@
-// Lokasi: lib/features/mutabaah/services/layanan_baca_mutabaah.dart
 part of 'mutabaah_service.dart';
 
 class LayananBacaMutabaah {
@@ -129,8 +128,7 @@ class LayananBacaMutabaah {
       if (policy == 'flexible') {
         return activeList;
       } else {
-        int currentActiveUrutan = activeList.first.urutan;
-        return activeList.where((m) => m.urutan == currentActiveUrutan).toList();
+        return [activeList.first];
       }
     } catch (e) {
       throw Exception(_mainService.handleError(e));
