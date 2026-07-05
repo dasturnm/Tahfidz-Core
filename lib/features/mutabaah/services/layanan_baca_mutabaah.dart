@@ -92,13 +92,30 @@ class LayananBacaMutabaah {
         throw Exception("Siswa belum memiliki Level. Pastikan Level Kurikulum diisi pada profil siswa.");
       }
 
+      final levelData = await supabase
+          .from('kurikulum_level')
+          .select('kurikulum_id')
+          .eq('id', levelId)
+          .single();
+
+      final kurikulumId = levelData['kurikulum_id'];
+
+      final kurikulumData = await supabase
+          .from('kurikulum')
+          .select('promotion_policy')
+          .eq('id', kurikulumId)
+          .maybeSingle();
+
+      final String policy = kurikulumData?['promotion_policy'] ?? 'flexible';
+
       // Query modul yang belum 'Final Completed'
       // Modul yang materinya selesai (isContentCompleted) tapi belum lulus ujian (isExamPassed)
       // HARUS TETAP MUNCUL agar tidak terjadi layar kosong "Belum punya modul aktif"
       final allPossibleModuls = await supabase
           .from('modul_kurikulum')
           .select('*, level:level_id(*)')
-          .eq('level_id', levelId);
+          .eq('level_id', levelId)
+          .order('urutan', ascending: true);
 
       List<ModulModel> activeList = [];
       for (var mJson in allPossibleModuls as List) {
@@ -106,7 +123,15 @@ class LayananBacaMutabaah {
         final isFinal = await LayananStatusModul().isFinalCompleted(siswaId, m);
         if (!isFinal) activeList.add(m);
       }
-      return activeList;
+
+      if (activeList.isEmpty) return [];
+
+      if (policy == 'flexible') {
+        return activeList;
+      } else {
+        int currentActiveUrutan = activeList.first.urutan;
+        return activeList.where((m) => m.urutan == currentActiveUrutan).toList();
+      }
     } catch (e) {
       throw Exception(_mainService.handleError(e));
     }

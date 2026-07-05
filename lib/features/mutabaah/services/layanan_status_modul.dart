@@ -22,20 +22,32 @@ class LayananStatusModul {
 
       if (modul.silabusSource == 'mushaf') {
         // PARSING COORDINATES (Contoh modul: "2:286")
-        final targetParts = modul.akhirKoordinat!.split(':');
-        final targetSurah = int.parse(targetParts[0]);
-        final targetAyat = int.parse(targetParts[1]);
+        int targetSurah = modul.surahId;
+        int targetAyat = modul.ayahEnd;
 
-        final currentSurah = lastRecord['surah_id'] as int;
-        final currentAyay = lastRecord['ayah_end'] as int;
+        if (modul.akhirKoordinat != null && modul.akhirKoordinat!.contains(':')) {
+          final targetParts = modul.akhirKoordinat!.split(':');
+          if (targetParts.length >= 2) {
+            targetSurah = int.tryParse(targetParts[0]) ?? targetSurah;
+            targetAyat = int.tryParse(targetParts[1]) ?? targetAyat;
+          }
+        }
+
+        final currentSurah = int.tryParse(lastRecord['surah_id']?.toString() ?? '0') ?? 0;
+        final currentAyay = int.tryParse(lastRecord['ayah_end']?.toString() ?? '0') ?? 0;
 
         // VALIDASI KOORDINAT FISIK
         if (currentSurah > targetSurah) return true;
         return (currentSurah == targetSurah && currentAyay >= targetAyat);
       } else {
         // VALIDASI INTERNAL (Keputusan Lanjut + Mencapai Baris Terakhir)
-        final totalCakupan = modul.silabusContent.length;
-        return (lastRecord['internal_end'] >= totalCakupan && lastRecord['status_keputusan'] == 1);
+        final int totalCakupan = modul.totalBaris > 0
+            ? modul.totalBaris
+            : (modul.silabusContent.isNotEmpty ? modul.silabusContent.length : modul.materiSilabus.length);
+
+        final int currentInternalEnd = int.tryParse(lastRecord['internal_end']?.toString() ?? '0') ?? 0;
+
+        return currentInternalEnd >= totalCakupan;
       }
     } catch (_) {
       return false;
