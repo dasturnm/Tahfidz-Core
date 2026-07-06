@@ -69,6 +69,7 @@ class _ModulInputScreenState extends ConsumerState<MutabaahInputScreen> with Tic
   final Map<String, int> _switchStates = {};
   final Map<String, int?> _pertemuanSebelumnyaMap = {};
   final Map<String, String?> _materiSebelumnyaMap = {};
+  final Map<String, bool> _modulCompleted = {};
 
   List<Map<String, dynamic>> _surahList = [];
   bool _isInitialLoading = true;
@@ -85,6 +86,7 @@ class _ModulInputScreenState extends ConsumerState<MutabaahInputScreen> with Tic
     super.initState();
     _currentSiswa = widget.siswa;
     _tabController = TabController(length: widget.activeModuls.length, vsync: this);
+    _tabController?.addListener(() => setState(() {}));
     _fetchSurah();
 
     for (var modul in widget.activeModuls) {
@@ -142,12 +144,16 @@ class _ModulInputScreenState extends ConsumerState<MutabaahInputScreen> with Tic
       return !(m.isExamRequired && _currentSiswa.isReadyForExam && _currentSiswa.readyModulId == m.id!);
     });
 
-    bool isAllSwitchesReady = widget.activeModuls.isNotEmpty &&
+    final ModulModel? currentModul = widget.activeModuls.isNotEmpty
+        ? widget.activeModuls[_tabController?.index ?? 0]
+        : null;
+
+    bool isAllSwitchesReady = currentModul != null &&
         hasSubmittableModul &&
-        widget.activeModuls.every((m) {
-          final isExamReady = m.isExamRequired && _currentSiswa.isReadyForExam && _currentSiswa.readyModulId == m.id!;
-          return isExamReady || _switchStates[m.id!] != 0;
-        });
+        (() {
+          final isExamReady = currentModul.isExamRequired && _currentSiswa.isReadyForExam && _currentSiswa.readyModulId == currentModul.id!;
+          return isExamReady || _switchStates[currentModul.id!] != 0;
+        })();
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -188,14 +194,14 @@ class _ModulInputScreenState extends ConsumerState<MutabaahInputScreen> with Tic
           child: ElevatedButton(
             onPressed: (!submitState.isLoading && isAllSwitchesReady) ? _submitDataBatch : null,
             style: ElevatedButton.styleFrom(
-              backgroundColor: isAllSwitchesReady ? slate : Colors.grey.shade400,
+              backgroundColor: isAllSwitchesReady ? emerald : Colors.grey.shade400,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
               elevation: isAllSwitchesReady ? 8 : 0,
-              shadowColor: slate.withOpacity(0.3),
+              shadowColor: emerald.withOpacity(0.3),
             ),
             child: submitState.isLoading
                 ? const CircularProgressIndicator(color: Colors.white)
-                : Text(isAllSwitchesReady ? "SIMPAN SEMUA LAPORAN" : "TENTUKAN STATUS (ULANG/LANJUT)",
+                : Text(isAllSwitchesReady ? "SIMPAN LAPORAN" : "TENTUKAN STATUS (ULANG/LANJUT)",
                 style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 14)),
           ),
         ),
@@ -209,6 +215,10 @@ class _ModulInputScreenState extends ConsumerState<MutabaahInputScreen> with Tic
     final isQuranic = !['INTERNAL', 'AKADEMIK'].contains(tipe) &&
         ['ZIYADAH HAFALAN', 'ZIYADAH TILAWAH', 'MUROJAAH', 'HAFALAN', 'TILAWAH', 'TASMI\''].contains(tipe);
     final bool isPreviousUlang = _catatanControllers['${mId}_is_ulang_prev']?.text == 'true';
+
+    if (_modulCompleted[mId] == true) {
+      return _buildCompletedModule(modul, color);
+    }
 
     return Container(
       margin: const EdgeInsets.only(bottom: 24),
@@ -246,12 +256,12 @@ class _ModulInputScreenState extends ConsumerState<MutabaahInputScreen> with Tic
           if (isPreviousUlang) ...[
             Row(
               children: [
-                Icon(Icons.history, size: 14, color: Colors.orange.shade700),
+                const Icon(Icons.history, size: 14, color: Color(0xFFF57C00)),
                 const SizedBox(width: 6),
-                Expanded(
+                const Expanded(
                   child: Text(
                     "Materi ini sedang diulang dari pertemuan sebelumnya.",
-                    style: TextStyle(color: Colors.orange.shade800, fontSize: 11, fontWeight: FontWeight.bold),
+                    style: TextStyle(color: Color(0xFFE65100), fontSize: 11, fontWeight: FontWeight.bold),
                   ),
                 ),
               ],
@@ -390,6 +400,100 @@ class _ModulInputScreenState extends ConsumerState<MutabaahInputScreen> with Tic
             const SizedBox(height: 24),
             MutabaahProjectionBoard(siswaId: _currentSiswa.id!, modul: modul),
           ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCompletedModule(ModulModel modul, Color color) {
+    final bool isExamRequired = modul.isExamRequired;
+    final bool isReady = _currentSiswa.isReadyForExam && _currentSiswa.readyModulId == modul.id;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 24),
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: Colors.green.withOpacity(0.3)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.green.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.green.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Text("✓ MODUL SELESAI", style: TextStyle(color: Colors.green, fontWeight: FontWeight.w900, fontSize: 10)),
+              ),
+              const SizedBox(width: 12),
+              Expanded(child: Text(modul.namaModul, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: Color(0xFF1E293B)))),
+            ],
+          ),
+          const Divider(height: 32),
+          const Icon(Icons.check_circle_outline_rounded, color: Colors.green, size: 48),
+          const SizedBox(height: 12),
+          const Text(
+            "Alhamdulillah, seluruh materi pada modul ini telah tuntas.",
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF1E293B)),
+          ),
+          if (isExamRequired && !isReady) ...[
+            const SizedBox(height: 8),
+            const Text(
+              "Modul ini mewajibkan Ujian (UKL/Tasmi'). Silakan koordinasikan dengan Tim Penguji untuk pelaksanaan ujian.",
+              style: TextStyle(fontSize: 12, color: Color(0xFF546E7A), height: 1.4),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  context.push(
+                    '/akademik/tasmi',
+                    extra: {
+                      'siswaId': _currentSiswa.id,
+                      'namaSiswa': _currentSiswa.namaLengkap,
+                      'modul': modul,
+                      'tipeEvaluasi': modul.examType,
+                    },
+                  );
+                },
+                icon: const Icon(Icons.assignment_turned_in_rounded, size: 16, color: Color(0xFF3B82F6)),
+                label: const Text("BUKA LEMBAR UJIAN", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF3B82F6))),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: Color(0xFF3B82F6)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+              ),
+            ),
+          ],
+          if (isExamRequired && isReady) ...[
+            const SizedBox(height: 8),
+            const Text(
+              "Siswa sudah siap ujian. Silakan lanjutkan ke proses ujian.",
+              style: TextStyle(fontSize: 12, color: Color(0xFF546E7A), height: 1.4),
+            ),
+          ],
+          if (!isExamRequired) ...[
+            const SizedBox(height: 8),
+            const Text(
+              "Siswa akan otomatis naik ke modul berikutnya setelah semua modul di level ini tuntas.",
+              style: TextStyle(fontSize: 12, color: Color(0xFF546E7A), height: 1.4),
+            ),
+          ],
+          const SizedBox(height: 16),
         ],
       ),
     );

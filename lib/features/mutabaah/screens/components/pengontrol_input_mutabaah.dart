@@ -20,6 +20,7 @@ extension PengontrolInputMutabaah on _ModulInputScreenState {
         if (modul.silabusSource == 'internal' || modul.tipe == 'INTERNAL' || modul.tipe == 'AKADEMIK') {
           _pertemuanSebelumnyaMap[mId] = nextCoord['pertemuan_sebelumnya'];
           _materiSebelumnyaMap[mId] = nextCoord['materi_sebelumnya'];
+          _modulCompleted[mId] = nextCoord['is_completed'] ?? false;
 
           if (modul.isPlottingActive) {
             _selectedMateri[mId] = nextCoord['materi'];
@@ -316,6 +317,12 @@ extension PengontrolInputMutabaah on _ModulInputScreenState {
       startNumber = (nextIdx >= modul.silabusContent.length) ? modul.silabusContent.length : (nextIdx + 1);
       max = modul.silabusContent.length;
     } else {
+      // Tentukan batas maksimal berdasarkan total baris/fisik, bukan targetPertemuan (administratif)
+      if (modul.totalBaris > 0) {
+        max = modul.totalBaris;
+      }
+      // Jika totalBaris masih 0, gunakan targetPertemuan atau 100 (fallback tetap di atas)
+
       if (_pertemuanSebelumnyaMap[mId] != null) {
         final bool isPreviousUlang = _catatanControllers['${mId}_is_ulang_prev']?.text == 'true';
         startNumber = isPreviousUlang ? _pertemuanSebelumnyaMap[mId]! : _pertemuanSebelumnyaMap[mId]! + 1;

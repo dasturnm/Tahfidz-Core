@@ -22,12 +22,29 @@ class LayananKecerdasanAkademik {
 
       if (isPhysicalDone) {
         if (modul.isExamRequired) {
-          // Hanya ubah ke exam_ready jika syarat fisik tuntas & modul wajib ujian
-          await supabase.from('siswa').update({'academic_state': 'exam_ready'}).eq('id', siswaId);
+          // DUAL/TRIPLE UPDATE: Ubah academic_state, is_ready_for_exam, dan ready_modul_id
+          await supabase.from('siswa').update({
+            'academic_state': 'exam_ready',
+            'is_ready_for_exam': true,
+            'ready_modul_id': modulId,
+          }).eq('id', siswaId);
         } else {
+          // Reset flag exam terlebih dahulu sebelum promosi
+          await supabase.from('siswa').update({
+            'is_ready_for_exam': false,
+            'ready_modul_id': null,
+            'academic_state': 'daily',
+          }).eq('id', siswaId);
           // Jika tidak wajib ujian, langsung pemicu promosi ke modul berikutnya
           await _evaluateStudentPromotion(siswaId);
         }
+      } else {
+        // Jika belum selesai, pastikan flag exam di-reset (mencegah status mengambang)
+        await supabase.from('siswa').update({
+          'is_ready_for_exam': false,
+          'ready_modul_id': null,
+          'academic_state': 'daily',
+        }).eq('id', siswaId);
       }
     } catch (e) {
       print("Error _evaluateExamReadiness: $e");
