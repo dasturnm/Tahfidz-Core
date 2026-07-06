@@ -40,14 +40,22 @@ class LayananStatusModul {
         if (currentSurah > targetSurah) return true;
         return (currentSurah == targetSurah && currentAyay >= targetAyat);
       } else {
-        // VALIDASI INTERNAL (Keputusan Lanjut + Mencapai Baris Terakhir)
-        final int totalCakupan = modul.totalBaris > 0
-            ? modul.totalBaris
-            : (modul.silabusContent.isNotEmpty ? modul.silabusContent.length : modul.materiSilabus.length);
+        // VALIDASI INTERNAL
+        if (modul.isPlottingActive) {
+          // Floating: bandingkan nomor urut materi dengan total materi
+          final int totalMateri = modul.extractedMateriList.length;
+          final int currentIndex = int.tryParse(lastRecord['nomor_urut_materi']?.toString() ?? '0') ?? 0;
+          // Jika totalMateri 0, anggap belum selesai. Indeks berbasis 0, jadi max index = totalMateri - 1
+          return totalMateri > 0 && currentIndex >= totalMateri - 1;
+        } else {
+          // Non-floating: bandingkan internal_end dengan total cakupan (target pertemuan atau total baris)
+          final int totalCakupan = modul.targetPertemuan > 0
+              ? modul.targetPertemuan
+              : (modul.totalBaris > 0 ? modul.totalBaris : 100);
 
-        final int currentInternalEnd = int.tryParse(lastRecord['internal_end']?.toString() ?? '0') ?? 0;
-
-        return currentInternalEnd >= totalCakupan;
+          final int currentInternalEnd = int.tryParse(lastRecord['internal_end']?.toString() ?? '0') ?? 0;
+          return currentInternalEnd >= totalCakupan;
+        }
       }
     } catch (_) {
       return false;

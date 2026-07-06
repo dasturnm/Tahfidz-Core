@@ -17,13 +17,13 @@ import 'layanan_status_modul.dart';
 part 'layanan_baca_mutabaah.dart';
 part 'layanan_simpan_mutabaah.dart';
 part 'layanan_kecerdasan_akademik.dart';
-part 'layanan_pemetaan_mushaf.dart';
+part 'layanan_navigasi_materi.dart';
 
 class MutabaahTahfidzService extends BaseService {
   late final LayananBacaMutabaah _baca = LayananBacaMutabaah(this);
   late final LayananSimpanMutabaah _simpan = LayananSimpanMutabaah(this);
   late final LayananKecerdasanAkademik _kecerdasanAkademik = LayananKecerdasanAkademik(this);
-  late final LayananPemetaanMushaf _pemetaanMushaf = LayananPemetaanMushaf(this);
+  late final LayananNavigasiMateri _navigasiMateri = LayananNavigasiMateri(this);
 
   /// 1. LOGIKA KALKULASI HALAMAN & BARIS (Smart Calculation)
   Future<Map<String, dynamic>> calculateTahfidzPayload({
@@ -34,7 +34,7 @@ class MutabaahTahfidzService extends BaseService {
     double? targetAmount,
     double previousDebt = 0.0,
     String? targetUnit,
-  }) => _pemetaanMushaf.calculateTahfidzPayload(
+  }) => _navigasiMateri.calculateTahfidzPayload(
     surahMulai: surahMulai,
     ayahMulai: ayahMulai,
     surahAkhir: surahAkhir,
@@ -63,13 +63,13 @@ class MutabaahTahfidzService extends BaseService {
   Future<void> _evaluateStudentPromotion(String siswaId) => _kecerdasanAkademik._evaluateStudentPromotion(siswaId);
 
   /// TAMBAHAN: Logika Auto-Next (Mendapatkan titik mulai cerdas berdasarkan setoran terakhir)
-  Future<Map<String, dynamic>> getNextCoordinate(String siswaId, {ModulModel? modul}) => _pemetaanMushaf.getNextCoordinate(siswaId, modul: modul);
+  Future<Map<String, dynamic>> getNextCoordinate(String siswaId, {ModulModel? modul}) => _navigasiMateri.getNextCoordinate(siswaId, modul: modul);
 
   /// TAMBAHAN: Konversi Baris Absolut menjadi format Manusiawi (Halaman & Baris)
-  String convertLinesToHumanReadable(int totalLines) => _pemetaanMushaf.convertLinesToHumanReadable(totalLines);
+  String convertLinesToHumanReadable(int totalLines) => _navigasiMateri.convertLinesToHumanReadable(totalLines);
 
   /// 5. READ: Mengambil saldo hutang terakhir (carry-over debt) untuk modul tertentu
-  Future<double> getLatestDebt(String siswaId, String modulId) => _pemetaanMushaf.getLatestDebt(siswaId, modulId);
+  Future<double> getLatestDebt(String siswaId, String modulId) => _navigasiMateri.getLatestDebt(siswaId, modulId);
 
   /// 6. KALKULASI: Menghitung skor akhir Ujian Tasmi' berdasarkan setting gradasi dinamis
   double calculateTasmiScore(Map<String, dynamic> tasmiSettings, Map<String, dynamic> penaltyCounts, Map<String, double> directScores) => _kecerdasanAkademik.calculateTasmiScore(tasmiSettings, penaltyCounts, directScores);
@@ -81,13 +81,13 @@ class MutabaahTahfidzService extends BaseService {
   Future<List<ModulModel>> getActiveModuls(Ref ref, String siswaId) => _baca.getActiveModuls(ref, siswaId);
 
   /// 9. READ: Mengambil daftar surah dari data_mushaf (Centralized & Fixed)
-  Future<List<Map<String, dynamic>>> getSurahList() => _pemetaanMushaf.getSurahList();
+  Future<List<Map<String, dynamic>>> getSurahList() => _navigasiMateri.getSurahList();
 
   /// 10. READ / CALCULATE: Memproyeksikan estimasi kelulusan modul berdasarkan data historis
   Future<MutabaahProjectionModel> getModuleProjection(String siswaId, ModulModel modul) => _kecerdasanAkademik.getModuleProjection(siswaId, modul);
 
   /// 11. TAMBAHAN (Fase 2): Filter Materi Internal (Smart Hide)
-  Future<List<String>> getRemainingMateri(String siswaId, ModulModel modul) => _pemetaanMushaf.getRemainingMateri(siswaId, modul);
+  Future<List<String>> getRemainingMateri(String siswaId, ModulModel modul) => _navigasiMateri.getRemainingMateri(siswaId, modul);
 
   /// 12. PENDETEKSI SANTRI "GHAIB" (Belum Setoran Hari Ini)
   Future<List<String>> getSiswaIdsSudahSetoranHariIni(DateTime tanggal) => _baca.getSiswaIdsSudahSetoranHariIni(tanggal);

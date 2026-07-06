@@ -1,9 +1,9 @@
-// Lokasi: lib/features/mutabaah/services/layanan_pemetaan_mushaf.dart
+// Lokasi: lib/features/mutabaah/services/layanan_navigasi_materi.dart
 part of 'mutabaah_service.dart';
 
-class LayananPemetaanMushaf {
+class LayananNavigasiMateri {
   final MutabaahTahfidzService _mainService;
-  LayananPemetaanMushaf(this._mainService);
+  LayananNavigasiMateri(this._mainService);
 
   SupabaseClient get supabase => _mainService.supabase;
 
@@ -87,78 +87,129 @@ class LayananPemetaanMushaf {
           .maybeSingle();
 
       if (modul != null && (modul.silabusSource == 'internal' || modul.tipe == 'INTERNAL' || modul.tipe == 'AKADEMIK' || modul.tipe == 'DINIYAH')) {
-        if (lastRecordData != null) {
-          final payload = lastRecordData['data_payload'] as Map<String, dynamic>? ?? {};
-          final int statusKeputusan = (lastRecordData['status_keputusan'] as num?)?.toInt() ?? 0;
+        // Ambil record terakhir yang BUKAN ULANG (status_keputusan != -1)
+        var validQuery = supabase
+            .from('mutabaah_records')
+            .select('data_payload, internal_start, internal_end, materi_silabus_aktif, nomor_urut_materi, status_keputusan, ayah_start, surah_id')
+            .eq('siswa_id', siswaId)
+            .eq('modul_id', modul.id!)
+            .neq('status_keputusan', -1)
+            .order('created_at', ascending: false)
+            .limit(1);
 
-          int lastHalamanAwal = (lastRecordData['internal_start'] as num?)?.toInt() ??
-              int.tryParse(payload['halaman_awal']?.toString() ?? '0') ?? 0;
+        final lastValidRecord = await validQuery.maybeSingle();
 
-          int lastHalamanAkhir = (lastRecordData['internal_end'] as num?)?.toInt() ??
-              int.tryParse(payload['halaman_akhir']?.toString() ?? '0') ?? 0;
-
-          String? lastMateri = lastRecordData['materi_silabus_aktif']?.toString() ??
-              payload['materi']?.toString();
-
-          int lastNomorUrut = (lastRecordData['nomor_urut_materi'] as num?)?.toInt() ?? 0;
-
+        // Jika tidak ada record valid, mulai dari awal
+        if (lastValidRecord == null) {
           if (modul.isPlottingActive) {
             final allMateri = modul.extractedMateriList;
-            int index = -1;
-
-            if (lastNomorUrut > 0 && lastNomorUrut < allMateri.length) {
-              index = lastNomorUrut;
-            } else if (lastMateri != null) {
-              index = allMateri.indexOf(lastMateri);
-            }
-
-            if (statusKeputusan == -1) {
-              return {
-                'materi': (index != -1 && index < allMateri.length) ? allMateri[index] : lastMateri,
-                'materi_sebelumnya': lastMateri,
-                'status_sebelumnya_ulang': true,
-              };
-            }
-
-            if (index != -1 && index + 1 < allMateri.length) {
-              return {
-                'materi': allMateri[index + 1],
-                'materi_sebelumnya': lastMateri,
-                'status_sebelumnya_ulang': false,
-              };
-            } else {
-              return {
-                'materi': null,
-                'materi_sebelumnya': lastMateri,
-                'status_sebelumnya_ulang': false,
-              };
-            }
-          } else {
-            if (statusKeputusan == -1) {
-              return {
-                'pertemuan_selanjutnya': lastHalamanAwal > 0 ? lastHalamanAwal : lastHalamanAkhir,
-                'pertemuan_sebelumnya': lastHalamanAkhir,
-                'status_sebelumnya_ulang': true,
-              };
-            }
-
             return {
-              'pertemuan_selanjutnya': lastHalamanAkhir + 1,
-              'pertemuan_sebelumnya': lastHalamanAkhir,
-              'status_sebelumnya_ulang': false,
+              'materi': allMateri.isNotEmpty ? allMateri.first : null,
+              'materi_sebelumnya': null,
+              'is_completed': false,
+            };
+          } else {
+            return {
+              'pertemuan_selanjutnya': 1,
+              'pertemuan_sebelumnya': null,
+              'is_completed': false,
             };
           }
         }
+
+        // Ada record valid
+        final payload = lastValidRecord['data_payload'] as Map<String, dynamic>? ?? {};
+        final int statusKeputusan = (lastValidRecord['status_keputusan'] as num?)?.toInt() ?? 0;
+
+        int lastHalamanAwal = (lastValidRecord['internal_start'] as num?)?.toInt() ??
+            int.tryParse(payload['halaman_awal']?.toString() ?? '0') ?? 0;
+
+        int lastHalamanAkhir = (lastValidRecord['internal_end'] as num?)?.toInt() ??
+            int.tryParse(payload['halaman_akhir']?.toString() ?? '0') ?? 0;
+
+        String? lastMateri = lastValidRecord['materi_silabus_aktif']?.toString() ??
+            payload['materi']?.toString();
+
+        int lastNomorUrut = (lastValidRecord['nomor_urut_materi'] as num?)?.toInt() ?? 0;
+
         if (modul.isPlottingActive) {
           final allMateri = modul.extractedMateriList;
-          return {
-            'materi': allMateri.isNotEmpty ? allMateri.first : null,
-            'materi_sebelumnya': null,
-          };
+          int index = -1;
+
+          if (lastNomorUrut > 0 && lastNomorUrut < allMateri.length) {
+            index = lastNomorUrut;
+          } else if (lastMateri != null) {
+            index = allMateri.indexOf(lastMateri);
+          }
+
+          // statusKeputusan seharusnya tidak -1 karena kita filter, tapi tetap jaga
+          if (statusKeputusan == -1) {
+            return {
+              'materi': (index != -1 && index < allMateri.length) ? allMateri[index] : lastMateri,
+              'materi_sebelumnya': lastMateri,
+              'status_sebelumnya_ulang': true,
+              'is_completed': false,
+            };
+          }
+
+          // Cek apakah sudah di materi terakhir
+          if (index >= allMateri.length - 1) {
+            return {
+              'materi': null,
+              'materi_sebelumnya': lastMateri,
+              'status_sebelumnya_ulang': false,
+              'is_completed': true,
+            };
+          }
+
+          // Lanjut ke materi berikutnya
+          if (index != -1 && index + 1 < allMateri.length) {
+            return {
+              'materi': allMateri[index + 1],
+              'materi_sebelumnya': lastMateri,
+              'status_sebelumnya_ulang': false,
+              'is_completed': false,
+            };
+          } else {
+            // Fallback jika index tidak valid
+            return {
+              'materi': null,
+              'materi_sebelumnya': lastMateri,
+              'status_sebelumnya_ulang': false,
+              'is_completed': false,
+            };
+          }
         } else {
+          // Non-plotting
+          // Tentukan total cakupan
+          int totalCakupan = modul.targetPertemuan > 0
+              ? modul.targetPertemuan
+              : (modul.totalBaris > 0 ? modul.totalBaris : 100); // fallback
+
+          if (statusKeputusan == -1) {
+            return {
+              'pertemuan_selanjutnya': lastHalamanAwal > 0 ? lastHalamanAwal : lastHalamanAkhir,
+              'pertemuan_sebelumnya': lastHalamanAkhir,
+              'status_sebelumnya_ulang': true,
+              'is_completed': false,
+            };
+          }
+
+          // Cek apakah sudah mencapai atau melewati batas
+          if (lastHalamanAkhir >= totalCakupan) {
+            return {
+              'pertemuan_selanjutnya': null,
+              'pertemuan_sebelumnya': lastHalamanAkhir,
+              'status_sebelumnya_ulang': false,
+              'is_completed': true,
+            };
+          }
+
           return {
-            'pertemuan_selanjutnya': 1,
-            'pertemuan_sebelumnya': null,
+            'pertemuan_selanjutnya': lastHalamanAkhir + 1,
+            'pertemuan_sebelumnya': lastHalamanAkhir,
+            'status_sebelumnya_ulang': false,
+            'is_completed': false,
           };
         }
       }
