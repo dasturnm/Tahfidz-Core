@@ -21,15 +21,27 @@ class LayananStatusModul {
       if (lastRecord == null) return false;
 
       if (modul.silabusSource == 'mushaf') {
-        // PARSING COORDINATES (Contoh modul: "2:286")
-        int targetSurah = modul.surahId;
-        int targetAyat = modul.ayahEnd;
+        // PARSING COORDINATES
+        int targetSurah = 0;
+        int targetAyat = 0;
 
         if (modul.akhirKoordinat != null && modul.akhirKoordinat!.contains(':')) {
           final targetParts = modul.akhirKoordinat!.split(':');
           if (targetParts.length >= 2) {
-            targetSurah = int.tryParse(targetParts[0]) ?? targetSurah;
-            targetAyat = int.tryParse(targetParts[1]) ?? targetAyat;
+            targetSurah = int.tryParse(targetParts[0]) ?? 0;
+            targetAyat = int.tryParse(targetParts[1]) ?? 0;
+          }
+        }
+        // Jika tidak ada di akhirKoordinat, coba ambil dari surahId/ayahEnd (hanya jika > 0)
+        if (targetSurah == 0) {
+          int tempSurah = modul.surahId;
+          int tempAyah = modul.ayahEnd;
+          if (tempSurah > 0 && tempAyah > 0) {
+            targetSurah = tempSurah;
+            targetAyat = tempAyah;
+          } else {
+            // Target tidak terdefinisi => anggap belum selesai
+            return false;
           }
         }
 
@@ -44,9 +56,13 @@ class LayananStatusModul {
         if (modul.isPlottingActive) {
           // Floating: bandingkan nomor urut materi dengan total materi
           final int totalMateri = modul.extractedMateriList.length;
+          if (totalMateri == 0) return false;
           final int currentIndex = int.tryParse(lastRecord['nomor_urut_materi']?.toString() ?? '0') ?? 0;
-          // Jika totalMateri 0, anggap belum selesai. Indeks berbasis 0, jadi max index = totalMateri - 1
-          return totalMateri > 0 && currentIndex >= totalMateri - 1;
+          // Indeks berbasis 0, jadi max index = totalMateri - 1
+          // Tambahkan pengecekan apakah record terakhir memiliki status LANJUT (status_keputusan == 1)
+          final int statusKeputusan = int.tryParse(lastRecord['status_keputusan']?.toString() ?? '0') ?? 0;
+          // Hanya dianggap selesai jika statusnya LANJUT dan indeks sudah di akhir
+          return statusKeputusan == 1 && currentIndex >= totalMateri - 1;
         } else {
           // Non-floating: bandingkan internal_end dengan total cakupan (target pertemuan atau total baris)
           final int totalCakupan = modul.targetPertemuan > 0
@@ -54,7 +70,9 @@ class LayananStatusModul {
               : (modul.totalBaris > 0 ? modul.totalBaris : 100);
 
           final int currentInternalEnd = int.tryParse(lastRecord['internal_end']?.toString() ?? '0') ?? 0;
-          return currentInternalEnd >= totalCakupan;
+          // Tambahkan pengecekan status LANJUT
+          final int statusKeputusan = int.tryParse(lastRecord['status_keputusan']?.toString() ?? '0') ?? 0;
+          return statusKeputusan == 1 && currentInternalEnd >= totalCakupan;
         }
       }
     } catch (_) {
