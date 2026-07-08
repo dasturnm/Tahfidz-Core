@@ -10,6 +10,7 @@ class MutabaahRecord {
   final String payrollStatus; // 'pending', 'processed', 'skipped' (Audit Payroll)
   final String modulId;
   final int surahId;    // TAMBAHAN: Mapping Fisik
+  final int endSurahId; // TAMBAHAN: Mapping Lintas Surah
   final int ayahStart;  // TAMBAHAN: Mapping Fisik
   final int ayahEnd;    // TAMBAHAN: Mapping Fisik
   final int totalBaris; // TAMBAHAN: Beban Baris Aktual
@@ -39,6 +40,7 @@ class MutabaahRecord {
     this.payrollStatus = 'pending',
     required this.modulId,
     this.surahId = 0,
+    this.endSurahId = 0,
     this.ayahStart = 0,
     this.ayahEnd = 0,
     this.totalBaris = 0,
@@ -71,6 +73,7 @@ class MutabaahRecord {
       payrollStatus: json['payroll_status']?.toString() ?? 'pending',
       modulId: (json['modul_id'] == null || json['modul_id'].toString() == 'null') ? '' : json['modul_id'].toString(),
       surahId: (json['surah_id'] as num?)?.toInt() ?? 0,
+      endSurahId: (json['end_surah_id'] as num?)?.toInt() ?? 0,
       ayahStart: (json['ayah_start'] as num?)?.toInt() ?? 0,
       ayahEnd: (json['ayah_end'] as num?)?.toInt() ?? 0,
       totalBaris: (json['total_baris'] as num?)?.toInt() ?? 0,
@@ -109,6 +112,7 @@ class MutabaahRecord {
       'payroll_status': payrollStatus,
       'modul_id': modulId,
       'surah_id': surahId,
+      'end_surah_id': endSurahId,
       'ayah_start': ayahStart,
       'ayah_end': ayahEnd,
       'total_baris': totalBaris,
@@ -143,6 +147,7 @@ class MutabaahRecord {
     String? payrollStatus,
     String? modulId,
     int? surahId,
+    int? endSurahId,
     int? ayahStart,
     int? ayahEnd,
     int? totalBaris,
@@ -172,6 +177,7 @@ class MutabaahRecord {
       payrollStatus: payrollStatus ?? this.payrollStatus,
       modulId: modulId ?? this.modulId,
       surahId: surahId ?? this.surahId,
+      endSurahId: endSurahId ?? this.endSurahId,
       ayahStart: ayahStart ?? this.ayahStart,
       ayahEnd: ayahEnd ?? this.ayahEnd,
       totalBaris: totalBaris ?? this.totalBaris,

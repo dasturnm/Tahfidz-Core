@@ -1,3 +1,4 @@
+// Lokasi: lib/features/mutabaah/services/layanan_status_modul.dart
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:tahfidz_core/features/akademik/kurikulum/models/modul_model.dart';
 
@@ -45,7 +46,9 @@ class LayananStatusModul {
           }
         }
 
-        final currentSurah = int.tryParse(lastRecord['surah_id']?.toString() ?? '0') ?? 0;
+        // FIX: Menggunakan end_surah_id sebagai titik acuan akhir setoran
+        final int endSurahFromDb = int.tryParse(lastRecord['end_surah_id']?.toString() ?? '0') ?? 0;
+        final currentSurah = endSurahFromDb > 0 ? endSurahFromDb : (int.tryParse(lastRecord['surah_id']?.toString() ?? '0') ?? 0);
         final currentAyay = int.tryParse(lastRecord['ayah_end']?.toString() ?? '0') ?? 0;
 
         // VALIDASI KOORDINAT FISIK

@@ -127,14 +127,19 @@ class MushafCalculator {
       final maxKoor = dbStartKoor < dbEndKoor ? dbEndKoor : dbStartKoor;
 
       final List<dynamic> rows = allRows.where((r) {
-        final koor = int.tryParse(r['koordinat_baris']?.toString() ?? '') ?? 0;
+        final int rowSurah = int.tryParse(r['surah_number']?.toString() ?? '') ?? 0;
         final int? aStart = int.tryParse(r['ayah_start']?.toString() ?? '');
         final int? aEnd = int.tryParse(r['ayah_end']?.toString() ?? '');
+        if (aStart == null || aEnd == null) return false;
 
-        return koor >= minKoor &&
-            koor <= maxKoor &&
-            aStart != null &&
-            aEnd != null;
+        if (sSurah == eSurah) {
+          return (rowSurah == sSurah && aStart <= safeEAyah && aEnd >= safeSAyah);
+        } else {
+          if (rowSurah < sSurah || rowSurah > eSurah) return false;
+          if (rowSurah == sSurah) return (aEnd >= safeSAyah);
+          if (rowSurah == eSurah) return (aStart <= safeEAyah);
+          return true;
+        }
       }).toList();
 
       final uniqueKoor = <int>{};

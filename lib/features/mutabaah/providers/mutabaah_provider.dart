@@ -82,11 +82,12 @@ class MutabaahNotifier extends StateNotifier<AsyncValue<void>> {
         final payload = await _ref.read(mutabaahServiceProvider).calculateTahfidzPayload(
           surahMulai: record.surahId,
           ayahMulai: record.ayahStart,
-          surahAkhir: record.surahId,
+          surahAkhir: record.endSurahId > 0 ? record.endSurahId : record.surahId,
           ayahAkhir: record.ayahEnd,
         );
 
         final int actualBaris = (payload['calculated_lines'] as num?)?.toInt() ?? 0;
+        final int finalBaris = record.totalBaris > 0 ? record.totalBaris : actualBaris;
 
         // Ambil Target dari Modul Kurikulum (Gunakan Snapshot untuk Integritas Data)
         final supabase = Supabase.instance.client;
@@ -99,10 +100,11 @@ class MutabaahNotifier extends StateNotifier<AsyncValue<void>> {
         final int targetBaris = (modulRes['total_baris'] ?? 0) as int;
 
         updatedRecord = record.copyWith(
-          totalBaris: actualBaris,
-          achievedAmount: actualBaris.toDouble(),
+          totalBaris: finalBaris,
+          endSurahId: record.endSurahId,
+          achievedAmount: finalBaris.toDouble(),
           targetSnapshot: targetBaris.toDouble(),
-          isPassedTarget: actualBaris >= targetBaris,
+          isPassedTarget: finalBaris >= targetBaris,
         );
       } else if (record.tipeModul == 'INTERNAL') {
         // Logika Internal: Memastikan status kelulusan berdasarkan nilai angka (KKM default 70 jika snapshot kosong)

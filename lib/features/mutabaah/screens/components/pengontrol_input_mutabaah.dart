@@ -252,6 +252,7 @@ extension PengontrolInputMutabaah on _ModulInputScreenState {
         surahId: sId,
         ayahStart: aStart,
         ayahEnd: aEnd,
+        endSurahId: isQuranic ? (_endSurah[mId] ?? 0) : 0,
         totalBaris: tBaris,
         targetSnapshot: _totalTargetsMap[mId] ?? 0.0,
         sabqiAmount: sabqiReal,

@@ -11,6 +11,10 @@ class LayananSimpanMutabaah {
     try {
       final data = _mainService.cleanData(record.toJson());
 
+      // FIX: Pastikan kolom kritikal tidak hilang meski cleanData agresif
+      data['end_surah_id'] = record.endSurahId;
+      data['total_baris'] = record.totalBaris;
+
       if (record.id == null) {
         data.remove('id');
       }
