@@ -41,8 +41,9 @@ class LayananStatusModul {
             targetSurah = tempSurah;
             targetAyat = tempAyah;
           } else {
-            // Target tidak terdefinisi => anggap belum selesai
-            return false;
+            // Target tidak terdefinisi secara valid.
+            // Anggap modul selesai agar tidak looping di daftar modul aktif.
+            return true;
           }
         }
 

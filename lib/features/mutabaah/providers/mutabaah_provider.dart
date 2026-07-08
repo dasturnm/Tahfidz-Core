@@ -101,7 +101,7 @@ class MutabaahNotifier extends StateNotifier<AsyncValue<void>> {
 
         updatedRecord = record.copyWith(
           totalBaris: finalBaris,
-          endSurahId: record.endSurahId,
+          endSurahId: record.endSurahId > 0 ? record.endSurahId : record.surahId,
           achievedAmount: finalBaris.toDouble(),
           targetSnapshot: targetBaris.toDouble(),
           isPassedTarget: finalBaris >= targetBaris,

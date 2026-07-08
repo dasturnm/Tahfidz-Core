@@ -92,6 +92,7 @@ extension PengontrolInputMutabaah on _ModulInputScreenState {
 
         if (mounted) {
           setState(() {
+            _endSurah[mId] = _endSurah[mId]; // Explicit state sync
             _pagesMap[mId] = (result['calculated_pages'] as num?)?.toDouble() ?? 0.0;
             _linesMap[mId] = (result['calculated_lines'] as num?)?.toDouble() ?? 0.0;
             _ayahsMap[mId] = (result['calculated_ayahs'] as num?)?.toDouble() ?? 0.0;
