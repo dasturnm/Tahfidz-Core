@@ -238,6 +238,56 @@ class LayananNavigasiMateri {
 
         if (startSurah > endSurah) isBackward = true;
 
+        // Tentukan target akhir modul (prioritas: akhirKoordinat, lalu surahId/ayahEnd jika valid)
+        int targetSurah = 0;
+        int targetAyah = 0;
+        if (modul?.akhirKoordinat != null && modul!.akhirKoordinat!.contains(':')) {
+          final targetParts = modul.akhirKoordinat!.split(':');
+          if (targetParts.length >= 2) {
+            targetSurah = int.tryParse(targetParts[0]) ?? 0;
+            targetAyah = int.tryParse(targetParts[1]) ?? 0;
+          }
+        }
+        // Jika tidak ada di akhirKoordinat, coba ambil dari surahId/ayahEnd (hanya jika > 0)
+        if (targetSurah == 0) {
+          int tempSurah = modul?.surahId ?? 0;
+          int tempAyah = modul?.ayahEnd ?? 0;
+          if (tempSurah > 0 && tempAyah > 0) {
+            targetSurah = tempSurah;
+            targetAyah = tempAyah;
+          } else {
+            // Target tidak terdefinisi secara valid.
+            // HENTIKAN LOOP: tandai modul sebagai selesai.
+            return {
+              'surah': null,
+              'ayah': null,
+              'status_sebelumnya_ulang': false,
+              'is_completed': true,
+            };
+          }
+        }
+
+        // Cek apakah sudah mencapai target akhir
+        bool isAtTarget = false;
+        if (isBackward) {
+          if (startSurah < targetSurah || (startSurah == targetSurah && endAyah <= targetAyah)) {
+            isAtTarget = true;
+          }
+        } else {
+          if (endSurah > targetSurah || (endSurah == targetSurah && endAyah >= targetAyah)) {
+            isAtTarget = true;
+          }
+        }
+
+        if (isAtTarget) {
+          return {
+            'surah': null,
+            'ayah': null,
+            'status_sebelumnya_ulang': false,
+            'is_completed': true,
+          };
+        }
+
         final String jsonContent = await rootBundle.loadString('assets/mushaf_peta.json');
         final List<dynamic> localRows = json.decode(jsonContent) as List<dynamic>;
         final surahRows = localRows.where((r) => (int.tryParse(r['surah_number']?.toString() ?? '') ?? 0) == endSurah).toList();

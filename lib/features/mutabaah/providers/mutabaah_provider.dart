@@ -99,12 +99,16 @@ class MutabaahNotifier extends StateNotifier<AsyncValue<void>> {
 
         final int targetBaris = (modulRes['total_baris'] ?? 0) as int;
 
+        // FIX: Sanitasi Data (Self-Healing Logic)
+        final int payloadLines = (record.dataPayload['calculated_lines'] as num?)?.toInt() ?? 0;
+        final int payloadEndSurah = (record.dataPayload['end_surah'] as num?)?.toInt() ?? 0;
+
         updatedRecord = record.copyWith(
-          totalBaris: finalBaris,
-          endSurahId: record.endSurahId > 0 ? record.endSurahId : record.surahId,
-          achievedAmount: finalBaris.toDouble(),
+          totalBaris: (finalBaris > 0) ? finalBaris : payloadLines,
+          endSurahId: (record.endSurahId > 0) ? record.endSurahId : (payloadEndSurah > 0 ? payloadEndSurah : record.surahId),
+          achievedAmount: (finalBaris > 0 ? finalBaris : payloadLines).toDouble(),
           targetSnapshot: targetBaris.toDouble(),
-          isPassedTarget: finalBaris >= targetBaris,
+          isPassedTarget: (finalBaris > 0 ? finalBaris : payloadLines) >= targetBaris,
         );
       } else if (record.tipeModul == 'INTERNAL') {
         // Logika Internal: Memastikan status kelulusan berdasarkan nilai angka (KKM default 70 jika snapshot kosong)
