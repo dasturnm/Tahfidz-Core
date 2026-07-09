@@ -28,8 +28,8 @@ class MutabaahSurahAyahPicker extends StatelessWidget {
     int originalEndCoord = 114;
 
     if (modul.jenisMetrik == 'JUZ') {
-      int startJuz = int.tryParse(modul.mulaiKoordinat ?? '1') ?? 1;
-      int endJuz = int.tryParse(modul.akhirKoordinat ?? '30') ?? 30;
+      int startJuz = int.tryParse(modul.mulaiKoordinatJuz ?? '1') ?? 1;
+      int endJuz = int.tryParse(modul.akhirKoordinatJuz ?? '30') ?? 30;
 
       // FIX: Handle reverse order (e.g., Juz 30 to 26) agar list dropdown tetap terisi
       int minJuz = startJuz < endJuz ? startJuz : endJuz;
@@ -45,8 +45,8 @@ class MutabaahSurahAyahPicker extends StatelessWidget {
       originalStartCoord = juzStartSurah[startJuz.clamp(1, 30)];
       originalEndCoord = juzEndSurah[endJuz.clamp(1, 30)];
     } else if (modul.jenisMetrik == 'SURAH') {
-      originalStartCoord = int.tryParse(modul.mulaiKoordinat ?? '1') ?? 1;
-      originalEndCoord = int.tryParse(modul.akhirKoordinat ?? '114') ?? 114;
+      originalStartCoord = int.tryParse(modul.mulaiKoordinatJuz ?? '1') ?? 1;
+      originalEndCoord = int.tryParse(modul.akhirKoordinatJuz ?? '114') ?? 114;
 
       // FIX: Handle reverse order Surah (e.g., Surah 114 to 78)
       startS = originalStartCoord < originalEndCoord ? originalStartCoord : originalEndCoord;

@@ -304,7 +304,7 @@ extension PengontrolInputMutabaah on _ModulInputScreenState {
 
   Widget _buildNumberDropdown(String label, TextEditingController controller, ModulModel modul) {
     final mId = modul.id!;
-    int max = (modul.targetPertemuan > 0) ? modul.targetPertemuan : 100;
+    int max = (modul.targetInternalAkhir > 0) ? modul.targetInternalAkhir : ((modul.targetPertemuan > 0) ? modul.targetPertemuan : 100);
     int startNumber = 1;
 
     if (label == "HALAMAN AKHIR") {
@@ -320,7 +320,9 @@ extension PengontrolInputMutabaah on _ModulInputScreenState {
       max = modul.silabusContent.length;
     } else {
       // Tentukan batas maksimal berdasarkan total baris/fisik, bukan targetPertemuan (administratif)
-      if (modul.totalBaris > 0) {
+      if (modul.targetInternalAkhir > 0) {
+        max = modul.targetInternalAkhir;
+      } else if (modul.totalBaris > 0) {
         max = modul.totalBaris;
       }
       // Jika totalBaris masih 0, gunakan targetPertemuan atau 100 (fallback tetap di atas)

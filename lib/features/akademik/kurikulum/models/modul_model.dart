@@ -16,9 +16,13 @@ class ModulModel {
   final List<String> materiSilabus; // TAMBAHAN: Untuk Silabus Internal
   final bool isSystemGenerated;
   final String jenisMetrik;
-  final String? mulaiKoordinat;
-  final String? akhirKoordinat;
-  final int surahId;
+  final String? mulaiKoordinatJuz;
+  final String? akhirKoordinatJuz;
+  final int surahIdStart;
+  final int surahIdEnd;
+  final int mulaiHalaman;
+  final int akhirHalaman;
+  final int targetInternalAkhir;
   final int ayahStart;
   final int ayahEnd;
   final int totalBaris;
@@ -74,9 +78,13 @@ class ModulModel {
     this.materiSilabus = const [], // TAMBAHAN
     this.isSystemGenerated = false,
     this.jenisMetrik = 'HALAMAN',
-    this.mulaiKoordinat,
-    this.akhirKoordinat,
-    this.surahId = 0,
+    this.mulaiKoordinatJuz,
+    this.akhirKoordinatJuz,
+    this.surahIdStart = 0,
+    this.surahIdEnd = 0,
+    this.mulaiHalaman = 0,
+    this.akhirHalaman = 0,
+    this.targetInternalAkhir = 0,
     this.ayahStart = 0,
     this.ayahEnd = 0,
     this.totalBaris = 0,
@@ -162,9 +170,13 @@ class ModulModel {
         : const [], // TAMBAHAN
     isSystemGenerated: json['is_system_generated'] == true,
     jenisMetrik: json['jenis_metrik']?.toString() ?? 'HALAMAN',
-    mulaiKoordinat: json['mulai_koordinat']?.toString(),
-    akhirKoordinat: json['akhir_koordinat']?.toString(),
-    surahId: (json['surah_id'] as num?)?.toInt() ?? 0,
+    mulaiKoordinatJuz: json['mulai_koordinat_juz']?.toString() ?? json['mulai_koordinat']?.toString(),
+    akhirKoordinatJuz: json['akhir_koordinat_juz']?.toString() ?? json['akhir_koordinat']?.toString(),
+    surahIdStart: (json['surah_id_start'] as num?)?.toInt() ?? (json['surah_id'] as num?)?.toInt() ?? 0,
+    surahIdEnd: (json['surah_id_end'] as num?)?.toInt() ?? 0,
+    mulaiHalaman: (json['mulai_halaman'] as num?)?.toInt() ?? 0,
+    akhirHalaman: (json['akhir_halaman'] as num?)?.toInt() ?? 0,
+    targetInternalAkhir: (json['target_internal_akhir'] as num?)?.toInt() ?? 0,
     ayahStart: (json['ayah_start'] as num?)?.toInt() ?? 0,
     ayahEnd: (json['ayah_end'] as num?)?.toInt() ?? 0,
     totalBaris: (json['total_baris'] as num?)?.toInt() ?? 0,
@@ -229,9 +241,13 @@ class ModulModel {
     'materi_silabus': materiSilabus, // TAMBAHAN
     'is_system_generated': isSystemGenerated,
     'jenis_metrik': jenisMetrik,
-    'mulai_koordinat': mulaiKoordinat,
-    'akhir_koordinat': akhirKoordinat,
-    'surah_id': surahId,
+    'mulai_koordinat_juz': mulaiKoordinatJuz,
+    'akhir_koordinat_juz': akhirKoordinatJuz,
+    'surah_id_start': surahIdStart,
+    'surah_id_end': surahIdEnd,
+    'mulai_halaman': mulaiHalaman,
+    'akhir_halaman': akhirHalaman,
+    'target_internal_akhir': targetInternalAkhir,
     'ayah_start': ayahStart,
     'ayah_end': ayahEnd,
     'total_baris': totalBaris,
@@ -285,9 +301,13 @@ class ModulModel {
     List<String>? materiSilabus, // TAMBAHAN
     bool? isSystemGenerated,
     String? jenisMetrik,
-    String? mulaiKoordinat,
-    String? akhirKoordinat,
-    int? surahId,
+    String? mulaiKoordinatJuz,
+    String? akhirKoordinatJuz,
+    int? surahIdStart,
+    int? surahIdEnd,
+    int? mulaiHalaman,
+    int? akhirHalaman,
+    int? targetInternalAkhir,
     int? ayahStart,
     int? ayahEnd,
     int? totalBaris,
@@ -341,9 +361,13 @@ class ModulModel {
       materiSilabus: materiSilabus ?? this.materiSilabus, // TAMBAHAN
       isSystemGenerated: isSystemGenerated ?? this.isSystemGenerated,
       jenisMetrik: jenisMetrik ?? this.jenisMetrik,
-      mulaiKoordinat: mulaiKoordinat ?? this.mulaiKoordinat,
-      akhirKoordinat: akhirKoordinat ?? this.akhirKoordinat,
-      surahId: surahId ?? this.surahId,
+      mulaiKoordinatJuz: mulaiKoordinatJuz ?? this.mulaiKoordinatJuz,
+      akhirKoordinatJuz: akhirKoordinatJuz ?? this.akhirKoordinatJuz,
+      surahIdStart: surahIdStart ?? this.surahIdStart,
+      surahIdEnd: surahIdEnd ?? this.surahIdEnd,
+      mulaiHalaman: mulaiHalaman ?? this.mulaiHalaman,
+      akhirHalaman: akhirHalaman ?? this.akhirHalaman,
+      targetInternalAkhir: targetInternalAkhir ?? this.targetInternalAkhir,
       ayahStart: ayahStart ?? this.ayahStart,
       ayahEnd: ayahEnd ?? this.ayahEnd,
       totalBaris: totalBaris ?? this.totalBaris,

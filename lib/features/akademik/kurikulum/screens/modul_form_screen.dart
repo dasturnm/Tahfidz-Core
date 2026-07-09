@@ -19,7 +19,6 @@ import 'components/modul_cakupan_section.dart';
 import 'components/modul_tasmi_setting_section.dart';
 import 'components/modul_exam_section.dart';
 import 'components/modul_estimation_card.dart';
-// HAPUS: modul_evaluasi_section.dart sudah dikonsolidasikan ke dalam modul_exam_section.dart
 
 class ModulFormScreen extends ConsumerStatefulWidget {
   final LevelModel level;
@@ -40,11 +39,12 @@ class _ModulFormScreenState extends ConsumerState<ModulFormScreen> {
   late TextEditingController _silabusController;
   late TextEditingController _mulaiController;
   late TextEditingController _akhirController;
+  final TextEditingController _mulaiAyatController = TextEditingController(text: '1'); // Inisialisasi instan tanpa kata kunci late
+  final TextEditingController _akhirAyatController = TextEditingController(text: '1'); // Inisialisasi instan tanpa kata kunci late
   late TextEditingController _sabqiController;
   late TextEditingController _manzilAmountController;
   late TextEditingController _urutanController;
 
-  // REVISI: Mengeluarkan 'TASMI'' agar integrasi ke modul utama utuh
   final List<String> _tipeOptions = ['ZIYADAH HAFALAN', 'ZIYADAH TILAWAH', 'MUROJAAH', 'TAHSIN', 'DINIYAH'];
 
   @override
@@ -53,12 +53,18 @@ class _ModulFormScreenState extends ConsumerState<ModulFormScreen> {
     initializeDateFormatting('id_ID', null);
 
     final m = widget.modul;
+    // Set teks pengontrol ayat secara defensif setelah objek terbuat sempurna
+    if (m != null) {
+      if (m.ayahStart != null) _mulaiAyatController.text = m.ayahStart.toString();
+      if (m.ayahEnd != null) _akhirAyatController.text = m.ayahEnd.toString();
+    }
+
     _namaController = TextEditingController(text: m?.namaModul ?? '');
     _targetPertemuanController = TextEditingController(text: (m?.targetPertemuan ?? 30).toString());
     _targetAmountController = TextEditingController(text: (m?.targetAmount ?? 0.0).toInt().toString());
     _silabusController = TextEditingController(text: m?.silabus ?? '');
-    _mulaiController = TextEditingController(text: m?.mulaiKoordinat ?? '');
-    _akhirController = TextEditingController(text: m?.akhirKoordinat ?? '');
+    _mulaiController = TextEditingController(text: m?.mulaiKoordinatJuz ?? '');
+    _akhirController = TextEditingController(text: m?.akhirKoordinatJuz ?? '');
     _sabqiController = TextEditingController(text: (m?.sabqiAmount ?? 0).toString());
     _manzilAmountController = TextEditingController(text: (m?.manzilAmount ?? 0.0).toString());
     _urutanController = TextEditingController(text: (m?.urutan ?? 0).toString());
@@ -66,6 +72,8 @@ class _ModulFormScreenState extends ConsumerState<ModulFormScreen> {
     _mulaiController.addListener(_updateControllerFields);
     _akhirController.addListener(_updateControllerFields);
     _targetAmountController.addListener(_updateControllerFields);
+    _mulaiAyatController.addListener(_updateControllerFields); // Sinkronisasi reaktif data ayat mulai
+    _akhirAyatController.addListener(_updateControllerFields); // Sinkronisasi reaktif data ayat akhir
 
     if (m != null) {
       Future.microtask(() => ref.read(modulFormControllerProvider(widget.level, widget.modul).notifier).recalculate());
@@ -77,6 +85,8 @@ class _ModulFormScreenState extends ConsumerState<ModulFormScreen> {
       nama: _namaController.text,
       mulai: _mulaiController.text,
       akhir: _akhirController.text,
+      ayahStart: int.tryParse(_mulaiAyatController.text), // Pengiriman data ayat terpisah dari teks koordinat surah/juz
+      ayahEnd: int.tryParse(_akhirAyatController.text),   // Pengiriman data ayat terpisah dari teks koordinat surah/juz
       targetAmount: double.tryParse(_targetAmountController.text),
       urutan: int.tryParse(_urutanController.text),
     );
@@ -90,6 +100,8 @@ class _ModulFormScreenState extends ConsumerState<ModulFormScreen> {
     _silabusController.dispose();
     _mulaiController.dispose();
     _akhirController.dispose();
+    _mulaiAyatController.dispose(); // Cegah kebocoran memori kontroler baru
+    _akhirAyatController.dispose(); // Cegah kebocoran memori kontroler baru
     _sabqiController.dispose();
     _manzilAmountController.dispose();
     _urutanController.dispose();
@@ -233,6 +245,8 @@ class _ModulFormScreenState extends ConsumerState<ModulFormScreen> {
                         selectedMetrik: m.jenisMetrik,
                         mulaiController: _mulaiController,
                         akhirController: _akhirController,
+                        mulaiAyatController: _mulaiAyatController, // Menyuntikkan pemisahan kontroler ayat ke UI
+                        akhirAyatController: _akhirAyatController, // Menyuntikkan pemisahan kontroler ayat ke UI
                         surahIdForAyah: state.surahIdForAyah,
                         surahList: state.surahList,
                         juzList: state.juzList,
@@ -240,7 +254,8 @@ class _ModulFormScreenState extends ConsumerState<ModulFormScreen> {
                         onSurahChanged: (v) {
                           _mulaiController.clear();
                           _akhirController.clear();
-                          notifier.updateField(surahId: v, mulai: '', akhir: '');
+                          notifier.updateSurahForAyah(v);
+                          notifier.updateField(surahIdStart: v, mulai: '', akhir: ''); // Izinkan surahIdEnd dikelola secara mandiri oleh ModulCakupanSection
                         },
                         onRangeChanged: () => notifier.recalculate(),
                       ),
@@ -299,7 +314,6 @@ class _ModulFormScreenState extends ConsumerState<ModulFormScreen> {
                   ),
                 ],
 
-                // REVISI: Pindahkan tombol switch skala penilaian 1-4 tepat berada di bawah KKM LULUS & hapus keterangan lama
                 if (m.tipe != 'TASMI\'' && m.tipe != 'MUROJAAH') ...[
                   SwitchListTile(
                     title: const Text("Gunakan Skala Penilaian 1-4", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
@@ -318,7 +332,6 @@ class _ModulFormScreenState extends ConsumerState<ModulFormScreen> {
                   _buildPolicySection(m, notifier),
                 ],
 
-                // REVISI: Sembunyikan total pengaturan lembar evaluasi dan UKL pada modul bertipe MUROJAAH saja
                 if (m.tipe != 'MUROJAAH') ...[
                   const SizedBox(height: 24),
                   EvaluationUnifiedSection(
@@ -356,7 +369,6 @@ class _ModulFormScreenState extends ConsumerState<ModulFormScreen> {
   }
 
   Widget _buildTypeRow(ModulModel m, ModulFormController notifier, bool isZiyadah, bool isTasmi) {
-    // FIX: Deteksi kecerdasan peringatan Tasmi berbasis koleksi modul dalam level aktif (Bukan lintas level berbeda)
     bool hasTasmiInLevel = widget.level.modul.any((mod) => mod.tipe == "TASMI'") || m.tipe == "TASMI'";
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -407,7 +419,6 @@ class _ModulFormScreenState extends ConsumerState<ModulFormScreen> {
   }
 
   Widget _buildPolicySection(ModulModel m, ModulFormController notifier) {
-    // FIX REVISI: Mengembalikan logika penentuan visibilitas toggle kedisplinan Murajaah (Sabqi & Manzil)
     final bool showMurojaahToggles = (m.tipe == 'ZIYADAH HAFALAN' || m.tipe == 'MUROJAAH') && m.silabusSource == 'mushaf';
     return Column(
       children: [
@@ -433,7 +444,6 @@ class _ModulFormScreenState extends ConsumerState<ModulFormScreen> {
   }
 
   Widget _buildPlottingSection(ModulModel m, ModulFormController notifier) {
-    // HAPUS AKTIFKAN FLOTTING MATERI HARIAN PADA MODUL TIPE MURAJAAH
     if (m.tipe == 'MUROJAAH') return const SizedBox.shrink();
 
     return Column(children: [
@@ -627,7 +637,6 @@ class EvaluationUnifiedSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // TAMBAHAN: Deteksi asinkron untuk instruksi banner dan instrumen tasmi
     final bool isTasmiTypeSelected = m.examType.trim().toLowerCase() == 'tasmi';
 
     return Container(
@@ -667,7 +676,6 @@ class EvaluationUnifiedSection extends StatelessWidget {
             formNotifier: notifier,
           ),
 
-          // INTEGRASI UTANG: Jika Switch aktif dan tipe ujian formal adalah TASMI, rentangkan form instrumen grading di sini
           if (m.isExamRequired && isTasmiTypeSelected) ...[
             const SizedBox(height: 24),
             Container(
@@ -690,9 +698,9 @@ class EvaluationUnifiedSection extends StatelessWidget {
             ModulTasmiSettingSection(
               settings: {
                 ...Map<String, dynamic>.from(m.tasmiSettings ?? {}),
-                'silabus_source': m.silabusSource, // Menyuntikkan tipe sumber silabus secara aman ke dalam sub-komponen UI
+                'silabus_source': m.silabusSource,
               },
-              onChanged: (v) => notifier.updateField(tasmiSettings: v), // FIX: Mengirim objek map setting yang diupdate, bukan mereset tipe modul
+              onChanged: (v) => notifier.updateField(tasmiSettings: v),
             ),
           ],
 

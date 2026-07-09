@@ -246,6 +246,10 @@ class MushafCalculator {
         "is_target_met": isAchieved,
         "deficit_value": deficit,
         "mushaf_standard": "Madinah 15 Lines (Spatial Engine)",
+        "start_surah": sSurah,
+        "start_ayah": safeSAyah,
+        "end_surah": eSurah,
+        "end_ayah": safeEAyah,
       };
     } catch (e) {
       return _emptyResult();
@@ -263,6 +267,10 @@ class MushafCalculator {
       "achieved_volume": 0.0,
       "is_target_met": true,
       "deficit_value": 0.0,
+      "start_surah": 0,
+      "start_ayah": 0,
+      "end_surah": 0,
+      "end_ayah": 0,
     };
   }
 }

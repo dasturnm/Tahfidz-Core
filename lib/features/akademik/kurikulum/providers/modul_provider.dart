@@ -33,7 +33,7 @@ class ModulList extends _$ModulList {
       // Filter baris yang sesuai dengan nomor surah modul
       final surahRows = localRows.where((r) {
         final sNum = int.tryParse(r['surah_number']?.toString() ?? '') ?? 0;
-        return sNum == modul.surahId;
+        return sNum == modul.surahIdStart;
       }).toList();
 
       Map<String, dynamic>? startRes;

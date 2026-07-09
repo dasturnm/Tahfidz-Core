@@ -101,8 +101,8 @@ class _ModulDetailScreenState extends ConsumerState<ModulDetailScreen> {
             child: Column(
               children: [
                 _buildDetailRow("Jenis Metrik", widget.modul.jenisMetrik),
-                _buildDetailRow("Mulai Dari", widget.modul.mulaiKoordinat ?? "-"),
-                _buildDetailRow("Hingga", widget.modul.akhirKoordinat ?? "-"),
+                _buildDetailRow("Mulai Dari", widget.modul.mulaiKoordinatJuz ?? "-"),
+                _buildDetailRow("Hingga", widget.modul.akhirKoordinatJuz ?? "-"),
                 _buildDetailRow("KKM Lulus", "${widget.modul.kkm.toInt()}%"),
               ],
             ),

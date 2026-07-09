@@ -9,6 +9,8 @@ class ModulCakupanSection extends StatelessWidget {
   final String selectedMetrik;
   final TextEditingController mulaiController;
   final TextEditingController akhirController;
+  final TextEditingController mulaiAyatController; // Tambah parameter pengontrol ayat mulai
+  final TextEditingController akhirAyatController; // Tambah parameter pengontrol ayat akhir
   final int? surahIdForAyah;
   final List<dynamic> surahList;
   final List<int> juzList;
@@ -24,6 +26,8 @@ class ModulCakupanSection extends StatelessWidget {
     required this.selectedMetrik,
     required this.mulaiController,
     required this.akhirController,
+    required this.mulaiAyatController, // Wajib disertakan dari parent screen
+    required this.akhirAyatController, // Wajib disertakan dari parent screen
     this.surahIdForAyah,
     this.surahList = const [],
     required this.juzList,
@@ -34,17 +38,13 @@ class ModulCakupanSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 1. Cabang untuk Silabus Internal (Buku/Diniyah)
     if (silabusSource == 'internal') {
-      // FIX: Jika plotting aktif dan ada data CSV, tampilkan Dropdown Materi (Point Penyempurnaan)
       if (isPlottingActive && silabusItems.isNotEmpty) {
         return _buildInternalMateriCakupan();
       }
       return _buildNumberCakupan("Pertemuan", silabusItems.length);
     }
 
-    // 2. Cabang untuk Silabus Mushaf (Al-Qur'an)
-    // FIX: Menambahkan return yang hilang untuk kondisi Mushaf
     switch (selectedMetrik) {
       case 'SURAH':
         return _buildSurahCakupan();
@@ -115,28 +115,22 @@ class ModulCakupanSection extends StatelessWidget {
   }
 
   Widget _buildSurahCakupan() {
-    return Row(
+    return Column(
       children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              ModulSharedWidgets.buildLabel("Surah Mulai"),
-              const SizedBox(height: 8),
-              _buildSurahDropdown(mulaiController),
-            ],
-          ),
+        Row(
+          children: [
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [ModulSharedWidgets.buildLabel("Surah Mulai"), const SizedBox(height: 8), _buildSurahDropdown(mulaiController, isForStartSurah: true)])),
+            const SizedBox(width: 16),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [ModulSharedWidgets.buildLabel("Surah Akhir"), const SizedBox(height: 8), _buildSurahDropdown(akhirController, isForStartSurah: false)])),
+          ],
         ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              ModulSharedWidgets.buildLabel("Surah Akhir"),
-              const SizedBox(height: 8),
-              _buildSurahDropdown(akhirController),
-            ],
-          ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [ModulSharedWidgets.buildLabel("Ayat Mulai"), const SizedBox(height: 8), _buildAyatDropdown(mulaiAyatController, customSurahId: int.tryParse(mulaiController.text))])), // Dialihkan ke pengontrol ayat terpisah
+            const SizedBox(width: 16),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [ModulSharedWidgets.buildLabel("Ayat Akhir"), const SizedBox(height: 8), _buildAyatDropdown(akhirAyatController, customSurahId: int.tryParse(akhirController.text))])), // Dialihkan ke pengontrol ayat terpisah
+          ],
         ),
       ],
     );
@@ -179,7 +173,7 @@ class ModulCakupanSection extends StatelessWidget {
     );
   }
 
-  Widget _buildSurahDropdown(TextEditingController? controller, {bool isForAyahParent = false}) {
+  Widget _buildSurahDropdown(TextEditingController? controller, {bool isForAyahParent = false, bool? isForStartSurah}) {
     final String? currentValue = isForAyahParent ? surahIdForAyah?.toString() : controller?.text;
     final bool isValueValid = surahList.any((s) => s['surah_number'].toString() == currentValue);
     final String? effectiveValue = isValueValid ? currentValue : null;
@@ -200,6 +194,9 @@ class ModulCakupanSection extends StatelessWidget {
             onSurahChanged(sId);
           } else {
             controller?.text = v;
+            if (isForStartSurah == true || isForStartSurah == null) {
+              onSurahChanged(sId); // Pemicu reaktif agar state surahIdForAyah ter-update real-time
+            }
             onRangeChanged();
           }
         }
@@ -207,9 +204,10 @@ class ModulCakupanSection extends StatelessWidget {
     );
   }
 
-  Widget _buildAyatDropdown(TextEditingController controller) {
+  Widget _buildAyatDropdown(TextEditingController controller, {int? customSurahId}) {
+    final targetSurahId = customSurahId ?? surahIdForAyah;
     final surahData = surahList.firstWhere(
-          (s) => s['surah_number'].toString() == surahIdForAyah.toString(),
+          (s) => s['surah_number'].toString() == targetSurahId.toString(),
       orElse: () => {'total_ayah': 1},
     );
 

@@ -241,8 +241,8 @@ class LayananNavigasiMateri {
         // Tentukan target akhir modul (prioritas: akhirKoordinat, lalu surahId/ayahEnd jika valid)
         int targetSurah = 0;
         int targetAyah = 0;
-        if (modul?.akhirKoordinat != null && modul!.akhirKoordinat!.contains(':')) {
-          final targetParts = modul.akhirKoordinat!.split(':');
+        if (modul?.akhirKoordinatJuz != null && modul!.akhirKoordinatJuz!.contains(':')) {
+          final targetParts = modul.akhirKoordinatJuz!.split(':');
           if (targetParts.length >= 2) {
             targetSurah = int.tryParse(targetParts[0]) ?? 0;
             targetAyah = int.tryParse(targetParts[1]) ?? 0;
@@ -250,7 +250,7 @@ class LayananNavigasiMateri {
         }
         // Jika tidak ada di akhirKoordinat, coba ambil dari surahId/ayahEnd (hanya jika > 0)
         if (targetSurah == 0) {
-          int tempSurah = modul?.surahId ?? 0;
+          int tempSurah = modul?.surahIdStart ?? 0;
           int tempAyah = modul?.ayahEnd ?? 0;
           if (tempSurah > 0 && tempAyah > 0) {
             targetSurah = tempSurah;

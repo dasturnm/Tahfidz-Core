@@ -23,29 +23,20 @@ class LayananStatusModul {
 
       if (modul.silabusSource == 'mushaf') {
         // PARSING COORDINATES
-        int targetSurah = 0;
-        int targetAyat = 0;
+        int targetSurah = modul.surahIdEnd;
+        int targetAyat = modul.ayahEnd;
 
-        if (modul.akhirKoordinat != null && modul.akhirKoordinat!.contains(':')) {
-          final targetParts = modul.akhirKoordinat!.split(':');
+        // Fallback untuk data lama yang mungkin belum terisi kolom fisik
+        if (targetSurah <= 0 && modul.akhirKoordinatJuz != null && modul.akhirKoordinatJuz!.contains(':')) {
+          final targetParts = modul.akhirKoordinatJuz!.split(':');
           if (targetParts.length >= 2) {
             targetSurah = int.tryParse(targetParts[0]) ?? 0;
             targetAyat = int.tryParse(targetParts[1]) ?? 0;
           }
         }
-        // Jika tidak ada di akhirKoordinat, coba ambil dari surahId/ayahEnd (hanya jika > 0)
-        if (targetSurah == 0) {
-          int tempSurah = modul.surahId;
-          int tempAyah = modul.ayahEnd;
-          if (tempSurah > 0 && tempAyah > 0) {
-            targetSurah = tempSurah;
-            targetAyat = tempAyah;
-          } else {
-            // Target tidak terdefinisi secara valid.
-            // Anggap modul selesai agar tidak looping di daftar modul aktif.
-            return true;
-          }
-        }
+
+        // Jika target masih tidak terdefinisi, anggap selesai agar tidak looping
+        if (targetSurah <= 0 || targetAyat <= 0) return true;
 
         // FIX: Menggunakan end_surah_id sebagai titik acuan akhir setoran
         final int endSurahFromDb = int.tryParse(lastRecord['end_surah_id']?.toString() ?? '0') ?? 0;
@@ -68,10 +59,12 @@ class LayananStatusModul {
           // Hanya dianggap selesai jika statusnya LANJUT dan indeks sudah di akhir
           return statusKeputusan == 1 && currentIndex >= totalMateri - 1;
         } else {
-          // Non-floating: bandingkan internal_end dengan total cakupan (target pertemuan atau total baris)
-          final int totalCakupan = modul.targetPertemuan > 0
+          // Non-floating: bandingkan internal_end dengan total cakupan (target_internal_akhir atau target pertemuan atau total baris)
+          final int totalCakupan = modul.targetInternalAkhir > 0
+              ? modul.targetInternalAkhir
+              : (modul.targetPertemuan > 0
               ? modul.targetPertemuan
-              : (modul.totalBaris > 0 ? modul.totalBaris : 100);
+              : (modul.totalBaris > 0 ? modul.totalBaris : 100));
 
           final int currentInternalEnd = int.tryParse(lastRecord['internal_end']?.toString() ?? '0') ?? 0;
           // Tambahkan pengecekan status LANJUT

@@ -42,6 +42,12 @@ class ModulFormController extends _$ModulFormController {
     return ['PERTEMUAN', 'HALAMAN', 'NOMOR'];
   }
 
+  // TAMBAHAN: Helper untuk batas ayat
+  int getAyahCount(int surahId) {
+    if (surahId < 1 || surahId > _surahAyahCounts.length) return 0;
+    return _surahAyahCounts[surahId - 1];
+  }
+
   // --- FIX: FETCH DATA MUSHAF DENGAN LIMIT 10.000 ---
   Future<void> _fetchSurahList() async {
     state = state.copyWith(isLoading: true);
@@ -116,7 +122,13 @@ class ModulFormController extends _$ModulFormController {
     String? targetUnit, // NEW: Digunakan untuk targetAmountUnit (Tipe Target)
     String? mulai,
     String? akhir,
-    int? surahId,
+    int? surahIdStart,
+    int? surahIdEnd,
+    int? ayahStart,
+    int? ayahEnd,
+    int? mulaiHalaman,
+    int? akhirHalaman,
+    int? targetInternalAkhir,
     int? urutan,
     bool? isPlottingActive,
     bool? isStrict,
@@ -175,9 +187,15 @@ class ModulFormController extends _$ModulFormController {
         jenisMetrik: unit ?? state.modul.jenisMetrik,
         // FIX: Mapping field targetAmountUnit secara aman
         targetAmountUnit: targetUnit ?? state.modul.targetAmountUnit,
-        mulaiKoordinat: mulai ?? state.modul.mulaiKoordinat,
-        akhirKoordinat: akhir ?? state.modul.akhirKoordinat,
-        surahId: surahId ?? state.modul.surahId,
+        mulaiKoordinatJuz: (unit ?? state.modul.jenisMetrik) == 'JUZ' ? (mulai ?? state.modul.mulaiKoordinatJuz) : state.modul.mulaiKoordinatJuz,
+        akhirKoordinatJuz: (unit ?? state.modul.jenisMetrik) == 'JUZ' ? (akhir ?? state.modul.akhirKoordinatJuz) : state.modul.akhirKoordinatJuz,
+        ayahStart: ayahStart ?? state.modul.ayahStart,
+        ayahEnd: ayahEnd ?? state.modul.ayahEnd,
+        mulaiHalaman: (unit ?? state.modul.jenisMetrik) == 'HALAMAN' ? (int.tryParse(mulai ?? '') ?? state.modul.mulaiHalaman) : (mulaiHalaman ?? state.modul.mulaiHalaman),
+        akhirHalaman: (unit ?? state.modul.jenisMetrik) == 'HALAMAN' ? (int.tryParse(akhir ?? '') ?? state.modul.akhirHalaman) : (akhirHalaman ?? state.modul.akhirHalaman),
+        surahIdStart: (unit ?? state.modul.jenisMetrik) == 'SURAH' ? (int.tryParse(mulai ?? '') ?? surahIdStart ?? state.modul.surahIdStart) : (surahIdStart ?? state.modul.surahIdStart),
+        surahIdEnd: (unit ?? state.modul.jenisMetrik) == 'SURAH' ? (int.tryParse(akhir ?? '') ?? surahIdEnd ?? state.modul.surahIdEnd) : (surahIdEnd ?? state.modul.surahIdEnd),
+        targetInternalAkhir: targetInternalAkhir ?? state.modul.targetInternalAkhir,
         urutan: urutan ?? state.modul.urutan,
         isPlottingActive: computedPlottingActive,
         isStrict: newStrict,
@@ -209,7 +227,6 @@ class ModulFormController extends _$ModulFormController {
         })()
             : state.modul.tasmiSettings, // FIX: Lakukan deep merge pada Map agar perubahan aspek spesifik tidak menghapus aspek lainnya
       ),
-      surahIdForAyah: surahId ?? state.surahIdForAyah,
     );
     recalculate();
   }
@@ -233,13 +250,19 @@ class ModulFormController extends _$ModulFormController {
       double computedHalaman = 0.0;
       double computedJuz = 0.0;
       int computedSurah = 0;
+      int sSurah = m.surahIdStart;
+      int eSurah = m.surahIdEnd;
+      int sAyah = m.ayahStart;
+      int eAyah = m.ayahEnd;
+      int mHal = m.mulaiHalaman;
+      int aHal = m.akhirHalaman;
+      int calculatedMeetings = m.targetPertemuan; // FIX: Diinisialisasi di awal agar aman diakses dari scope manapun
 
       // FIX: Bedakan perhitungan antara Mushaf and Internal (Point Penyempurnaan)
       if (m.silabusSource == 'mushaf') {
         // 1. RESOLVE KOORDINAT KE SURAH/AYAH (Agar bisa diproses Engine)
-        int sSurah = 1, sAyah = 1, eSurah = 1, eAyah = 1;
-        final rawMulai = int.tryParse(m.mulaiKoordinat ?? '1') ?? 1;
-        final rawAkhir = int.tryParse(m.akhirKoordinat ?? '1') ?? 1;
+        final rawMulai = m.jenisMetrik == 'HALAMAN' ? m.mulaiHalaman : (int.tryParse(m.mulaiKoordinatJuz ?? '1') ?? 1);
+        final rawAkhir = m.jenisMetrik == 'HALAMAN' ? m.akhirHalaman : (int.tryParse(m.akhirKoordinatJuz ?? '1') ?? 1);
 
         // Normalisasi urutan: cari nilai terkecil untuk awal and terbesar untuk akhir agar kueri range database selalu valid dan mendukung hafalan mundur (reverse order)
         final mulaiVal = rawMulai <= rawAkhir ? rawMulai : rawAkhir;
@@ -254,40 +277,35 @@ class ModulFormController extends _$ModulFormController {
           juzMulaiRows.sort((a, b) => (int.tryParse(a['koordinat_baris']?.toString() ?? '') ?? 0).compareTo(int.tryParse(b['koordinat_baris']?.toString() ?? '') ?? 0));
 
           final juzAkhirRows = localRows.where((r) => (int.tryParse(r['juz_number']?.toString() ?? '') ?? 0) == akhirVal).toList();
-          juzAkhirRows.sort((a, b) => (int.tryParse(b['koordinat_baris']?.toString() ?? '') ?? 0).compareTo(int.tryParse(a['koordinat_baris']?.toString() ?? '') ?? 0));
+          juzAkhirRows.sort((a, b) => (int.tryParse(a['koordinat_baris']?.toString() ?? '') ?? 0).compareTo(int.tryParse(b['koordinat_baris']?.toString() ?? '') ?? 0));
 
           sSurah = int.tryParse(juzMulaiRows.first['surah_number']?.toString() ?? '') ?? 1;
-          // FIX: Ambil ayat mulai riil dari baris pertama Juz (Mencegah luapan wilayah Juz 1 masuk ke Juz 2)
-          final int calculatedSAyah = int.tryParse(juzMulaiRows.first['ayah_start']?.toString() ?? '') ?? 1;
-          sAyah = calculatedSAyah > 0 ? calculatedSAyah : 1;
+          sAyah = int.tryParse(juzMulaiRows.first['ayah_start']?.toString() ?? '') ?? 1;
 
-          eSurah = int.tryParse(juzAkhirRows.first['surah_number']?.toString() ?? '') ?? 114;
+          eSurah = int.tryParse(juzAkhirRows.last['surah_number']?.toString() ?? '') ?? 114;
           final int fallbackEAyah = (eSurah >= 1 && eSurah <= 114) ? _surahAyahCounts[eSurah - 1] : 6;
-          final int calculatedEAyah = int.tryParse(juzAkhirRows.first['ayah_end']?.toString() ?? '') ?? fallbackEAyah;
-          eAyah = calculatedEAyah > 0 ? calculatedEAyah : fallbackEAyah;
+          eAyah = int.tryParse(juzAkhirRows.last['ayah_end']?.toString() ?? '') ?? fallbackEAyah;
         } else if (m.jenisMetrik == 'HALAMAN') {
           final halMulaiRows = localRows.where((r) => (int.tryParse(r['page_number']?.toString() ?? '') ?? 0) == mulaiVal).toList();
           halMulaiRows.sort((a, b) => (int.tryParse(a['koordinat_baris']?.toString() ?? '') ?? 0).compareTo(int.tryParse(b['koordinat_baris']?.toString() ?? '') ?? 0));
 
           final halAkhirRows = localRows.where((r) => (int.tryParse(r['page_number']?.toString() ?? '') ?? 0) == akhirVal).toList();
-          halAkhirRows.sort((a, b) => (int.tryParse(b['koordinat_baris']?.toString() ?? '') ?? 0).compareTo(int.tryParse(a['page_number']?.toString() ?? '') ?? 0));
+          halAkhirRows.sort((a, b) => (int.tryParse(a['koordinat_baris']?.toString() ?? '') ?? 0).compareTo(int.tryParse(b['koordinat_baris']?.toString() ?? '') ?? 0));
+
+          mHal = mulaiVal;
+          aHal = akhirVal;
 
           sSurah = int.tryParse(halMulaiRows.first['surah_number']?.toString() ?? '') ?? 1;
           sAyah = int.tryParse(halMulaiRows.first['ayah_start']?.toString() ?? '') ?? 1;
-          if(sAyah == 0) sAyah = 1;
 
-          eSurah = int.tryParse(halAkhirRows.first['surah_number']?.toString() ?? '') ?? 114;
-          eAyah = int.tryParse(halAkhirRows.first['ayah_end']?.toString() ?? '') ?? 1;
-          if(eAyah == 0) eAyah = 1;
+          eSurah = int.tryParse(halAkhirRows.last['surah_number']?.toString() ?? '') ?? 114;
+          eAyah = int.tryParse(halAkhirRows.last['ayah_end']?.toString() ?? '') ?? 1;
         } else {
-          final List<String> startParts = (m.mulaiKoordinat ?? '1:1').split(':');
-          final List<String> endParts = (m.akhirKoordinat ?? '1:1').split(':');
-
-          sSurah = int.tryParse(startParts[0]) ?? 1;
-          sAyah = startParts.length > 1 ? (int.tryParse(startParts[1]) ?? 1) : 1;
-
-          eSurah = int.tryParse(endParts[0]) ?? 1;
-          eAyah = endParts.length > 1 ? (int.tryParse(endParts[1]) ?? 1) : 1;
+          // Metrik SURAH
+          sSurah = m.surahIdStart;
+          eSurah = m.surahIdEnd;
+          sAyah = m.ayahStart > 0 ? m.ayahStart : 1;
+          eAyah = m.ayahEnd > 0 ? m.ayahEnd : getAyahCount(eSurah);
         }
 
         // 2. PANGGIL ENGINE UTAMA (MushafCalculator)
@@ -305,36 +323,58 @@ class ModulFormController extends _$ModulFormController {
         computedJuz = (engineRes['calculated_juzs'] as num?)?.toDouble() ?? 0.0;
         computedSurah = (engineRes['calculated_surahs'] as num?)?.toInt() ?? 0;
 
-        // Override dengan nilai bulat murni berdasarkan rentang definisi kurikulum agar akurat secara struktur makro
-        if (m.jenisMetrik == 'JUZ') {
-          computedJuz = (rawAkhir - rawMulai).abs() + 1.0;
-        } else if (m.jenisMetrik == 'HALAMAN') {
-          computedHalaman = (rawAkhir - rawMulai).abs() + 1.0;
-        } else if (m.jenisMetrik == 'SURAH') {
-          computedSurah = (rawAkhir - rawMulai).abs() + 1;
-        }
-      } else {
-        // LOGIKA INTERNAL: Hitung jumlah materi/pertemuan dalam range pilihan
-        if (m.silabusContent.isNotEmpty) {
-          int startIndex = m.silabusContent.indexWhere((it) => "${m.silabusContent.indexOf(it) + 1}. ${it.materi}" == m.mulaiKoordinat);
-          int endIndex = m.silabusContent.indexWhere((it) => "${m.silabusContent.indexOf(it) + 1}. ${it.materi}" == m.akhirKoordinat);
+        int startPageFromRows = mHal;
+        int endPageFromRows = aHal;
 
-          if (startIndex != -1 && endIndex != -1) {
-            summaryValueForMeetings = (endIndex - startIndex).abs() + 1.0;
-          } else {
-            summaryValueForMeetings = m.silabusContent.length.toDouble();
-          }
+        if (localRows.isNotEmpty) {
+          final sRow = localRows.firstWhere((r) => (int.tryParse(r['surah_number']?.toString() ?? '') ?? 0) == sSurah && (int.tryParse(r['ayah_start']?.toString() ?? '') ?? 0) <= sAyah && (int.tryParse(r['ayah_end']?.toString() ?? '') ?? 0) >= sAyah, orElse: () => null);
+          final eRow = localRows.firstWhere((r) => (int.tryParse(r['surah_number']?.toString() ?? '') ?? 0) == eSurah && (int.tryParse(r['ayah_start']?.toString() ?? '') ?? 0) <= eAyah && (int.tryParse(r['ayah_end']?.toString() ?? '') ?? 0) >= eAyah, orElse: () => null);
+          if (sRow != null) startPageFromRows = int.tryParse(sRow['page_number']?.toString() ?? '') ?? mHal;
+          if (eRow != null) endPageFromRows = int.tryParse(eRow['page_number']?.toString() ?? '') ?? aHal;
+        }
+
+        if (summaryValueForMeetings > 0 && m.targetAmount > 0) {
+          calculatedMeetings = (summaryValueForMeetings / m.targetAmount).ceil();
+        }
+
+        state = state.copyWith(
+          weight: calculatedWeight,
+          totalBaris: calculatedWeight.toInt(),
+          totalHalaman: computedHalaman,
+          totalJuz: computedJuz,
+          totalSurah: computedSurah,
+          surahIdForAyah: sSurah > 0 ? sSurah : state.surahIdForAyah,
+          modul: state.modul.copyWith(
+            targetPertemuan: calculatedMeetings,
+            totalBaris: calculatedWeight.toInt(),
+            surahIdStart: engineRes['start_surah'] ?? sSurah,
+            surahIdEnd: engineRes['end_surah'] ?? eSurah,
+            ayahStart: engineRes['start_ayah'] ?? sAyah,
+            ayahEnd: engineRes['end_ayah'] ?? eAyah,
+            mulaiHalaman: startPageFromRows,
+            akhirHalaman: endPageFromRows,
+            totalSurah: computedSurah,
+            totalHalaman: computedHalaman,
+            totalJuz: computedJuz,
+          ),
+          isLoading: false,
+        );
+        return;
+      } else {
+        // LOGIKA INTERNAL
+        if (m.silabusContent.isNotEmpty) {
+          int startIndex = m.silabusContent.indexWhere((it) => "${m.silabusContent.indexOf(it) + 1}. ${it.materi}" == m.mulaiKoordinatJuz);
+          int endIndex = m.silabusContent.indexWhere((it) => "${m.silabusContent.indexOf(it) + 1}. ${it.materi}" == m.akhirKoordinatJuz);
+          summaryValueForMeetings = (startIndex != -1 && endIndex != -1) ? (endIndex - startIndex).abs() + 1.0 : m.silabusContent.length.toDouble();
         } else {
-          // Logika Internal: Tanpa plotting materi, gunakan angka koordinat inklusif
-          int mulai = int.tryParse(m.mulaiKoordinat ?? '1') ?? 1;
-          int akhir = int.tryParse(m.akhirKoordinat ?? '1') ?? 1;
+          int mulai = int.tryParse(m.mulaiKoordinatJuz ?? '1') ?? 1;
+          int akhir = int.tryParse(m.akhirKoordinatJuz ?? '1') ?? 1;
           summaryValueForMeetings = ((akhir - mulai).abs() + 1).toDouble();
         }
-        computedHalaman = summaryValueForMeetings; // Simpan total unit ke computedHalaman agar reaktif di UI ringkasan
+        computedHalaman = summaryValueForMeetings;
       }
 
       // FIX: Rumus Ringkasan Akademik
-      int calculatedMeetings = m.targetPertemuan;
       if (summaryValueForMeetings > 0 && m.targetAmount > 0) {
         calculatedMeetings = (summaryValueForMeetings / m.targetAmount).ceil();
       }
@@ -410,7 +450,6 @@ class ModulFormController extends _$ModulFormController {
   Future<void> loadCriteriaFromMaster() async {
     state = state.copyWith(isLoading: true);
     try {
-      // Logic pemuatan kriteria master selesai dengan aman tanpa menyentuh field eksternal isManual yang belum terdefinisi di State
       state = state.copyWith(isLoading: false);
     } catch (e) {
       state = state.copyWith(isLoading: false);
@@ -431,8 +470,8 @@ class ModulFormController extends _$ModulFormController {
         silabusContent: items,
         silabusSource: 'internal',
         isPlottingActive: true,
-        mulaiKoordinat: items.isNotEmpty ? "Pertemuan 1" : "Pertemuan 1",
-        akhirKoordinat: items.isNotEmpty ? "Pertemuan ${items.length}" : "Pertemuan 1",
+        mulaiKoordinatJuz: items.isNotEmpty ? "Pertemuan 1" : "Pertemuan 1",
+        akhirKoordinatJuz: items.isNotEmpty ? "Pertemuan ${items.length}" : "Pertemuan 1",
         targetAmount: 1.0,
         targetAmountUnit: 'PERTEMUAN',
         jenisMetrik: 'PERTEMUAN',
@@ -450,5 +489,10 @@ class ModulFormController extends _$ModulFormController {
       debugPrint("Submit Error: $e");
       return false;
     }
+  }
+
+  void updateSurahForAyah(int surahId) {
+    state = state.copyWith(surahIdForAyah: surahId);
+    recalculate();
   }
 }
