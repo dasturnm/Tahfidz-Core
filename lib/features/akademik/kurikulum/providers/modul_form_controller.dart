@@ -301,11 +301,18 @@ class ModulFormController extends _$ModulFormController {
           eSurah = int.tryParse(halAkhirRows.last['surah_number']?.toString() ?? '') ?? 114;
           eAyah = int.tryParse(halAkhirRows.last['ayah_end']?.toString() ?? '') ?? 1;
         } else {
-          // Metrik SURAH
-          sSurah = m.surahIdStart;
-          eSurah = m.surahIdEnd;
-          sAyah = m.ayahStart > 0 ? m.ayahStart : 1;
-          eAyah = m.ayahEnd > 0 ? m.ayahEnd : getAyahCount(eSurah);
+          // Metrik SURAH - Logika Bolak-Balik Preservasi Input
+          int s1 = m.surahIdStart > 0 ? m.surahIdStart : 1;
+          int a1 = m.ayahStart > 0 ? m.ayahStart : 1;
+          int s2 = m.surahIdEnd > 0 ? m.surahIdEnd : 114;
+          int a2 = m.ayahEnd > 0 ? m.ayahEnd : getAyahCount(s2);
+
+          // Normalisasi untuk Engine: Bandingkan berdasarkan (Surah * 1000 + Ayah) agar sorting akurat
+          bool isReversed = (s1 * 1000 + a1) > (s2 * 1000 + a2);
+          sSurah = isReversed ? s2 : s1;
+          sAyah = isReversed ? a2 : a1;
+          eSurah = isReversed ? s1 : s2;
+          eAyah = isReversed ? a1 : a2;
         }
 
         // 2. PANGGIL ENGINE UTAMA (MushafCalculator)
@@ -323,14 +330,42 @@ class ModulFormController extends _$ModulFormController {
         computedJuz = (engineRes['calculated_juzs'] as num?)?.toDouble() ?? 0.0;
         computedSurah = (engineRes['calculated_surahs'] as num?)?.toInt() ?? 0;
 
+        int finalStartSurah = engineRes['start_surah'] ?? sSurah;
+        int finalEndSurah = engineRes['end_surah'] ?? eSurah;
+        int finalStartAyah = engineRes['start_ayah'] ?? sAyah;
+        int finalEndAyah = engineRes['end_ayah'] ?? eAyah;
+
         int startPageFromRows = mHal;
         int endPageFromRows = aHal;
+        String startJuzFromRows = m.mulaiKoordinatJuz ?? '1';
+        String endJuzFromRows = m.akhirKoordinatJuz ?? '1';
 
         if (localRows.isNotEmpty) {
-          final sRow = localRows.firstWhere((r) => (int.tryParse(r['surah_number']?.toString() ?? '') ?? 0) == sSurah && (int.tryParse(r['ayah_start']?.toString() ?? '') ?? 0) <= sAyah && (int.tryParse(r['ayah_end']?.toString() ?? '') ?? 0) >= sAyah, orElse: () => null);
-          final eRow = localRows.firstWhere((r) => (int.tryParse(r['surah_number']?.toString() ?? '') ?? 0) == eSurah && (int.tryParse(r['ayah_start']?.toString() ?? '') ?? 0) <= eAyah && (int.tryParse(r['ayah_end']?.toString() ?? '') ?? 0) >= eAyah, orElse: () => null);
-          if (sRow != null) startPageFromRows = int.tryParse(sRow['page_number']?.toString() ?? '') ?? mHal;
-          if (eRow != null) endPageFromRows = int.tryParse(eRow['page_number']?.toString() ?? '') ?? aHal;
+          final sRow = localRows.firstWhere((r) => (int.tryParse(r['surah_number']?.toString() ?? '') ?? 0) == finalStartSurah && (int.tryParse(r['ayah_start']?.toString() ?? '') ?? 0) <= finalStartAyah && (int.tryParse(r['ayah_end']?.toString() ?? '') ?? 0) >= finalStartAyah, orElse: () => null);
+          final eRow = localRows.firstWhere((r) => (int.tryParse(r['surah_number']?.toString() ?? '') ?? 0) == finalEndSurah && (int.tryParse(r['ayah_start']?.toString() ?? '') ?? 0) <= finalEndAyah && (int.tryParse(r['ayah_end']?.toString() ?? '') ?? 0) >= finalEndAyah, orElse: () => null);
+          if (sRow != null) {
+            startPageFromRows = int.tryParse(sRow['page_number']?.toString() ?? '') ?? mHal;
+            startJuzFromRows = sRow['juz_number']?.toString() ?? startJuzFromRows;
+          }
+          if (eRow != null) {
+            endPageFromRows = int.tryParse(eRow['page_number']?.toString() ?? '') ?? aHal;
+            endJuzFromRows = eRow['juz_number']?.toString() ?? endJuzFromRows;
+          }
+        }
+
+        // Normalisasi Nilai Tampilan Ringkasan Juz & Halaman agar selalu bulat presisi (baik input normal maupun terbalik)
+        if (m.jenisMetrik == 'JUZ') {
+          final int juzMulai = int.tryParse(m.mulaiKoordinatJuz ?? '1') ?? 1;
+          final int juzAkhir = int.tryParse(m.akhirKoordinatJuz ?? '1') ?? 1;
+          computedJuz = ((juzAkhir - juzMulai).abs() + 1).toDouble();
+          computedHalaman = computedJuz * 20.0; // Standard halaman per juz
+        } else if (m.jenisMetrik == 'HALAMAN') {
+          computedHalaman = ((aHal - mHal).abs() + 1).toDouble();
+          computedJuz = computedHalaman / 20.0;
+        } else if (m.jenisMetrik == 'SURAH') {
+          // Jika metrik surah, bulatkan secara matematis mengikuti rentang sekuens fisik halaman koordinat
+          computedHalaman = ((endPageFromRows - startPageFromRows).abs() + 1).toDouble();
+          computedJuz = computedHalaman / 20.0;
         }
 
         if (summaryValueForMeetings > 0 && m.targetAmount > 0) {
@@ -343,16 +378,19 @@ class ModulFormController extends _$ModulFormController {
           totalHalaman: computedHalaman,
           totalJuz: computedJuz,
           totalSurah: computedSurah,
-          surahIdForAyah: sSurah > 0 ? sSurah : state.surahIdForAyah,
+          surahIdForAyah: finalStartSurah > 0 ? finalStartSurah : state.surahIdForAyah,
           modul: state.modul.copyWith(
             targetPertemuan: calculatedMeetings,
             totalBaris: calculatedWeight.toInt(),
-            surahIdStart: engineRes['start_surah'] ?? sSurah,
-            surahIdEnd: engineRes['end_surah'] ?? eSurah,
-            ayahStart: engineRes['start_ayah'] ?? sAyah,
-            ayahEnd: engineRes['end_ayah'] ?? eAyah,
-            mulaiHalaman: startPageFromRows,
-            akhirHalaman: endPageFromRows,
+            // Tetap simpan input asli dari user (jangan overwrite dengan hasil normalisasi engine)
+            surahIdStart: m.surahIdStart,
+            surahIdEnd: m.surahIdEnd,
+            ayahStart: m.ayahStart,
+            ayahEnd: m.ayahEnd,
+            mulaiHalaman: m.mulaiHalaman == 0 ? startPageFromRows : m.mulaiHalaman,
+            akhirHalaman: m.akhirHalaman == 0 ? endPageFromRows : m.akhirHalaman,
+            mulaiKoordinatJuz: m.mulaiKoordinatJuz,
+            akhirKoordinatJuz: m.akhirKoordinatJuz,
             totalSurah: computedSurah,
             totalHalaman: computedHalaman,
             totalJuz: computedJuz,
@@ -483,6 +521,8 @@ class ModulFormController extends _$ModulFormController {
 
   Future<bool> submit() async {
     try {
+      // Selalu lakukan kalkulasi ulang tepat sebelum penyimpanan objek ke database untuk memastikan totalBaris and ringkasan valid
+      await recalculate();
       await ref.read(modulListProvider(state.modul.levelId).notifier).saveModul(state.modul);
       return true;
     } catch (e) {

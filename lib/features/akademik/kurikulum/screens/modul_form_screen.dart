@@ -177,6 +177,38 @@ class _ModulFormScreenState extends ConsumerState<ModulFormScreen> {
     final bool isEdit = widget.modul != null;
     final m = state.modul;
 
+    if (m.silabusSource == 'mushaf' && !state.isLoading) {
+      if (m.jenisMetrik == 'SURAH') {
+        final FocusNode? currentFocus = FocusScope.of(context).focusedChild;
+        if (m.surahIdStart > 0 && _mulaiController.text != m.surahIdStart.toString() && currentFocus?.context?.widget is! EditableText) {
+          _mulaiController.text = m.surahIdStart.toString();
+        }
+        if (m.surahIdEnd > 0 && _akhirController.text != m.surahIdEnd.toString() && currentFocus?.context?.widget is! EditableText) {
+          _akhirController.text = m.surahIdEnd.toString();
+        }
+        if (m.ayahStart > 0 && _mulaiAyatController.text != m.ayahStart.toString() && currentFocus?.context?.widget is! EditableText) {
+          _mulaiAyatController.text = m.ayahStart.toString();
+        }
+        if (m.ayahEnd > 0 && _akhirAyatController.text != m.ayahEnd.toString() && currentFocus?.context?.widget is! EditableText) {
+          _akhirAyatController.text = m.ayahEnd.toString();
+        }
+      } else if (m.jenisMetrik == 'JUZ') {
+        if (m.mulaiKoordinatJuz != null && _mulaiController.text != m.mulaiKoordinatJuz) {
+          _mulaiController.text = m.mulaiKoordinatJuz!;
+        }
+        if (m.akhirKoordinatJuz != null && _akhirController.text != m.akhirKoordinatJuz) {
+          _akhirController.text = m.akhirKoordinatJuz!;
+        }
+      } else if (m.jenisMetrik == 'HALAMAN') {
+        if (m.mulaiHalaman > 0 && _mulaiController.text != m.mulaiHalaman.toString()) {
+          _mulaiController.text = m.mulaiHalaman.toString();
+        }
+        if (m.akhirHalaman > 0 && _akhirController.text != m.akhirHalaman.toString()) {
+          _akhirController.text = m.akhirHalaman.toString();
+        }
+      }
+    }
+
     final bool isMurojaah = m.tipe == 'MUROJAAH';
     final bool isTasmi = m.tipe == 'TASMI\'';
     final bool isZiyadah = m.tipe.contains('HAFALAN');
@@ -252,10 +284,13 @@ class _ModulFormScreenState extends ConsumerState<ModulFormScreen> {
                         juzList: state.juzList,
                         halamanList: state.halamanList,
                         onSurahChanged: (v) {
-                          _mulaiController.clear();
-                          _akhirController.clear();
+                          final currentMetrik = ref.read(modulFormControllerProvider(widget.level, widget.modul)).modul.jenisMetrik;
+                          if (currentMetrik == 'AYAT') {
+                            _mulaiController.clear();
+                            _akhirController.clear();
+                            notifier.updateField(surahIdStart: v, mulai: '', akhir: '');
+                          }
                           notifier.updateSurahForAyah(v);
-                          notifier.updateField(surahIdStart: v, mulai: '', akhir: ''); // Izinkan surahIdEnd dikelola secara mandiri oleh ModulCakupanSection
                         },
                         onRangeChanged: () => notifier.recalculate(),
                       ),
@@ -606,16 +641,122 @@ class _ModulFormScreenState extends ConsumerState<ModulFormScreen> {
   }
 
   Future<void> _saveModul() async {
+    // Jalankan pembaruan data secara aman sebelum form divalidasi penuh
     _updateControllerFields();
     if (!_formKey.currentState!.validate()) return;
 
+    // Tutup keyboard secara paksa agar layout dialog tidak mengalami pergeseran dimensi visual
+    FocusScope.of(context).unfocus();
+
+    // Stream lokal durasi pendek untuk memajukan info tekstual secara cerdas & reaktif agar user menyukai proses tunggu
+    final loadingTextStream = Stream<String>.periodic(const Duration(milliseconds: 600), (computationalStep) {
+      switch (computationalStep) {
+        case 0:
+          return "Menghitung total baris & halaman...";
+        case 1:
+          return "Menyusun peta urutan koordinat...";
+        case 2:
+          return "Mengunci jangkar data mutabaah...";
+        default:
+          return "Memfinalisasi penyimpanan data modul...";
+      }
+    });
+
+    // 1. TAMPILKAN POP-UP LOADING DI TENGAH LAYAR DENGAN TEKS PROSES DINAMIS
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      useRootNavigator: true,
+      builder: (context) => PopScope(
+        canPop: false,
+        child: Center(
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            margin: const EdgeInsets.all(32),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CircularProgressIndicator(color: Color(0xFF10B981)),
+                const SizedBox(height: 20),
+                StreamBuilder<String>(
+                  stream: loadingTextStream,
+                  initialData: "Menghitung total baris & halaman...",
+                  builder: (context, snapshot) {
+                    return Material(
+                      color: Colors.transparent,
+                      child: Text(
+                        snapshot.data ?? "Menyimpan modul...",
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    // Kirim objek data menuju jaringan Supabase cloud
     final success = await ref.read(modulFormControllerProvider(widget.level, widget.modul).notifier).submit();
+
+    // 2. TUTUP POP-UP LOADING MENGGUNAKAN ROOT NAVIGATOR SECARA SINKRON DAN PASTI
+    if (mounted) {
+      Navigator.of(context, rootNavigator: true).pop();
+    }
+
+    // Berikan jeda waktu super singkat untuk memastikan transisi tumpukan layar bersih total
+    await Future.delayed(const Duration(milliseconds: 100));
+
     if (mounted) {
       if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Unit Modul berhasil disimpan"), backgroundColor: Color(0xFF10B981)));
-        Navigator.pop(context);
+        // 3. TAMPILKAN POP-UP SUKSES CENTANG DI TENGAH LAYAR SETELAH PROSES MEMFINALISASI SELESAI SEMPURNA
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          useRootNavigator: true,
+          builder: (context) => Center(
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              margin: const EdgeInsets.all(40),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.check_circle_rounded, color: Color(0xFF10B981), size: 60),
+                  SizedBox(height: 16),
+                  Material(
+                    color: Colors.transparent,
+                    child: Text(
+                      "Berhasil disimpan",
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+
+        // Lepaskan dialog sukses dari tumpukan sistem, lalu lempar navigasi mundur dengan aman
+        await Future.delayed(const Duration(milliseconds: 1200));
+        if (mounted) {
+          Navigator.of(context, rootNavigator: true).pop(); // Tutup dialog sukses secara definitif dari root tumpukan
+          Navigator.of(context).pop(); // Keluar dari form screen kembali menuju daftar list utama, tombol back kini aktif sempurna
+        }
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Gagal menyimpan modul"), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Gagal menyimpan modul"), backgroundColor: Colors.red),
+        );
       }
     }
   }
