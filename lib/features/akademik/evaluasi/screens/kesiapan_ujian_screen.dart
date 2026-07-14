@@ -115,13 +115,14 @@ class KesiapanUjianScreen extends ConsumerWidget {
                             levelId: siswa.levelId ?? "level-id",
                             namaModul: tipeKesiapanUjian == 'TASMI' ? "Ujian Juz Eksklusif" : "Ujian Kenaikan Tingkat",
                             tipe: tipeKesiapanUjian,
-                            bobotItqon: 50,
-                            bobotMakhraj: 25,
-                            bobotTajwid: 25,
                             kkm: 80,
                             urutan: 1,
+                            sertifikasiSettings: {
+                              'itqon': {'bobot': 50, 'active': true},
+                              'makhraj': {'bobot': 25, 'active': true},
+                              'tajwid': {'bobot': 25, 'active': true},
+                            },
                           );
-
                           // Berpindah ke Form Penilaian dengan membawa Extra Arguments lengkap
                           context.push(
                             '/akademik/tasmi',

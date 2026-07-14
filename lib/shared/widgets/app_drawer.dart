@@ -148,6 +148,11 @@ class AppDrawer extends ConsumerWidget {
                     label: "Mushaf Digital",
                     onTap: () => _navigatePath(context, AppRouteNames.mushafIndex),
                   ),
+                  _buildDrawerItem(
+                    icon: Icons.workspace_premium_rounded,
+                    label: "Sertifikasi Hafalan",
+                    onTap: () => _navigatePath(context, '/akademik/sertifikasi-mandiri'),
+                  ),
                 ],
 
                 // KELOMPOK 5: FINANSIAL & SISTEM

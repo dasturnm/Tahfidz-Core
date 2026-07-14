@@ -11,7 +11,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart'; // TAMBAHAN
 import '../../../core/providers/app_context_provider.dart'; // TAMBAHAN
 import 'dart:convert';
 import 'package:flutter/services.dart';
-import 'package:flutter/foundation.dart';
 import 'layanan_status_modul.dart';
 
 part 'layanan_baca_mutabaah.dart';
@@ -71,8 +70,8 @@ class MutabaahTahfidzService extends BaseService {
   /// 5. READ: Mengambil saldo hutang terakhir (carry-over debt) untuk modul tertentu
   Future<double> getLatestDebt(String siswaId, String modulId) => _navigasiMateri.getLatestDebt(siswaId, modulId);
 
-  /// 6. KALKULASI: Menghitung skor akhir Ujian Tasmi' berdasarkan setting gradasi dinamis
-  double calculateTasmiScore(Map<String, dynamic> tasmiSettings, Map<String, dynamic> penaltyCounts, Map<String, double> directScores) => _kecerdasanAkademik.calculateTasmiScore(tasmiSettings, penaltyCounts, directScores);
+  /// 6. KALKULASI: Menghitung skor akhir Ujian Sertifikasi berdasarkan setting gradasi dinamis
+  double calculateSertifikasiScore(Map<String, dynamic> tasmiSettings, Map<String, dynamic> penaltyCounts, Map<String, double> directScores) => _kecerdasanAkademik.calculateTasmiScore(tasmiSettings, penaltyCounts, directScores);
 
   /// 7. READ: Mendapatkan status delegasi aktif untuk guru pengganti di kelas tertentu
   Future<DelegasiModel?> getActiveDelegation(String kelasId, String penerimaIzinId) => _baca.getActiveDelegation(kelasId, penerimaIzinId);

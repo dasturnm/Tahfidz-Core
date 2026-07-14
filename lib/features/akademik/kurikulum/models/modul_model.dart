@@ -1,6 +1,5 @@
 // Lokasi: lib/features/akademik/kurikulum/models/modul_model.dart
 
-
 // -----------------------------------------------------------------------------
 // 1. MODUL MODEL (The Specific Target/Content)
 // -----------------------------------------------------------------------------
@@ -43,28 +42,33 @@ class ModulModel {
   final bool isPlottingActive;
   final bool showSabqiInMutabaah;
   final bool showManzilInDashboard;
+  final bool isMurojaah;
 
   // FIX: Tambahkan field untuk Pengaturan Kenaikan Level (Poin 6)
   final bool isExamRequired;
-  final String examType;
-  final double examVolume;
-  final String examUnit;
-  final bool isCumulativeExam;
-  final int cumulativeRange;
+  final String evaluationType;        // Ganti dari examType
+  final double tasmiVolume;      // Ganti dari examVolume
+  final String tasmiUnit;        // Ganti dari examUnit
+  final bool isCumulativeTasmi;  // Ganti dari isCumulativeExam
+  final int tasmiRange;          // Ganti dari cumulativeRange
   final bool useRatingScale; // TAMBAHAN: Preferensi metode penilaian admin (skala 1-4)
   final bool isTasmiRequired; // TAMBAHAN: Flag kontrol alur Tasmi Kelancaran atau langsung Exam
+  final bool isTasmiSekaliDuduk; // TAMBAHAN: Flag apakah ujian Tasmi' wajib sekali duduk
+  final bool isReverseOrder; // TAMBAHAN: Flag penanda urutan hafalan mundur (Opsi 2)
 
-  final int bobotItqon;
-  final int bobotMakhraj;
-  final int bobotTajwid;
-  final int bobotNada;
-  final int bobotAdab;
-  final int bobotPenampilan;
-  final int bobotTebakSurah;
-  final Map<String, dynamic>? tasmiSettings;
+  final Map<String, dynamic>? sertifikasiSettings;
   final List<TargetMetrikModel> targetMetrik;
   final List<ModulEvaluasiTemplateModel> evaluasiTemplates; // TAMBAHAN: Komponen Lembar Evaluasi Dinamis
   final int urutan;
+
+  // Getters - Single Source of Truth untuk bobot sertifikasi
+  int get bobotItqon => (sertifikasiSettings?['itqon']?['bobot'] as num?)?.toInt() ?? 0;
+  int get bobotMakhraj => (sertifikasiSettings?['makhraj']?['bobot'] as num?)?.toInt() ?? 0;
+  int get bobotTajwid => (sertifikasiSettings?['tajwid']?['bobot'] as num?)?.toInt() ?? 0;
+  int get bobotNada => (sertifikasiSettings?['nada']?['bobot'] as num?)?.toInt() ?? 0;
+  int get bobotAdab => (sertifikasiSettings?['adab']?['bobot'] as num?)?.toInt() ?? 0;
+  int get bobotPenampilan => (sertifikasiSettings?['penampilan']?['bobot'] as num?)?.toInt() ?? 0;
+  int get bobotTebakSurah => (sertifikasiSettings?['tebak_surah']?['bobot'] as num?)?.toInt() ?? 0;
 
   ModulModel({
     this.id,
@@ -77,7 +81,7 @@ class ModulModel {
     this.silabusContent = const [],
     this.materiSilabus = const [], // TAMBAHAN
     this.isSystemGenerated = false,
-    this.jenisMetrik = 'HALAMAN',
+    this.jenisMetrik = 'SURAH',
     this.mulaiKoordinatJuz,
     this.akhirKoordinatJuz,
     this.surahIdStart = 0,
@@ -105,23 +109,19 @@ class ModulModel {
     this.isPlottingActive = false,
     this.showSabqiInMutabaah = true,
     this.showManzilInDashboard = true,
+    this.isMurojaah = false,
     // FIX: Default value untuk Pengaturan Kenaikan Level
     this.isExamRequired = false,
-    this.examType = 'tasmi',
-    this.examVolume = 1.0,
-    this.examUnit = 'JUZ',
-    this.isCumulativeExam = false,
-    this.cumulativeRange = 5,
+    this.evaluationType = 'tasmi',
+    this.tasmiVolume = 1.0,
+    this.tasmiUnit = 'JUZ',
+    this.isCumulativeTasmi = false,
+    this.tasmiRange = 5,
     this.useRatingScale = false, // TAMBAHAN
     this.isTasmiRequired = false, // TAMBAHAN
-    this.bobotItqon = 0,
-    this.bobotMakhraj = 0,
-    this.bobotTajwid = 0,
-    this.bobotNada = 0,
-    this.bobotAdab = 0,
-    this.bobotPenampilan = 0,
-    this.bobotTebakSurah = 0,
-    this.tasmiSettings,
+    this.isTasmiSekaliDuduk = true, // TAMBAHAN: Default true (wajib sekali duduk)
+    this.isReverseOrder = false, // TAMBAHAN
+    this.sertifikasiSettings,
     this.targetMetrik = const [],
     this.evaluasiTemplates = const [], // TAMBAHAN
     this.urutan = 0,
@@ -134,14 +134,6 @@ class ModulModel {
       return silabusContent.map((e) => e.materi).where((m) => m.trim().isNotEmpty).toList();
     }
     return materiSilabus;
-  }
-
-  // TAMBAHAN: Helper mengecek status wajib Tasmi' Sekali Duduk dari tasmiSettings
-  bool get isTasmiSekaliDuduk {
-    if (tasmiSettings != null && tasmiSettings!.containsKey('is_tasmi_sekali_duduk')) {
-      return tasmiSettings!['is_tasmi_sekali_duduk'] == true;
-    }
-    return true; // Default true (wajib tasmi') jika tidak ada konfigurasi
   }
 
   int calculateTotalMeetings() {
@@ -197,23 +189,19 @@ class ModulModel {
     isPlottingActive: json['is_plotting_active'] == true,
     showSabqiInMutabaah: json['show_sabqi_in_mutabaah'] ?? true,
     showManzilInDashboard: json['show_manzil_in_dashboard'] ?? true,
+    isMurojaah: json['is_murojaah'] == true,
     // FIX: Parsing field Kenaikan Level dari JSON
     isExamRequired: json['is_exam_required'] == true,
-    examType: json['exam_type']?.toString() ?? 'tasmi',
-    examVolume: (json['exam_volume'] as num?)?.toDouble() ?? 1.0,
-    examUnit: json['exam_unit']?.toString() ?? 'JUZ',
-    isCumulativeExam: json['is_cumulative_exam'] == true,
-    cumulativeRange: (json['cumulative_range'] as num?)?.toInt() ?? 5,
+    evaluationType: json['tasmi_type']?.toString() ?? 'tasmi',
+    tasmiVolume: (json['tasmi_volume'] as num?)?.toDouble() ?? 1.0,
+    tasmiUnit: json['tasmi_unit']?.toString() ?? 'JUZ',
+    isCumulativeTasmi: json['is_cumulative_tasmi'] == true,
+    tasmiRange: (json['tasmi_range'] as num?)?.toInt() ?? 5,
     useRatingScale: json['use_rating_scale'] == true, // TAMBAHAN
     isTasmiRequired: json['is_tasmi_required'] == true || (json['is_tasmi_required'] as bool? ?? false), // TAMBAHAN
-    bobotItqon: (json['bobot_itqon'] as num?)?.toInt() ?? 0,
-    bobotMakhraj: (json['bobot_makhraj'] as num?)?.toInt() ?? 0,
-    bobotTajwid: (json['bobot_tajwid'] as num?)?.toInt() ?? 0,
-    bobotNada: (json['bobot_nada'] as num?)?.toInt() ?? 0,
-    bobotAdab: (json['bobot_adab'] as num?)?.toInt() ?? 0,
-    bobotPenampilan: (json['bobot_penampilan'] as num?)?.toInt() ?? 0,
-    bobotTebakSurah: (json['bobot_tebak_surah'] as num?)?.toInt() ?? 0,
-    tasmiSettings: json['tasmi_settings'] as Map<String, dynamic>?,
+    isTasmiSekaliDuduk: json['is_tasmi_sekali_duduk'] ?? true, // TAMBAHAN
+    isReverseOrder: json['is_reverse_order'] == true, // TAMBAHAN
+    sertifikasiSettings: json['tasmi_settings'] as Map<String, dynamic>?,
     targetMetrik: (json['target_metrik_kurikulum'] is List)
         ? (json['target_metrik_kurikulum'] as List)
         .whereType<Map<String, dynamic>>()
@@ -243,13 +231,36 @@ class ModulModel {
     'jenis_metrik': jenisMetrik,
     'mulai_koordinat_juz': mulaiKoordinatJuz,
     'akhir_koordinat_juz': akhirKoordinatJuz,
-    'surah_id_start': surahIdStart,
-    'surah_id_end': surahIdEnd,
-    'mulai_halaman': mulaiHalaman,
-    'akhir_halaman': akhirHalaman,
+    // FIX: Auto-Normalisasi Database (Start <= End) di tingkat serialization agar data selalu rapi
+    'surah_id_start': (() {
+      final s = silabusSource == 'mushaf' && surahIdStart == 0 ? 1 : surahIdStart;
+      final e = silabusSource == 'mushaf' && surahIdEnd == 0 ? 114 : surahIdEnd;
+      return s < e ? s : e;
+    })(),
+    'surah_id_end': (() {
+      final s = silabusSource == 'mushaf' && surahIdStart == 0 ? 1 : surahIdStart;
+      final e = silabusSource == 'mushaf' && surahIdEnd == 0 ? 114 : surahIdEnd;
+      return s < e ? e : s;
+    })(),
+    // FIX: Normalisasi Halaman agar selalu (Start <= End) di DB
+    'mulai_halaman': (mulaiHalaman > 0 && akhirHalaman > 0) ? (mulaiHalaman < akhirHalaman ? mulaiHalaman : akhirHalaman) : mulaiHalaman,
+    'akhir_halaman': (mulaiHalaman > 0 && akhirHalaman > 0) ? (mulaiHalaman < akhirHalaman ? akhirHalaman : mulaiHalaman) : akhirHalaman,
     'target_internal_akhir': targetInternalAkhir,
-    'ayah_start': ayahStart,
-    'ayah_end': ayahEnd,
+    // FIX: Normalisasi Ayat mengikuti Surah agar selalu (Start <= End) di DB
+    'ayah_start': (() {
+      final sSurah = silabusSource == 'mushaf' && surahIdStart == 0 ? 1 : surahIdStart;
+      final eSurah = silabusSource == 'mushaf' && surahIdEnd == 0 ? 114 : surahIdEnd;
+      if (sSurah < eSurah) return ayahStart;
+      if (sSurah > eSurah) return ayahEnd;
+      return ayahStart <= ayahEnd ? ayahStart : ayahEnd;
+    })(),
+    'ayah_end': (() {
+      final sSurah = silabusSource == 'mushaf' && surahIdStart == 0 ? 1 : surahIdStart;
+      final eSurah = silabusSource == 'mushaf' && surahIdEnd == 0 ? 114 : surahIdEnd;
+      if (sSurah < eSurah) return ayahEnd;
+      if (sSurah > eSurah) return ayahStart;
+      return ayahStart <= ayahEnd ? ayahEnd : ayahStart;
+    })(),
     'total_baris': totalBaris,
     'total_surah': totalSurah, // FIX: Masukkan ke JSON
     'total_halaman': totalHalaman, // FIX: Masukkan ke JSON (Poin 2)
@@ -268,23 +279,19 @@ class ModulModel {
     'is_plotting_active': isPlottingActive,
     'show_sabqi_in_mutabaah': showSabqiInMutabaah, // FIX: Variabel diperbaiki
     'show_manzil_in_dashboard': showManzilInDashboard,
+    'is_murojaah': isMurojaah,
     // FIX: Sinkronisasi field Kenaikan Level ke JSON dengan format snake_case sesuai kolom database
     'is_exam_required': isExamRequired,
-    'exam_type': examType,     // FIXED
-    'exam_volume': examVolume, // FIXED
-    'exam_unit': examUnit,     // FIXED
-    'is_cumulative_exam': isCumulativeExam,
-    'cumulative_range': cumulativeRange,
-    'use_rating_scale': useRatingScale, // FIX: Daftarkan pemetaan agar nilai kesimpan di database & reaktif di UI state
-    'is_tasmi_required': isTasmiRequired, // TAMBAHAN
-    'bobot_itqon': bobotItqon,
-    'bobot_makhraj': bobotMakhraj,
-    'bobot_tajwid': bobotTajwid,
-    'bobot_nada': bobotNada,
-    'bobot_adab': bobotAdab,
-    'bobot_penampilan': bobotPenampilan,
-    'bobot_tebak_surah': bobotTebakSurah,
-    'tasmi_settings': tasmiSettings,
+    'tasmi_type': evaluationType,
+    'tasmi_volume': tasmiVolume,
+    'tasmi_unit': tasmiUnit,
+    'is_cumulative_tasmi': isCumulativeTasmi,
+    'tasmi_range': tasmiRange,
+    'use_rating_scale': useRatingScale,
+    'is_tasmi_required': isTasmiRequired,
+    'is_tasmi_sekali_duduk': isTasmiSekaliDuduk,
+    'is_reverse_order': isReverseOrder,
+    'tasmi_settings': sertifikasiSettings,
     'modul_evaluasi_template': List<dynamic>.from(evaluasiTemplates.map((x) => x.toJson())), // TAMBAHAN
     'urutan': urutan,
   };
@@ -328,23 +335,19 @@ class ModulModel {
     bool? isPlottingActive,
     bool? showSabqiInMutabaah,
     bool? showManzilInDashboard,
+    bool? isMurojaah,
     // FIX: Parameter copyWith untuk field baru
     bool? isExamRequired,
-    String? examType,
-    double? examVolume,
-    String? examUnit,
-    bool? isCumulativeExam,
-    int? cumulativeRange,
+    String? evaluationType,
+    double? tasmiVolume,
+    String? tasmiUnit,
+    bool? isCumulativeTasmi,
+    int? tasmiRange,
     bool? useRatingScale, // TAMBAHAN
     bool? isTasmiRequired, // TAMBAHAN
-    int? bobotItqon,
-    int? bobotMakhraj,
-    int? bobotTajwid,
-    int? bobotNada,
-    int? bobotAdab,
-    int? bobotPenampilan,
-    int? bobotTebakSurah,
-    Map<String, dynamic>? tasmiSettings,
+    bool? isTasmiSekaliDuduk, // TAMBAHAN
+    bool? isReverseOrder, // TAMBAHAN
+    Map<String, dynamic>? sertifikasiSettings,
     List<TargetMetrikModel>? targetMetrik,
     List<ModulEvaluasiTemplateModel>? evaluasiTemplates, // TAMBAHAN
     int? urutan,
@@ -388,23 +391,19 @@ class ModulModel {
       isPlottingActive: isPlottingActive ?? this.isPlottingActive,
       showSabqiInMutabaah: showSabqiInMutabaah ?? this.showSabqiInMutabaah,
       showManzilInDashboard: showManzilInDashboard ?? this.showManzilInDashboard,
+      isMurojaah: isMurojaah ?? this.isMurojaah,
       // FIX: Mapping field baru di copyWith
       isExamRequired: isExamRequired ?? this.isExamRequired,
-      examType: examType ?? this.examType,
-      examVolume: examVolume ?? this.examVolume,
-      examUnit: examUnit ?? this.examUnit,
-      isCumulativeExam: isCumulativeExam ?? this.isCumulativeExam,
-      cumulativeRange: cumulativeRange ?? this.cumulativeRange,
+      evaluationType: evaluationType ?? this.evaluationType,
+      tasmiVolume: tasmiVolume ?? this.tasmiVolume,
+      tasmiUnit: tasmiUnit ?? this.tasmiUnit,
+      isCumulativeTasmi: isCumulativeTasmi ?? this.isCumulativeTasmi,
+      tasmiRange: tasmiRange ?? this.tasmiRange,
       useRatingScale: useRatingScale ?? this.useRatingScale, // TAMBAHAN
       isTasmiRequired: isTasmiRequired ?? this.isTasmiRequired, // TAMBAHAN
-      bobotItqon: bobotItqon ?? this.bobotItqon,
-      bobotMakhraj: bobotMakhraj ?? this.bobotMakhraj,
-      bobotTajwid: bobotTajwid ?? this.bobotTajwid,
-      bobotNada: bobotNada ?? this.bobotNada,
-      bobotAdab: bobotAdab ?? this.bobotAdab,
-      bobotPenampilan: bobotPenampilan ?? this.bobotPenampilan,
-      bobotTebakSurah: bobotTebakSurah ?? this.bobotTebakSurah,
-      tasmiSettings: tasmiSettings ?? this.tasmiSettings,
+      isTasmiSekaliDuduk: isTasmiSekaliDuduk ?? this.isTasmiSekaliDuduk, // TAMBAHAN
+      isReverseOrder: isReverseOrder ?? this.isReverseOrder, // TAMBAHAN
+      sertifikasiSettings: sertifikasiSettings ?? this.sertifikasiSettings,
       targetMetrik: targetMetrik ?? this.targetMetrik,
       evaluasiTemplates: evaluasiTemplates ?? this.evaluasiTemplates, // TAMBAHAN
       urutan: urutan ?? this.urutan,

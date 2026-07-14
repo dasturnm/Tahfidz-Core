@@ -227,7 +227,7 @@ GoRouter router(Ref ref) { // Ganti RouterRef jadi Ref
             builder: (context, state) => const AcademicCalendarTab(),
           ),
           GoRoute(
-            path: AppRouteNames.tasmi,
+            path: '/akademik/sertifikasi',
             builder: (context, state) {
               final extra = state.extra as Map<String, dynamic>?;
 
@@ -245,11 +245,11 @@ GoRouter router(Ref ref) { // Ganti RouterRef jadi Ref
             },
           ),
           GoRoute(
-            path: '/akademik/tasmi/remedial',
+            path: '/akademik/sertifikasi/remedial',
             builder: (context, state) => const Scaffold(body: Center(child: Text('Fitur Daftar Siswa Remedial dalam Pengembangan'))),
           ),
           GoRoute(
-            path: '/akademik/tasmi/riwayat',
+            path: '/akademik/sertifikasi/riwayat',
             builder: (context, state) => const Scaffold(body: Center(child: Text('Fitur Riwayat Ujian dalam Pengembangan'))),
           ),
 

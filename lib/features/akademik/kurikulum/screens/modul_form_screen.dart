@@ -13,12 +13,11 @@ import '../providers/modul_form_controller.dart';
 import '../providers/modul_form_state.dart';
 import 'components/modul_shared_widgets.dart';
 import 'components/modul_policy_section.dart';
-import 'components/modul_murojaah_section.dart';
 import 'components/modul_pencapaian_section.dart';
 import 'components/modul_cakupan_section.dart';
-import 'components/modul_tasmi_setting_section.dart';
 import 'components/modul_exam_section.dart';
 import 'components/modul_estimation_card.dart';
+import '../../sertifikasi/widgets/sertifikasi_rubric_widget.dart';
 
 class ModulFormScreen extends ConsumerStatefulWidget {
   final LevelModel level;
@@ -39,13 +38,10 @@ class _ModulFormScreenState extends ConsumerState<ModulFormScreen> {
   late TextEditingController _silabusController;
   late TextEditingController _mulaiController;
   late TextEditingController _akhirController;
-  final TextEditingController _mulaiAyatController = TextEditingController(text: '1'); // Inisialisasi instan tanpa kata kunci late
-  final TextEditingController _akhirAyatController = TextEditingController(text: '1'); // Inisialisasi instan tanpa kata kunci late
-  late TextEditingController _sabqiController;
+  final TextEditingController _mulaiAyatController = TextEditingController(text: '1');
+  final TextEditingController _akhirAyatController = TextEditingController(text: '1');
   late TextEditingController _manzilAmountController;
   late TextEditingController _urutanController;
-
-  final List<String> _tipeOptions = ['ZIYADAH HAFALAN', 'ZIYADAH TILAWAH', 'MUROJAAH', 'TAHSIN', 'DINIYAH'];
 
   @override
   void initState() {
@@ -53,10 +49,9 @@ class _ModulFormScreenState extends ConsumerState<ModulFormScreen> {
     initializeDateFormatting('id_ID', null);
 
     final m = widget.modul;
-    // Set teks pengontrol ayat secara defensif setelah objek terbuat sempurna
     if (m != null) {
-      if (m.ayahStart != null) _mulaiAyatController.text = m.ayahStart.toString();
-      if (m.ayahEnd != null) _akhirAyatController.text = m.ayahEnd.toString();
+      _mulaiAyatController.text = m.ayahStart.toString();
+      _akhirAyatController.text = m.ayahEnd.toString();
     }
 
     _namaController = TextEditingController(text: m?.namaModul ?? '');
@@ -65,15 +60,14 @@ class _ModulFormScreenState extends ConsumerState<ModulFormScreen> {
     _silabusController = TextEditingController(text: m?.silabus ?? '');
     _mulaiController = TextEditingController(text: m?.mulaiKoordinatJuz ?? '');
     _akhirController = TextEditingController(text: m?.akhirKoordinatJuz ?? '');
-    _sabqiController = TextEditingController(text: (m?.sabqiAmount ?? 0).toString());
     _manzilAmountController = TextEditingController(text: (m?.manzilAmount ?? 0.0).toString());
     _urutanController = TextEditingController(text: (m?.urutan ?? 0).toString());
 
     _mulaiController.addListener(_updateControllerFields);
     _akhirController.addListener(_updateControllerFields);
     _targetAmountController.addListener(_updateControllerFields);
-    _mulaiAyatController.addListener(_updateControllerFields); // Sinkronisasi reaktif data ayat mulai
-    _akhirAyatController.addListener(_updateControllerFields); // Sinkronisasi reaktif data ayat akhir
+    _mulaiAyatController.addListener(_updateControllerFields);
+    _akhirAyatController.addListener(_updateControllerFields);
 
     if (m != null) {
       Future.microtask(() => ref.read(modulFormControllerProvider(widget.level, widget.modul).notifier).recalculate());
@@ -85,8 +79,8 @@ class _ModulFormScreenState extends ConsumerState<ModulFormScreen> {
       nama: _namaController.text,
       mulai: _mulaiController.text,
       akhir: _akhirController.text,
-      ayahStart: int.tryParse(_mulaiAyatController.text), // Pengiriman data ayat terpisah dari teks koordinat surah/juz
-      ayahEnd: int.tryParse(_akhirAyatController.text),   // Pengiriman data ayat terpisah dari teks koordinat surah/juz
+      ayahStart: int.tryParse(_mulaiAyatController.text),
+      ayahEnd: int.tryParse(_akhirAyatController.text),
       targetAmount: double.tryParse(_targetAmountController.text),
       urutan: int.tryParse(_urutanController.text),
     );
@@ -100,9 +94,8 @@ class _ModulFormScreenState extends ConsumerState<ModulFormScreen> {
     _silabusController.dispose();
     _mulaiController.dispose();
     _akhirController.dispose();
-    _mulaiAyatController.dispose(); // Cegah kebocoran memori kontroler baru
-    _akhirAyatController.dispose(); // Cegah kebocoran memori kontroler baru
-    _sabqiController.dispose();
+    _mulaiAyatController.dispose();
+    _akhirAyatController.dispose();
     _manzilAmountController.dispose();
     _urutanController.dispose();
     super.dispose();
@@ -209,10 +202,7 @@ class _ModulFormScreenState extends ConsumerState<ModulFormScreen> {
       }
     }
 
-    final bool isMurojaah = m.tipe == 'MUROJAAH';
     final bool isTasmi = m.tipe == 'TASMI\'';
-    final bool isZiyadah = m.tipe.contains('HAFALAN');
-    final bool isTilawah = m.tipe.contains('TILAWAH');
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -251,87 +241,134 @@ class _ModulFormScreenState extends ConsumerState<ModulFormScreen> {
                 const SizedBox(height: 8),
                 TextFormField(controller: _namaController, decoration: ModulSharedWidgets.inputStyle("Misal: Juz 30"), validator: (v) => v!.isEmpty ? "Wajib diisi" : null),
 
-                const SizedBox(height: 24),
-                _buildTypeRow(m, notifier, isZiyadah, isTasmi),
-
                 const SizedBox(height: 32),
                 if (!isTasmi) ...[
                   _buildSyllabusSourceSelector(m, notifier),
+                  const SizedBox(height: 16),
+                  if (m.silabusSource == 'mushaf') ...[
+                    SwitchListTile(
+                      title: const Text("Aktifkan Urutan Hafalan Mundur", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                      subtitle: const Text("Santri menghafal mundur dari akhir ke awal. Input cakupan materi di bawah tetap diisi normal dari depan.", style: TextStyle(fontSize: 11, color: Colors.grey)),
+                      value: m.isReverseOrder,
+                      activeThumbColor: const Color(0xFF10B981),
+                      contentPadding: EdgeInsets.zero,
+                      onChanged: (v) => notifier.updateField(isReverseOrder: v),
+                    ),
+                  ],
                   if (m.silabusSource == 'internal')...[
                     _buildPlottingSection(m, notifier),
                     const SizedBox(height: 16),
                   ],
                   const SizedBox(height: 32),
-                  if (!isMurojaah) ...[
-                    if (m.silabusSource == 'mushaf' && state.isLoading && state.surahList.isEmpty)
-                      const Center(child: Padding(padding: EdgeInsets.symmetric(vertical: 32), child: CircularProgressIndicator(color: Color(0xFF10B981))))
-                    else ...[
-                      _buildStandardMetricSection(m, state, notifier),
-                      const SizedBox(height: 24),
-                      ModulSharedWidgets.buildLabel("CAKUPAN MATERI (MULAI - AKHIR)"),
-                      const SizedBox(height: 8),
-                      ModulCakupanSection(
-                        isPlottingActive: m.isPlottingActive,
-                        silabusItems: m.silabusContent,
-                        silabusSource: m.silabusSource,
-                        selectedMetrik: m.jenisMetrik,
-                        mulaiController: _mulaiController,
-                        akhirController: _akhirController,
-                        mulaiAyatController: _mulaiAyatController, // Menyuntikkan pemisahan kontroler ayat ke UI
-                        akhirAyatController: _akhirAyatController, // Menyuntikkan pemisahan kontroler ayat ke UI
-                        surahIdForAyah: state.surahIdForAyah,
-                        surahList: state.surahList,
-                        juzList: state.juzList,
-                        halamanList: state.halamanList,
-                        onSurahChanged: (v) {
-                          final currentMetrik = ref.read(modulFormControllerProvider(widget.level, widget.modul)).modul.jenisMetrik;
-                          if (currentMetrik == 'AYAT') {
-                            _mulaiController.clear();
-                            _akhirController.clear();
-                            notifier.updateField(surahIdStart: v, mulai: '', akhir: '');
-                          }
-                          notifier.updateSurahForAyah(v);
-                        },
-                        onRangeChanged: () => notifier.recalculate(),
-                      ),
-                      _buildMaterialSummary(state, notifier),
-                      const SizedBox(height: 32),
-                      ModulPencapaianSection(
-                        targetAmountController: _targetAmountController,
-                        selectedTargetUnit: m.targetAmountUnit,
-                        allowedUnits: m.silabusSource == 'mushaf'
-                            ? (state.allowedUnits.contains('BARIS') ? state.allowedUnits : [...state.allowedUnits, 'BARIS'])
-                            : state.allowedUnits,
-                        onUnitChanged: (v) => notifier.updateField(targetUnit: v),
-                        onDecrement: () {
-                          double v = double.tryParse(_targetAmountController.text) ?? 0;
-                          if (v > 0) _targetAmountController.text = (v - 1).toInt().toString();
-                        },
-                        onIncrement: () {
-                          double v = double.tryParse(_targetAmountController.text) ?? 0;
-                          _targetAmountController.text = (v + 1).toInt().toString();
-                        },
-                      ),
-                      ModulEstimationCard(
-                        levelId: widget.level.id!,
-                        programIdFromLevel: widget.level.programId ?? '',
-                        targetPertemuan: m.targetPertemuan.toString(),
-                        onRefresh: () => notifier.recalculate(),
-                      ),
-                    ],
-                  ] else
-                    ModulMurojaahSection(
-                      sabqiController: _sabqiController,
-                      sabqiUnit: m.sabqiAmountUnit,
-                      manzilType: m.manzilType,
-                      manzilAmountController: _manzilAmountController,
-                      onSabqiUnitChanged: (v) => notifier.updateField(unit: v),
-                      onManzilTypeChanged: (v) => notifier.updateField(unit: v),
+                  if (m.silabusSource == 'mushaf' && state.isLoading && state.surahList.isEmpty)
+                    const Center(child: Padding(padding: EdgeInsets.symmetric(vertical: 32), child: CircularProgressIndicator(color: Color(0xFF10B981))))
+                  else if (m.silabusSource == 'mushaf') ...[
+                    _buildStandardMetricSection(m, state, notifier),
+                    const SizedBox(height: 24),
+                    ModulSharedWidgets.buildLabel("CAKUPAN MATERI (MULAI - AKHIR)"),
+                    const SizedBox(height: 8),
+                    ModulCakupanSection(
+                      isPlottingActive: m.isPlottingActive,
+                      silabusItems: m.silabusContent,
+                      silabusSource: m.silabusSource,
+                      selectedMetrik: m.jenisMetrik,
+                      mulaiController: _mulaiController,
+                      akhirController: _akhirController,
+                      mulaiAyatController: _mulaiAyatController,
+                      akhirAyatController: _akhirAyatController,
+                      surahIdForAyah: state.surahIdForAyah,
+                      surahList: state.surahList,
+                      juzList: state.juzList,
+                      halamanList: state.halamanList,
+                      onSurahChanged: (v) {
+                        final currentMetrik = ref.read(modulFormControllerProvider(widget.level, widget.modul)).modul.jenisMetrik;
+                        if (currentMetrik == 'AYAT') {
+                          _mulaiController.clear();
+                          _akhirController.clear();
+                          notifier.updateField(surahIdStart: v, mulai: '', akhir: '');
+                        }
+                        notifier.updateSurahForAyah(v);
+                      },
+                      onRangeChanged: () => notifier.recalculate(),
                     ),
+                    _buildMaterialSummary(state, notifier),
+                    const SizedBox(height: 32),
+                    ModulPencapaianSection(
+                      targetAmountController: _targetAmountController,
+                      selectedTargetUnit: m.targetAmountUnit,
+                      allowedUnits: m.silabusSource == 'mushaf'
+                          ? (state.allowedUnits.contains('BARIS') ? state.allowedUnits : [...state.allowedUnits, 'BARIS'])
+                          : state.allowedUnits,
+                      onUnitChanged: (v) => notifier.updateField(targetUnit: v),
+                      onDecrement: () {
+                        double v = double.tryParse(_targetAmountController.text) ?? 0;
+                        if (v > 0) _targetAmountController.text = (v - 1).toInt().toString();
+                      },
+                      onIncrement: () {
+                        double v = double.tryParse(_targetAmountController.text) ?? 0;
+                        _targetAmountController.text = (v + 1).toInt().toString();
+                      },
+                    ),
+                    ModulEstimationCard(
+                      levelId: widget.level.id!,
+                      programIdFromLevel: widget.level.programId ?? '',
+                      targetPertemuan: m.targetPertemuan.toString(),
+                      onRefresh: () => notifier.recalculate(),
+                    ),
+                  ] else if (m.silabusSource == 'internal') ...[
+                    ModulSharedWidgets.buildLabel("CAKUPAN MATERI (MULAI - AKHIR)"),
+                    const SizedBox(height: 8),
+                    ModulCakupanSection(
+                      isPlottingActive: m.isPlottingActive,
+                      silabusItems: m.silabusContent,
+                      silabusSource: m.silabusSource,
+                      selectedMetrik: m.jenisMetrik,
+                      mulaiController: _mulaiController,
+                      akhirController: _akhirController,
+                      mulaiAyatController: _mulaiAyatController,
+                      akhirAyatController: _akhirAyatController,
+                      surahIdForAyah: state.surahIdForAyah,
+                      surahList: state.surahList,
+                      juzList: state.juzList,
+                      halamanList: state.halamanList,
+                      onSurahChanged: (v) {
+                        final currentMetrik = ref.read(modulFormControllerProvider(widget.level, widget.modul)).modul.jenisMetrik;
+                        if (currentMetrik == 'AYAT') {
+                          _mulaiController.clear();
+                          _akhirController.clear();
+                          notifier.updateField(surahIdStart: v, mulai: '', akhir: '');
+                        }
+                        notifier.updateSurahForAyah(v);
+                      },
+                      onRangeChanged: () => notifier.recalculate(),
+                    ),
+                    _buildMaterialSummary(state, notifier),
+                    const SizedBox(height: 32),
+                    ModulPencapaianSection(
+                      targetAmountController: _targetAmountController,
+                      selectedTargetUnit: m.targetAmountUnit,
+                      allowedUnits: state.allowedUnits,
+                      onUnitChanged: (v) => notifier.updateField(targetUnit: v),
+                      onDecrement: () {
+                        double v = double.tryParse(_targetAmountController.text) ?? 0;
+                        if (v > 0) _targetAmountController.text = (v - 1).toInt().toString();
+                      },
+                      onIncrement: () {
+                        double v = double.tryParse(_targetAmountController.text) ?? 0;
+                        _targetAmountController.text = (v + 1).toInt().toString();
+                      },
+                    ),
+                    ModulEstimationCard(
+                      levelId: widget.level.id!,
+                      programIdFromLevel: widget.level.programId ?? '',
+                      targetPertemuan: m.targetPertemuan.toString(),
+                      onRefresh: () => notifier.recalculate(),
+                    ),
+                  ],
                 ],
 
                 const SizedBox(height: 32),
-                if (!isMurojaah) ...[
+                if (m.tipe != 'TASMI\'') ...[
                   ModulSharedWidgets.buildLabel("KKM LULUS"),
                   Theme(
                     data: Theme.of(context).copyWith(
@@ -349,7 +386,7 @@ class _ModulFormScreenState extends ConsumerState<ModulFormScreen> {
                   ),
                 ],
 
-                if (m.tipe != 'TASMI\'' && m.tipe != 'MUROJAAH') ...[
+                if (m.tipe != 'TASMI\'') ...[
                   SwitchListTile(
                     title: const Text("Gunakan Skala Penilaian 1-4", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
                     subtitle: const Text("Mengganti parameter input angka nilai setoran harian menjadi standar kompetensi deskriptif pada rekam mutabaah harian santri.", style: TextStyle(fontSize: 11, color: Colors.grey)),
@@ -360,14 +397,14 @@ class _ModulFormScreenState extends ConsumerState<ModulFormScreen> {
                   ),
                 ],
 
-                if (isZiyadah || isTilawah || isMurojaah) ...[
+                if (m.tipe != "TASMI'") ...[
                   const SizedBox(height: 24),
-                  ModulSharedWidgets.buildLabel("PENGATURAN KEDISPLINAN"),
+                  ModulSharedWidgets.buildLabel("PENGATURAN KEDISIPLINAN"),
                   const SizedBox(height: 12),
                   _buildPolicySection(m, notifier),
                 ],
 
-                if (m.tipe != 'MUROJAAH') ...[
+                if (m.tipe != 'TASMI\'') ...[
                   const SizedBox(height: 24),
                   EvaluationUnifiedSection(
                     m: m,
@@ -403,84 +440,156 @@ class _ModulFormScreenState extends ConsumerState<ModulFormScreen> {
     );
   }
 
-  Widget _buildTypeRow(ModulModel m, ModulFormController notifier, bool isZiyadah, bool isTasmi) {
-    bool hasTasmiInLevel = widget.level.modul.any((mod) => mod.tipe == "TASMI'") || m.tipe == "TASMI'";
-
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      ModulSharedWidgets.buildLabel("TIPE MODUL"),
-      const SizedBox(height: 8),
-      DropdownButtonFormField<String>(
-        isExpanded: true,
-        initialValue: _tipeOptions.contains(m.tipe) ? m.tipe : _tipeOptions.first,
-        decoration: ModulSharedWidgets.inputStyle(""),
-        items: _tipeOptions.map((t) => DropdownMenuItem(value: t, child: Text(t, style: const TextStyle(fontSize: 12)))).toList(),
-        onChanged: (v) => Future.microtask(() => notifier.updateField(tipe: v)),
-      ),
-      if (isZiyadah && m.showSabqiInMutabaah) _buildMurajaahWarning(),
-      if (hasTasmiInLevel) _buildTasmiWarning(),
-    ]);
-  }
-
-  Widget _buildMurajaahWarning() {
-    bool hasMurojaah = widget.level.modul.any((m) => m.tipe == 'MUROJAAH');
-    if (hasMurojaah) return const SizedBox.shrink();
-    return Padding(
-        padding: const EdgeInsets.only(top: 16),
-        child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: Colors.amber[50], borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.amber[200]!)),
-            child: const Row(children: [
-              Icon(Icons.warning_amber_rounded, color: Colors.amber, size: 20),
-              SizedBox(width: 12),
-              Expanded(child: Text("Peringatan: Anda mengaktifkan Murajaah Sabqi, namun belum ada Modul Murajaah di level ini.", style: TextStyle(fontSize: 10, color: Colors.brown, fontWeight: FontWeight.w500)))
-            ])
-        )
-    );
-  }
-
-  Widget _buildTasmiWarning() {
-    return Padding(
-        padding: const EdgeInsets.only(top: 16),
-        child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: Colors.blue[50], borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.blue[200]!)),
-            child: const Row(children: [
-              Icon(Icons.info_outline, color: Colors.blue, size: 20),
-              SizedBox(width: 12),
-              Expanded(child: Text("Peringatan: Anda mengaktifkan Tasmi Sekali Duduk, pastikan target volume sudah disetting dengan benar di bawah.", style: TextStyle(fontSize: 10, color: Colors.blue, fontWeight: FontWeight.w500)))
-            ])
-        )
-    );
-  }
-
   Widget _buildPolicySection(ModulModel m, ModulFormController notifier) {
-    final bool showMurojaahToggles = (m.tipe == 'ZIYADAH HAFALAN' || m.tipe == 'MUROJAAH') && m.silabusSource == 'mushaf';
     return Column(
       children: [
         ModulPolicySection(
-            isStrict: m.isStrict,
-            isAllowBelowTarget: m.isAllowBelowTarget,
-            isAccumulated: m.isAccumulated,
-            isSingleBurden: m.isSingleBurden,
-            showSabqiInMutabaah: m.showSabqiInMutabaah,
-            showManzilInDashboard: m.showManzilInDashboard,
-            hasMurojaahToggles: showMurojaahToggles,
-            onStrictSelected: () => notifier.updateField(isStrict: !m.isStrict),
-            onToleransiSelected: () => notifier.updateField(isAllowBelowTarget: !m.isAllowBelowTarget),
-            onAccumulatedSelected: () => notifier.updateField(isAccumulated: !m.isAccumulated),
-            onSingleBurdenSelected: () => notifier.updateField(isSingleBurden: !m.isSingleBurden),
-            onInfoAccumulated: () => _showInfoDialog(context, "Akumulasi", "Sisa target akan dibebankan pada pertemuan selanjutnya."),
-            onInfoSingleBurden: () => _showInfoDialog(context, "Beban Tunggal", "Sisa target tidak dibebankan pada pertemuan selanjutnya."),
-            onSabqiVisibilityChanged: (v) => notifier.updateField(showSabqiInMutabaah: v),
-            onManzilVisibilityChanged: (v) => notifier.updateField(showManzilInDashboard: v)
+          isStrict: m.isStrict,
+          isAllowBelowTarget: m.isAllowBelowTarget,
+          isAccumulated: m.isAccumulated,
+          isSingleBurden: m.isSingleBurden,
+          showSabqiInMutabaah: false,
+          showManzilInDashboard: m.showManzilInDashboard,
+          hasMurojaahToggles: false,
+          onStrictSelected: () => notifier.updateField(isStrict: !m.isStrict),
+          onToleransiSelected: () => notifier.updateField(isAllowBelowTarget: !m.isAllowBelowTarget),
+          onAccumulatedSelected: () => notifier.updateField(isAccumulated: !m.isAccumulated),
+          onSingleBurdenSelected: () => notifier.updateField(isSingleBurden: !m.isSingleBurden),
+          onInfoAccumulated: () => _showInfoDialog(context, "Akumulasi", "Sisa target akan dibebankan pada pertemuan selanjutnya."),
+          onInfoSingleBurden: () => _showInfoDialog(context, "Beban Tunggal", "Sisa target tidak dibebankan pada pertemuan selanjutnya."),
+          onSabqiVisibilityChanged: (_) {},
+          onManzilVisibilityChanged: (v) => notifier.updateField(showManzilInDashboard: v),
         ),
+        if (m.silabusSource == 'mushaf') ...[
+          const SizedBox(height: 12),
+          SwitchListTile(
+            title: const Text("Murojaah Manzil (Siswa)", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+            subtitle: const Text("Aktifkan pilar Manzil (hafalan lama) pada dashboard siswa.", style: TextStyle(fontSize: 11, color: Colors.grey)),
+            value: m.showManzilInDashboard,
+            activeThumbColor: const Color(0xFF10B981),
+            contentPadding: EdgeInsets.zero,
+            onChanged: (v) => notifier.updateField(showManzilInDashboard: v),
+          ),
+        ],
+        if (m.showManzilInDashboard && m.silabusSource == 'mushaf') ...[
+          const SizedBox(height: 16),
+          Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text("MANZIL (Hafalan Lama)", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  IconButton(
+                    onPressed: () => _showInfoDialog(context, "Manzil", "Penelitian menunjukkan bahwa hafalan yang baik itu bisa mutar dalam jangka waktu 30 hari - 40 hari. Disarankan memilih persentase 4% agar siklus murojaah terjaga dengan baik."),
+                    icon: const Icon(Icons.info_outline, size: 18, color: Colors.blue),
+                  ),
+                  const Spacer(),
+                  DropdownButton<String>(
+                    value: m.manzilType,
+                    items: const [
+                      DropdownMenuItem(value: 'fixed', child: Text("Angka")),
+                      DropdownMenuItem(value: 'percentage', child: Text("Persen"))
+                    ],
+                    onChanged: (v) => notifier.updateField(unit: v),
+                  ),
+                ],
+              ),
+              TextFormField(
+                controller: _manzilAmountController,
+                textAlign: TextAlign.right,
+                decoration: InputDecoration(hintText: m.manzilType == 'fixed' ? "Juz / Halaman" : "Contoh: 10 (%)"),
+              ),
+            ],
+          ),
+        ],
+        if (m.silabusSource == 'mushaf') ...[
+          const SizedBox(height: 12),
+          SwitchListTile(
+            title: const Text("Aktifkan Ujian Tasmi' Formal", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+            subtitle: const Text("Mewajibkan ujian tasmi' formal (volume & kumulatif) setelah setoran selesai.", style: TextStyle(fontSize: 11, color: Colors.grey)),
+            value: m.isTasmiRequired,
+            activeThumbColor: const Color(0xFF10B981),
+            contentPadding: EdgeInsets.zero,
+            onChanged: (v) => notifier.updateField(isTasmiRequired: v),
+          ),
+          if (m.isTasmiRequired) ...[
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ModulSharedWidgets.buildLabel("VOLUME UJIAN"),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        initialValue: m.tasmiVolume.toString(),
+                        keyboardType: TextInputType.number,
+                        decoration: ModulSharedWidgets.inputStyle("1.0"),
+                        onChanged: (v) => notifier.updateField(tasmiVolume: double.tryParse(v)),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ModulSharedWidgets.buildLabel("SATUAN"),
+                      const SizedBox(height: 8),
+                      DropdownButtonFormField<String>(
+                        initialValue: m.tasmiUnit.trim().toUpperCase().isNotEmpty ? m.tasmiUnit.trim().toUpperCase() : 'JUZ',
+                        decoration: ModulSharedWidgets.inputStyle(""),
+                        items: const [
+                          DropdownMenuItem(value: 'JUZ', child: Text("Juz")),
+                          DropdownMenuItem(value: 'HALAMAN', child: Text("Halaman")),
+                        ],
+                        onChanged: (v) => notifier.updateField(tasmiUnit: v),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text("Tasmi' Bertingkat (Kumulatif)", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                      Text("Wajib tasmi' gabungan per periode juz", style: TextStyle(fontSize: 11, color: Colors.grey)),
+                    ],
+                  ),
+                ),
+                Switch(
+                  value: m.isCumulativeTasmi,
+                  activeThumbColor: const Color(0xFF10B981),
+                  onChanged: (v) => notifier.updateField(isCumulativeTasmi: v),
+                ),
+              ],
+            ),
+            if (m.isCumulativeTasmi) ...[
+              const SizedBox(height: 8),
+              ModulSharedWidgets.buildLabel("KELIPATAN JUZ (MISAL: 5)"),
+              const SizedBox(height: 8),
+              TextFormField(
+                initialValue: m.tasmiRange.toString(),
+                keyboardType: TextInputType.number,
+                decoration: ModulSharedWidgets.inputStyle("5"),
+                onChanged: (v) => notifier.updateField(tasmiRange: int.tryParse(v)),
+              ),
+            ],
+          ],
+        ],
       ],
     );
   }
 
   Widget _buildPlottingSection(ModulModel m, ModulFormController notifier) {
-    if (m.tipe == 'MUROJAAH') return const SizedBox.shrink();
-
     return Column(children: [
       const SizedBox(height: 24),
       Container(
@@ -512,6 +621,7 @@ class _ModulFormScreenState extends ConsumerState<ModulFormScreen> {
   }
 
   Widget _buildStandardMetricSection(ModulModel m, ModulFormState state, ModulFormController notifier) {
+    if (m.silabusSource == 'mushaf') return const SizedBox.shrink();
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(children: [
         ModulSharedWidgets.buildLabel("STANDAR METRIK MODUL"),
@@ -533,16 +643,13 @@ class _ModulFormScreenState extends ConsumerState<ModulFormScreen> {
   }
 
   Widget _buildSyllabusSourceSelector(ModulModel m, ModulFormController notifier) {
-    final bool isMurojaah = m.tipe == 'MUROJAAH';
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       ModulSharedWidgets.buildLabel("SUMBER SILABUS"),
       const SizedBox(height: 8),
       Row(children: [
         Expanded(child: _sourceButton("Mushaf", 'mushaf', Icons.menu_book_rounded, m.silabusSource == 'mushaf', notifier)),
-        if (!isMurojaah) ...[
-          const SizedBox(width: 12),
-          Expanded(child: _sourceButton("Internal", 'internal', Icons.assignment_rounded, m.silabusSource == 'internal', notifier))
-        ]
+        const SizedBox(width: 12),
+        Expanded(child: _sourceButton("Internal", 'internal', Icons.assignment_rounded, m.silabusSource == 'internal', notifier))
       ])
     ]);
   }
@@ -641,14 +748,11 @@ class _ModulFormScreenState extends ConsumerState<ModulFormScreen> {
   }
 
   Future<void> _saveModul() async {
-    // Jalankan pembaruan data secara aman sebelum form divalidasi penuh
     _updateControllerFields();
     if (!_formKey.currentState!.validate()) return;
 
-    // Tutup keyboard secara paksa agar layout dialog tidak mengalami pergeseran dimensi visual
     FocusScope.of(context).unfocus();
 
-    // Stream lokal durasi pendek untuk memajukan info tekstual secara cerdas & reaktif agar user menyukai proses tunggu
     final loadingTextStream = Stream<String>.periodic(const Duration(milliseconds: 600), (computationalStep) {
       switch (computationalStep) {
         case 0:
@@ -662,7 +766,6 @@ class _ModulFormScreenState extends ConsumerState<ModulFormScreen> {
       }
     });
 
-    // 1. TAMPILKAN POP-UP LOADING DI TENGAH LAYAR DENGAN TEKS PROSES DINAMIS
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -703,20 +806,16 @@ class _ModulFormScreenState extends ConsumerState<ModulFormScreen> {
       ),
     );
 
-    // Kirim objek data menuju jaringan Supabase cloud
     final success = await ref.read(modulFormControllerProvider(widget.level, widget.modul).notifier).submit();
 
-    // 2. TUTUP POP-UP LOADING MENGGUNAKAN ROOT NAVIGATOR SECARA SINKRON DAN PASTI
     if (mounted) {
       Navigator.of(context, rootNavigator: true).pop();
     }
 
-    // Berikan jeda waktu super singkat untuk memastikan transisi tumpukan layar bersih total
     await Future.delayed(const Duration(milliseconds: 100));
 
     if (mounted) {
       if (success) {
-        // 3. TAMPILKAN POP-UP SUKSES CENTANG DI TENGAH LAYAR SETELAH PROSES MEMFINALISASI SELESAI SEMPURNA
         showDialog(
           context: context,
           barrierDismissible: false,
@@ -747,11 +846,10 @@ class _ModulFormScreenState extends ConsumerState<ModulFormScreen> {
           ),
         );
 
-        // Lepaskan dialog sukses dari tumpukan sistem, lalu lempar navigasi mundur dengan aman
         await Future.delayed(const Duration(milliseconds: 1200));
         if (mounted) {
-          Navigator.of(context, rootNavigator: true).pop(); // Tutup dialog sukses secara definitif dari root tumpukan
-          Navigator.of(context).pop(); // Keluar dari form screen kembali menuju daftar list utama, tombol back kini aktif sempurna
+          Navigator.of(context, rootNavigator: true).pop();
+          Navigator.of(context).pop();
         }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -778,8 +876,6 @@ class EvaluationUnifiedSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool isTasmiTypeSelected = m.examType.trim().toLowerCase() == 'tasmi';
-
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(color: Colors.white, border: Border.all(color: Colors.grey[200]!), borderRadius: BorderRadius.circular(16)),
@@ -793,79 +889,59 @@ class EvaluationUnifiedSection extends StatelessWidget {
               Switch(
                 value: m.isExamRequired,
                 activeThumbColor: const Color(0xFF10B981),
-                onChanged: (v) => notifier.updateField(isExamRequired: v),
+                onChanged: (v) {
+                  if (v && (m.evaluationType.isEmpty || m.evaluationType == 'tasmi')) {
+                    notifier.updateField(isExamRequired: true, evaluationType: 'checklist');
+                  } else {
+                    notifier.updateField(isExamRequired: v, evaluationType: v ? (m.evaluationType == 'tasmi' ? 'checklist' : m.evaluationType) : '');
+                  }
+                },
               ),
             ],
           ),
-          const Divider(height: 24),
-
-          ModulExamSection(
-            silabusSource: m.silabusSource,
-            isExamRequired: m.isExamRequired,
-            examType: m.examType,
-            examVolume: m.examVolume,
-            examUnit: m.examUnit,
-            isCumulativeExam: m.isCumulativeExam,
-            cumulativeRange: m.cumulativeRange,
-            onRequiredChanged: (v) => notifier.updateField(isExamRequired: v),
-            onTypeChanged: (v) => Future.microtask(() => notifier.updateField(examType: v)),
-            onVolumeChanged: (v) => notifier.updateField(examVolume: double.tryParse(v)),
-            onUnitChanged: (v) => notifier.updateField(examUnit: v),
-            onCumulativeChanged: (v) => notifier.updateField(isCumulativeExam: v),
-            onRangeChanged: (v) => notifier.updateField(cumulativeRange: int.tryParse(v)),
-            evaluationTemplates: m.evaluasiTemplates,
-            formNotifier: notifier,
-          ),
-
-          if (m.isExamRequired && isTasmiTypeSelected) ...[
-            const SizedBox(height: 24),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: Colors.blue[50], borderRadius: BorderRadius.circular(12)),
-              child: const Row(
-                children: [
-                  Icon(Icons.info_outline, color: Colors.blue, size: 18),
-                  SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      "Instruksi: Atur bobot proporsional aspek penilaian Ujian Tasmi' terintegrasi di bawah ini.",
-                      style: TextStyle(fontSize: 11, color: Colors.blue),
-                    ),
-                  )
-                ],
+          if (m.isExamRequired) ...[
+            const Divider(height: 24),
+            ModulSharedWidgets.buildLabel("TIPE EVALUASI"),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<String>(
+              initialValue: m.evaluationType.isNotEmpty && m.evaluationType != 'tasmi' ? m.evaluationType : 'checklist',
+              isExpanded: true,
+              decoration: ModulSharedWidgets.inputStyle(""),
+              items: const [
+                DropdownMenuItem(value: 'checklist', child: Text("Checklist (Silabus Internal)")),
+                DropdownMenuItem(value: 'mushaf_rubric', child: Text("Lembaran Evaluasi Silabus Mushaf")),
+              ],
+              onChanged: (v) => notifier.updateField(evaluationType: v),
+            ),
+            const SizedBox(height: 16),
+            if (m.evaluationType == 'checklist' || m.evaluationType.isEmpty || m.evaluationType == 'tasmi') ...[
+              ModulExamSection(
+                isExamRequired: true,
+                silabusSource: m.silabusSource,
+                tasmiType: 'checklist',
+                tasmiVolume: m.tasmiVolume,
+                tasmiUnit: m.tasmiUnit,
+                isCumulativeTasmi: m.isCumulativeTasmi,
+                tasmiRange: m.tasmiRange,
+                onRequiredChanged: (v) => notifier.updateField(isExamRequired: v),
+                onTypeChanged: (v) => Future.microtask(() => notifier.updateField(evaluationType: v)),
+                onVolumeChanged: (v) => notifier.updateField(tasmiVolume: double.tryParse(v)),
+                onUnitChanged: (v) => notifier.updateField(tasmiUnit: v),
+                onCumulativeChanged: (v) => notifier.updateField(isCumulativeTasmi: v),
+                onRangeChanged: (v) => notifier.updateField(tasmiRange: int.tryParse(v)),
+                evaluationTemplates: m.evaluasiTemplates,
+                formNotifier: notifier,
+                lembagaId: null,
               ),
-            ),
-            const SizedBox(height: 16),
-            ModulTasmiSettingSection(
-              settings: {
-                ...Map<String, dynamic>.from(m.tasmiSettings ?? {}),
-                'silabus_source': m.silabusSource,
-              },
-              onChanged: (v) => notifier.updateField(tasmiSettings: v),
-            ),
-          ],
-
-          if (m.isExamRequired && (m.examType.trim().toUpperCase() == 'CHECKLIST' || m.examType == 'LEMBARAN_EVALUASI')) ...[
-            const SizedBox(height: 16),
-            if (m.evaluasiTemplates.isEmpty) ...[
-              Column(
-                children: [
-                  const Text("Belum ada kriteria evaluasi", style: TextStyle(color: Colors.grey, fontSize: 12)),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(child: OutlinedButton(onPressed: onDownloadTemplate, child: const Text("Download Template"))),
-                      const SizedBox(width: 8),
-                      Expanded(child: ElevatedButton(onPressed: onUploadCSV, child: const Text("Upload CSV"))),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton(onPressed: () => notifier.addEvaluasiTemplate(''), child: const Text("Input Manual")),
-                  ),
-                ],
-              )
+            ] else if (m.evaluationType == 'mushaf_rubric') ...[
+              SertifikasiRubricWidget(
+                settings: {
+                  ...Map<String, dynamic>.from(m.sertifikasiSettings ?? {}),
+                  'silabus_source': m.silabusSource,
+                },
+                onChanged: (v) => notifier.updateField(sertifikasiSettings: v),
+                isStandalone: false,
+              ),
             ],
           ],
         ],

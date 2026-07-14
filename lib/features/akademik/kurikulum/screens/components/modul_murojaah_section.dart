@@ -4,20 +4,14 @@ import 'package:flutter/material.dart';
 import 'modul_shared_widgets.dart';
 
 class ModulMurojaahSection extends StatelessWidget {
-  final TextEditingController sabqiController;
-  final String sabqiUnit;
   final String manzilType;
   final TextEditingController manzilAmountController;
-  final ValueChanged<String> onSabqiUnitChanged;
   final ValueChanged<String> onManzilTypeChanged;
 
   const ModulMurojaahSection({
     super.key,
-    required this.sabqiController,
-    required this.sabqiUnit,
     required this.manzilType,
     required this.manzilAmountController,
-    required this.onSabqiUnitChanged,
     required this.onManzilTypeChanged,
   });
 
@@ -33,50 +27,9 @@ class ModulMurojaahSection extends StatelessWidget {
           decoration: BoxDecoration(color: Colors.blueGrey[50], borderRadius: BorderRadius.circular(16)),
           child: Column(
             children: [
-              const ListTile(
-                leading: Icon(Icons.star, color: Colors.orange),
-                title: Text("SABAQ", style: TextStyle(fontWeight: FontWeight.bold)),
-                subtitle: Text("Hafalan baru (Merujuk pada modul Ziyadah)", style: TextStyle(fontSize: 11)),
-              ),
-              const Divider(),
-              _buildMurojaahSabqiRow(),
-              const Divider(),
               _buildMurojaahManzilRow(context),
             ],
           ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildMurojaahSabqiRow() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text("SABQI (Hafalan Kemarin)", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              flex: 2,
-              child: TextFormField(
-                controller: sabqiController,
-                textAlign: TextAlign.center,
-                keyboardType: TextInputType.number,
-                decoration: ModulSharedWidgets.inputStyle("Angka"),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              flex: 3,
-              child: DropdownButtonFormField<String>(
-                initialValue: sabqiUnit,
-                decoration: ModulSharedWidgets.inputStyle("Satuan"),
-                items: ['JUZ', 'HALAMAN', 'BARIS'].map((u) => DropdownMenuItem(value: u, child: Text(u, style: const TextStyle(fontSize: 12)))).toList(),
-                onChanged: (v) => onSabqiUnitChanged(v!),
-              ),
-            ),
-          ],
         ),
       ],
     );

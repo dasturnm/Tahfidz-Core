@@ -36,7 +36,7 @@ class ModulFormController extends _$ModulFormController {
   }
 
   List<String> _getInitialUnits(String source) {
-    // FIX: Metrik Mushaf diatur menjadi JUZ, HALAMAN, dan SURAH (Point Penyempurnaan)
+    // KEMBALIKAN: Opsi target pencapaian harian tetap mendukung pilihan lengkap
     if (source == 'mushaf') return ['JUZ', 'HALAMAN', 'SURAH'];
     // FIX: Gunakan PERTEMUAN untuk silabus internal (Point Penyempurnaan)
     return ['PERTEMUAN', 'HALAMAN', 'NOMOR'];
@@ -95,7 +95,7 @@ class ModulFormController extends _$ModulFormController {
   void updateSource(String source) {
     List<String> units;
     if (source == 'mushaf') {
-      // FIX: Metrik Mushaf diatur menjadi JUZ, HALAMAN, dan SURAH (Point Penyempurnaan)
+      // KEMBALIKAN: Opsi target pencapaian harian tetap mendukung pilihan lengkap
       units = ['JUZ', 'HALAMAN', 'SURAH'];
     } else {
       // FIX: Internal selalu menampilkan pilihan lengkap berbasis PERTEMUAN (Point Penyempurnaan)
@@ -106,7 +106,7 @@ class ModulFormController extends _$ModulFormController {
       allowedUnits: units,
       modul: state.modul.copyWith(
         silabusSource: source,
-        jenisMetrik: units.first,
+        jenisMetrik: source == 'mushaf' ? 'SURAH' : units.first, // Cakupan materi dikunci ke SURAH, target pencapaian menggunakan allowedUnits
         // Reset target unit agar konsisten saat ganti source
         targetAmountUnit: units.first,
       ),
@@ -139,17 +139,19 @@ class ModulFormController extends _$ModulFormController {
     bool? showManzilInDashboard,
     // FIX: Tambahkan parameter field ujian
     bool? isExamRequired,
-    String? examType,
-    double? examVolume,
-    String? examUnit,
-    bool? isCumulativeExam,
-    int? cumulativeRange,
-    bool? isManual, // TAMBAHAN: State untuk Mode Manual Evaluasi
-    bool? useRatingScale, // TAMBAHAN: Preferensi metode penilaian admin (skala 1-4)
-    bool? isTasmiRequired, // TAMBAHAN
-    double? kkm, // FIX: Tambahkan parameter kkm
-    List<ModulEvaluasiTemplateModel>? evaluasiTemplates, // TAMBAHAN
-    Map<String, dynamic>? tasmiSettings, // FIX: Parameter penampung konfigurasi ujian mandiri
+    String? evaluationType,
+    double? tasmiVolume,
+    String? tasmiUnit,
+    bool? isCumulativeTasmi,
+    int? tasmiRange,
+    bool? isManual,
+    bool? useRatingScale,
+    bool? isTasmiRequired,
+    bool? isReverseOrder,
+    double? kkm,
+    List<ModulEvaluasiTemplateModel>? evaluasiTemplates,
+    Map<String, dynamic>? sertifikasiSettings,
+    bool? isMurojaah,
   }) {
     // FIX: Logika Eksklusif Kedisplinan (Mutually Exclusive)
     bool newStrict = isStrict ?? state.modul.isStrict;
@@ -170,11 +172,13 @@ class ModulFormController extends _$ModulFormController {
     bool computedExamRequired = isExamRequired ?? state.modul.isExamRequired;
     bool computedRatingScale = useRatingScale ?? state.modul.useRatingScale;
     bool computedPlottingActive = isPlottingActive ?? state.modul.isPlottingActive;
+    bool newIsMurojaah = isMurojaah ?? state.modul.isMurojaah;
 
     if (targetTipe == "TASMI'") {
       computedExamRequired = false;
       computedRatingScale = false;
-    } else if (targetTipe == "MUROJAAH") {
+    }
+    if (newIsMurojaah) {
       computedRatingScale = false;
       computedPlottingActive = false;
     }
@@ -206,26 +210,28 @@ class ModulFormController extends _$ModulFormController {
         showManzilInDashboard: showManzilInDashboard ?? state.modul.showManzilInDashboard,
         // FIX: Mapping field ujian
         isExamRequired: computedExamRequired,
-        examType: examType ?? state.modul.examType,
-        examVolume: examVolume ?? state.modul.examVolume,
-        examUnit: examUnit ?? state.modul.examUnit,
-        isCumulativeExam: isCumulativeExam ?? state.modul.isCumulativeExam,
-        cumulativeRange: cumulativeRange ?? state.modul.cumulativeRange,
-        useRatingScale: computedRatingScale, // TAMBAHAN
-        isTasmiRequired: isTasmiRequired ?? state.modul.isTasmiRequired, // TAMBAHAN
-        kkm: kkm ?? state.modul.kkm, // FIX: Simpan nilai kkm ke model
-        evaluasiTemplates: evaluasiTemplates ?? state.modul.evaluasiTemplates, // TAMBAHAN
-        tasmiSettings: tasmiSettings != null
+        evaluationType: evaluationType ?? state.modul.evaluationType,
+        tasmiVolume: tasmiVolume ?? state.modul.tasmiVolume,
+        tasmiUnit: tasmiUnit ?? state.modul.tasmiUnit,
+        isCumulativeTasmi: isCumulativeTasmi ?? state.modul.isCumulativeTasmi,
+        tasmiRange: tasmiRange ?? state.modul.tasmiRange,
+        useRatingScale: computedRatingScale,
+        isTasmiRequired: isTasmiRequired ?? state.modul.isTasmiRequired,
+        isReverseOrder: isReverseOrder ?? state.modul.isReverseOrder,
+        kkm: kkm ?? state.modul.kkm,
+        evaluasiTemplates: evaluasiTemplates ?? state.modul.evaluasiTemplates,
+        isMurojaah: newIsMurojaah,
+        sertifikasiSettings: sertifikasiSettings != null
             ? (() {
           final merged = {
-            ...Map<String, dynamic>.from(state.modul.tasmiSettings ?? const {}),
-            ...tasmiSettings,
+            ...Map<String, dynamic>.from(state.modul.sertifikasiSettings ?? const {}),
+            ...sertifikasiSettings,
           };
           // FIX: Bersihkan key secara permanen jika menerima sinyal null (Tombstone) dari UI
           merged.removeWhere((key, value) => value == null);
           return merged;
         })()
-            : state.modul.tasmiSettings, // FIX: Lakukan deep merge pada Map agar perubahan aspek spesifik tidak menghapus aspek lainnya
+            : state.modul.sertifikasiSettings,
       ),
     );
     recalculate();
@@ -256,7 +262,7 @@ class ModulFormController extends _$ModulFormController {
       int eAyah = m.ayahEnd;
       int mHal = m.mulaiHalaman;
       int aHal = m.akhirHalaman;
-      int calculatedMeetings = m.targetPertemuan; // FIX: Diinisialisasi di awal agar aman diakses dari scope manapun
+      int calculatedMeetings = m.targetPertemuan;
 
       // FIX: Bedakan perhitungan antara Mushaf and Internal (Point Penyempurnaan)
       if (m.silabusSource == 'mushaf') {
@@ -301,18 +307,16 @@ class ModulFormController extends _$ModulFormController {
           eSurah = int.tryParse(halAkhirRows.last['surah_number']?.toString() ?? '') ?? 114;
           eAyah = int.tryParse(halAkhirRows.last['ayah_end']?.toString() ?? '') ?? 1;
         } else {
-          // Metrik SURAH - Logika Bolak-Balik Preservasi Input
-          int s1 = m.surahIdStart > 0 ? m.surahIdStart : 1;
-          int a1 = m.ayahStart > 0 ? m.ayahStart : 1;
-          int s2 = m.surahIdEnd > 0 ? m.surahIdEnd : 114;
-          int a2 = m.ayahEnd > 0 ? m.ayahEnd : getAyahCount(s2);
+          // Metrik SURAH - Auto-Normalisasi (Start selalu <= End untuk Database)
+          final s = m.surahIdStart > 0 ? m.surahIdStart : 1;
+          final e = m.surahIdEnd > 0 ? m.surahIdEnd : 114;
 
-          // Normalisasi untuk Engine: Bandingkan berdasarkan (Surah * 1000 + Ayah) agar sorting akurat
-          bool isReversed = (s1 * 1000 + a1) > (s2 * 1000 + a2);
-          sSurah = isReversed ? s2 : s1;
-          sAyah = isReversed ? a2 : a1;
-          eSurah = isReversed ? s1 : s2;
-          eAyah = isReversed ? a1 : a2;
+          sSurah = s < e ? s : e;
+          eSurah = s < e ? e : s;
+
+          // Ayah mengikuti surah yang terpilih
+          sAyah = (s < e) ? (m.ayahStart > 0 ? m.ayahStart : 1) : (m.ayahEnd > 0 ? m.ayahEnd : getAyahCount(eSurah));
+          eAyah = (s < e) ? (m.ayahEnd > 0 ? m.ayahEnd : getAyahCount(eSurah)) : (m.ayahStart > 0 ? m.ayahStart : 1);
         }
 
         // 2. PANGGIL ENGINE UTAMA (MushafCalculator)
@@ -324,7 +328,7 @@ class ModulFormController extends _$ModulFormController {
           targetUnit: m.targetAmountUnit,
         );
 
-        calculatedWeight = (engineRes['calculated_lines'] as num?)?.toDouble() ?? 0.0;
+        // PENTING: Hanya gunakan engineRes untuk ringkasan volume, JANGAN untuk baris
         summaryValueForMeetings = (engineRes['achieved_volume'] as num?)?.toDouble() ?? 0.0;
         computedHalaman = (engineRes['calculated_pages'] as num?)?.toDouble() ?? 0.0;
         computedJuz = (engineRes['calculated_juzs'] as num?)?.toDouble() ?? 0.0;
@@ -351,7 +355,41 @@ class ModulFormController extends _$ModulFormController {
             endPageFromRows = int.tryParse(eRow['page_number']?.toString() ?? '') ?? aHal;
             endJuzFromRows = eRow['juz_number']?.toString() ?? endJuzFromRows;
           }
+
+          // FIX: Hitung Total Baris Murni secara Fisik (Hanya menghitung baris Ayat, mengabaikan header Surah/Basmalah)
+          int lineCount = 0;
+          for (var r in localRows) {
+            final sNum = int.tryParse(r['surah_number']?.toString() ?? '') ?? 0;
+            final aStart = int.tryParse(r['ayah_start']?.toString() ?? '') ?? 0;
+            final aEnd = int.tryParse(r['ayah_end']?.toString() ?? '') ?? 0;
+
+            // Abaikan metadata/header (basmalah/nama surah) yang tidak memiliki nomor ayat awal
+            if (sNum == 0 || aStart == 0) continue;
+
+            if (sNum > finalStartSurah && sNum < finalEndSurah) {
+              lineCount++;
+            } else if (finalStartSurah == finalEndSurah) {
+              if (sNum == finalStartSurah && aEnd >= finalStartAyah && aStart <= finalEndAyah) {
+                lineCount++;
+              }
+            } else {
+              if (sNum == finalStartSurah && aEnd >= finalStartAyah) {
+                lineCount++;
+              }
+              if (sNum == finalEndSurah && aStart <= finalEndAyah) {
+                lineCount++;
+              }
+            }
+          }
+          // FORCE OVERRIDE: Pastikan total baris mutlak dari hasil filter fisik, abaikan engine
+          calculatedWeight = lineCount.toDouble();
+        } else {
+          // Fallback jika json kosong
+          calculatedWeight = 0.0;
         }
+
+        // FIX: Tangkap nilai bersih di satu variabel
+        final int finalTotalBaris = calculatedWeight.toInt();
 
         // Normalisasi Nilai Tampilan Ringkasan Juz & Halaman agar selalu bulat presisi (baik input normal maupun terbalik)
         if (m.jenisMetrik == 'JUZ') {
@@ -374,23 +412,23 @@ class ModulFormController extends _$ModulFormController {
 
         state = state.copyWith(
           weight: calculatedWeight,
-          totalBaris: calculatedWeight.toInt(),
+          totalBaris: finalTotalBaris,
           totalHalaman: computedHalaman,
           totalJuz: computedJuz,
           totalSurah: computedSurah,
           surahIdForAyah: finalStartSurah > 0 ? finalStartSurah : state.surahIdForAyah,
           modul: state.modul.copyWith(
             targetPertemuan: calculatedMeetings,
-            totalBaris: calculatedWeight.toInt(),
-            // Tetap simpan input asli dari user (jangan overwrite dengan hasil normalisasi engine)
-            surahIdStart: m.surahIdStart,
-            surahIdEnd: m.surahIdEnd,
-            ayahStart: m.ayahStart,
-            ayahEnd: m.ayahEnd,
-            mulaiHalaman: m.mulaiHalaman == 0 ? startPageFromRows : m.mulaiHalaman,
-            akhirHalaman: m.akhirHalaman == 0 ? endPageFromRows : m.akhirHalaman,
-            mulaiKoordinatJuz: m.mulaiKoordinatJuz,
-            akhirKoordinatJuz: m.akhirKoordinatJuz,
+            totalBaris: finalTotalBaris,
+            // Auto-Normalisasi: Pastikan Database selalu menyimpan (Start <= End)
+            surahIdStart: sSurah < eSurah ? sSurah : eSurah,
+            surahIdEnd: sSurah < eSurah ? eSurah : sSurah,
+            ayahStart: sSurah < eSurah ? sAyah : eAyah,
+            ayahEnd: sSurah < eSurah ? eAyah : sAyah,
+            mulaiHalaman: startPageFromRows < endPageFromRows ? startPageFromRows : endPageFromRows,
+            akhirHalaman: startPageFromRows < endPageFromRows ? endPageFromRows : startPageFromRows,
+            mulaiKoordinatJuz: (int.tryParse(startJuzFromRows) ?? 0) < (int.tryParse(endJuzFromRows) ?? 0) ? startJuzFromRows : endJuzFromRows,
+            akhirKoordinatJuz: (int.tryParse(startJuzFromRows) ?? 0) < (int.tryParse(endJuzFromRows) ?? 0) ? endJuzFromRows : startJuzFromRows,
             totalSurah: computedSurah,
             totalHalaman: computedHalaman,
             totalJuz: computedJuz,
@@ -417,16 +455,19 @@ class ModulFormController extends _$ModulFormController {
         calculatedMeetings = (summaryValueForMeetings / m.targetAmount).ceil();
       }
 
+      // FIX: Tangkap nilai bersih di satu variabel
+      final int finalTotalBaris = calculatedWeight.toInt();
+
       // OPTIMASI: Satukan pembaruan ke dalam satu pemanggilan penugasan tunggal (Atomic State Update)
       state = state.copyWith(
         weight: calculatedWeight,
-        totalBaris: calculatedWeight.toInt(),
+        totalBaris: finalTotalBaris,
         totalHalaman: computedHalaman,
         totalJuz: computedJuz,
         totalSurah: computedSurah,
         modul: state.modul.copyWith(
           targetPertemuan: calculatedMeetings,
-          totalBaris: calculatedWeight.toInt(),
+          totalBaris: finalTotalBaris,
           totalSurah: computedSurah,
           totalHalaman: computedHalaman,
           totalJuz: computedJuz,

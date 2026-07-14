@@ -1,22 +1,22 @@
-// Lokasi: lib/features/akademik/tasmi/screens/tasmi_form_screen.dart
+// Lokasi: lib/features/akademik/sertifikasi/screens/sertifikasi_form_screen.dart
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../kurikulum/models/kurikulum_model.dart';
-import '../models/tasmi_model.dart';
-import '../providers/tasmi_provider.dart';
+import '../models/sertifikasi_model.dart';
+import '../providers/sertifikasi_provider.dart';
 
 // =============================================================================
-// SCREEN: TasmiFormScreen
+// SCREEN: SertifikasiFormScreen
 // Digunakan oleh Guru untuk menilai ujian Tasmi' Santri secara realtime
 // =============================================================================
 
-class TasmiFormScreen extends ConsumerStatefulWidget {
+class SertifikasiFormScreen extends ConsumerStatefulWidget {
   final String siswaId;
   final String namaSiswa;
   final ModulModel modul;
 
-  const TasmiFormScreen({
+  const SertifikasiFormScreen({
     super.key,
     required this.siswaId,
     required this.namaSiswa,
@@ -24,10 +24,10 @@ class TasmiFormScreen extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<TasmiFormScreen> createState() => _TasmiFormScreenState();
+  ConsumerState<SertifikasiFormScreen> createState() => _SertifikasiFormScreenState();
 }
 
-class _TasmiFormScreenState extends ConsumerState<TasmiFormScreen> {
+class _SertifikasiFormScreenState extends ConsumerState<SertifikasiFormScreen> {
   // ---------------------------------------------------------------------------
   // 1. STATE & COUNTERS (PINALTI & POINT-IN SYSTEM)
   // ---------------------------------------------------------------------------
@@ -64,7 +64,7 @@ class _TasmiFormScreenState extends ConsumerState<TasmiFormScreen> {
     /// Fungsi Pembantu: Hitung Nilai Per Kategori
     /// Mendukung sistem Pinalti (Pengurangan dari 100) dan Point-In (Input Langsung)
     double getScore(String key) {
-      final settings = widget.modul.tasmiSettings?[key] ?? {};
+      final settings = widget.modul.sertifikasiSettings?[key] ?? {};
 
       // Jika tidak ada data pinalti di settings, gunakan sistem Point-In (Penambahan)
       if (!settings.containsKey('pinalti_stt') && !settings.containsKey('pinalti_kurang')) {
@@ -84,8 +84,8 @@ class _TasmiFormScreenState extends ConsumerState<TasmiFormScreen> {
       return score < 0 ? 0 : score;
     }
 
-    // Masukkan hasil kalkulasi ke TasmiScoreModel untuk divalidasi
-    final tasmiScore = TasmiScoreModel(
+    // Masukkan hasil kalkulasi ke SertifikasiScoreModel untuk divalidasi
+    final tasmiScore = SertifikasiScoreModel(
       itqon: getScore('itqon'),
       makhraj: getScore('makhraj'),
       tajwid: getScore('tajwid'),
@@ -361,8 +361,8 @@ class _TasmiFormScreenState extends ConsumerState<TasmiFormScreen> {
     );
   }
 
-  Widget _buildActionButtons(bool isLulus, TasmiScoreModel finalSkor) {
-    final tasmiState = ref.watch(tasmiNotifierProvider);
+  Widget _buildActionButtons(bool isLulus, SertifikasiScoreModel finalSkor) {
+    final tasmiState = ref.watch(sertifikasiNotifierProvider);
 
     return Column(
       children: [
@@ -374,7 +374,7 @@ class _TasmiFormScreenState extends ConsumerState<TasmiFormScreen> {
                 ? null
                 : () async {
               try {
-                await ref.read(tasmiNotifierProvider.notifier).simpanHasilTasmi(
+                await ref.read(sertifikasiNotifierProvider.notifier).simpanHasilSertifikasi(
                   siswaId: widget.siswaId,
                   modul: widget.modul,
                   skor: finalSkor,

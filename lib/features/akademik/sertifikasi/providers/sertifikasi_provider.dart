@@ -1,25 +1,25 @@
-// Lokasi: lib/features/akademik/tasmi/providers/tasmi_provider.dart
+// Lokasi: lib/features/akademik/sertifikasi/providers/sertifikasi_provider.dart
 
 import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../models/tasmi_model.dart';
+import '../models/sertifikasi_model.dart';
 import '../../kurikulum/models/kurikulum_model.dart';
 
-part 'tasmi_provider.g.dart';
+part 'sertifikasi_provider.g.dart';
 
 @riverpod
-class TasmiNotifier extends _$TasmiNotifier {
+class SertifikasiNotifier extends _$SertifikasiNotifier {
   final _supabase = Supabase.instance.client;
 
   @override
   AsyncValue<void> build() => const AsyncValue.data(null);
 
-  /// Fungsi untuk menyimpan hasil ujian Tasmi'
-  Future<void> simpanHasilTasmi({
+  /// Fungsi untuk menyimpan hasil ujian Sertifikasi
+  Future<void> simpanHasilSertifikasi({
     required String siswaId,
     required ModulModel modul,
-    required TasmiScoreModel skor,
+    required SertifikasiScoreModel skor,
     String? catatan,
   }) async {
     state = const AsyncValue.loading();
@@ -35,14 +35,14 @@ class TasmiNotifier extends _$TasmiNotifier {
         bAdab: modul.bobotAdab,
         bNada: modul.bobotNada,
         bPenampilan: modul.bobotPenampilan,
-        bTebakSurah: modul.bobotTebakSurah, // FIX ERROR: Menambahkan parameter yang wajib ada
+        bTebakSurah: modul.bobotTebakSurah,
       );
 
       final bool isLulus = nilaiAkhir >= modul.kkm;
 
       // 2. Susun Payload JSON untuk kolom data_payload
       final Map<String, dynamic> payload = {
-        'jenis_record': 'TASMI',
+        'jenis_record': 'Sertifikasi',
         'nama_modul': modul.namaModul,
         'skor_detail': {
           'itqon': skor.itqon,
@@ -51,14 +51,14 @@ class TasmiNotifier extends _$TasmiNotifier {
           'adab': skor.adab,
           'nada': skor.nada,
           'penampilan': skor.penampilan,
-          'tebak_surah': skor.tebakSurah, // PENYEMPURNAAN: Detail skor lengkap
+          'tebak_surah': skor.tebakSurah,
         },
         'bobot_app': {
           'itqon': modul.bobotItqon,
           'makhraj': modul.bobotMakhraj,
           'tajwid': modul.bobotTajwid,
           'adab': modul.bobotAdab,
-          'nada': modul.bobotNada, // PENYEMPURNAAN: Metadata bobot lengkap
+          'nada': modul.bobotNada,
           'penampilan': modul.bobotPenampilan,
           'tebak_surah': modul.bobotTebakSurah,
         },
@@ -66,7 +66,6 @@ class TasmiNotifier extends _$TasmiNotifier {
         'kkm_saat_ujian': modul.kkm,
         'status_lulus': isLulus,
         'tanggal_ujian': DateTime.now().toIso8601String(),
-        // Nomor Sertifikat (Logika Sederhana: TSM-ID_SISWA-TIMESTAMP)
         'nomor_sertifikat': 'TSM-${DateTime.now().millisecondsSinceEpoch}',
       };
 
@@ -75,14 +74,14 @@ class TasmiNotifier extends _$TasmiNotifier {
         'siswa_id': siswaId,
         'guru_id': guruId,
         'modul_id': modul.id,
-        'tipe_modul': 'TASMI',
+        'tipe_modul': 'Sertifikasi',
         'data_payload': payload,
-        'catatan': catatan ?? (isLulus ? "Lulus Ujian Tasmi'" : "Belum Lulus Tasmi'"),
+        'catatan': catatan ?? (isLulus ? "Lulus Ujian Sertifikasi" : "Belum Lulus Ujian Sertifikasi"),
       });
 
       state = const AsyncValue.data(null);
     } catch (e, st) {
-      debugPrint("Error simpanHasilTasmi: $e");
+      debugPrint("Error simpanHasilSertifikasi: $e");
       state = AsyncValue.error(e, st);
       rethrow;
     }

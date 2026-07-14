@@ -99,7 +99,7 @@ class _FormEvaluasiScreenState extends ConsumerState<FormEvaluasiScreen> {
     final isLoading = evaluasiState.isLoading;
 
     // Ambil Konfigurasi Bobot dari Modul Kurikulum via tasmiSettings
-    final Map<String, dynamic> settings = widget.modul.tasmiSettings ?? {};
+    final Map<String, dynamic> settings = widget.modul.sertifikasiSettings ?? {};
     double getBobot(String key) => (settings[key]?['bobot'] as num?)?.toDouble() ?? 0.0;
 
     final double bItqon = getBobot('itqon');
@@ -112,7 +112,7 @@ class _FormEvaluasiScreenState extends ConsumerState<FormEvaluasiScreen> {
 
     /// Fungsi Pembantu: Hitung Nilai Per Kategori
     double getScore(String key) {
-      final settings = widget.modul.tasmiSettings?[key] ?? {};
+      final settings = widget.modul.sertifikasiSettings?[key] ?? {};
 
       // Jika tidak ada data pinalti di settings, gunakan sistem Point-In
       if (!settings.containsKey('pinalti_stt') && !settings.containsKey('pinalti_kurang')) {

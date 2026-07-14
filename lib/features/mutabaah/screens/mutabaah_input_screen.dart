@@ -107,8 +107,8 @@ class _ModulInputScreenState extends ConsumerState<MutabaahInputScreen> with Tic
         _loadModulSpecificData(modul);
       }
 
-      if (tipeModul == 'TASMI\'') {
-        final settings = modul.tasmiSettings ?? {};
+      if (tipeModul == 'SERTIFIKASI\'') {
+        final settings = modul.sertifikasiSettings ?? {};
         settings.forEach((key, val) {
           if (val['active'] == true && (key == 'nada' || key == 'adab' || val['is_custom'] == true)) {
             _directScores[key] = 80.0;
@@ -254,11 +254,11 @@ class _ModulInputScreenState extends ConsumerState<MutabaahInputScreen> with Tic
           ),
           const SizedBox(height: 24),
           if (isPreviousUlang) ...[
-            Row(
+            const Row(
               children: [
-                const Icon(Icons.history, size: 14, color: Color(0xFFF57C00)),
-                const SizedBox(width: 6),
-                const Expanded(
+                Icon(Icons.history, size: 14, color: Color(0xFFF57C00)),
+                SizedBox(width: 6),
+                Expanded(
                   child: Text(
                     "Materi ini sedang diulang dari pertemuan sebelumnya.",
                     style: TextStyle(color: Color(0xFFE65100), fontSize: 11, fontWeight: FontWeight.bold),
@@ -333,7 +333,7 @@ class _ModulInputScreenState extends ConsumerState<MutabaahInputScreen> with Tic
                               'siswaId': _currentSiswa.id,
                               'namaSiswa': _currentSiswa.namaLengkap,
                               'modul': modul,
-                              'tipeEvaluasi': modul.examType,
+                              'tipeEvaluasi': modul.evaluationType,
                             },
                           );
                         }
@@ -383,7 +383,7 @@ class _ModulInputScreenState extends ConsumerState<MutabaahInputScreen> with Tic
               ),
             ),
             const SizedBox(height: 24),
-            const Text("KEPUTUSAN KEDISPLINAN (WAJIB)", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 10, color: Colors.red)),
+            const Text("KEPUTUSAN KEDISIPLINAN (WAJIB)", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 10, color: Colors.red)),
             const SizedBox(height: 8),
             StatusSwitchButton(
               value: _switchStates[mId] ?? 0,
@@ -465,7 +465,7 @@ class _ModulInputScreenState extends ConsumerState<MutabaahInputScreen> with Tic
                       'siswaId': _currentSiswa.id,
                       'namaSiswa': _currentSiswa.namaLengkap,
                       'modul': modul,
-                      'tipeEvaluasi': modul.examType,
+                      'tipeEvaluasi': modul.evaluationType,
                     },
                   );
                 },

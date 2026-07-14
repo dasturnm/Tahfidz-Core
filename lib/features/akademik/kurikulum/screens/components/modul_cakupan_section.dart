@@ -45,18 +45,8 @@ class ModulCakupanSection extends StatelessWidget {
       return _buildNumberCakupan("Pertemuan", silabusItems.length);
     }
 
-    switch (selectedMetrik) {
-      case 'SURAH':
-        return _buildSurahCakupan();
-      case 'JUZ':
-        return _buildDualDropdown(juzList, "Juz");
-      case 'HALAMAN':
-        return _buildDualDropdown(halamanList, "Halaman");
-      case 'AYAT':
-        return _buildAyatCakupan();
-      default:
-        return _buildNumberCakupan("Nomor", 100);
-    }
+    // Jika mushaf, langsung tampilkan cakupan surah + ayat secara otomatis
+    return _buildSurahCakupan();
   }
 
   Widget _buildDualDropdown(List<int> data, String label) {

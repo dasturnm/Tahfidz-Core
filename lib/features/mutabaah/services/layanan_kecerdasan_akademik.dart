@@ -113,10 +113,10 @@ class LayananKecerdasanAkademik {
     }
   }
 
-  double calculateTasmiScore(Map<String, dynamic> tasmiSettings, Map<String, dynamic> penaltyCounts, Map<String, double> directScores) {
+  double calculateTasmiScore(Map<String, dynamic> sertifikasiSettings, Map<String, dynamic> penaltyCounts, Map<String, double> directScores) {
     double totalScore = 0.0;
 
-    tasmiSettings.forEach((aspect, config) {
+    sertifikasiSettings.forEach((aspect, config) {
       if (config['active'] == true) {
         double bobot = (config['bobot'] as num?)?.toDouble() ?? 0.0;
 

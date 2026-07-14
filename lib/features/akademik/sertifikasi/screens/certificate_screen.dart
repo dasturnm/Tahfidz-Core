@@ -1,4 +1,4 @@
-// Lokasi: lib/features/akademik/tasmi/screens/tasmi_certificate_screen.dart
+// Lokasi: lib/features/akademik/tasmi/screens/certificate_screen.dart
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';

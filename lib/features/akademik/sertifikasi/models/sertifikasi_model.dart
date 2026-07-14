@@ -1,12 +1,12 @@
-// Lokasi: lib/features/akademik/tasmi/models/tasmi_model.dart
+// Lokasi: lib/features/akademik/sertifikasi/models/sertifikasi_model.dart
 
 // =============================================================================
-// FILE: tasmi_model.dart
+// FILE: sertifikasi_model.dart
 // Model untuk menampung skor mentah per kategori dan menghitung nilai akhir
 // berdasarkan bobot kurikulum yang berlaku.
 // =============================================================================
 
-class TasmiScoreModel {
+class SertifikasiScoreModel {
   final double itqon;
   final double makhraj;
   final double tajwid;
@@ -15,7 +15,7 @@ class TasmiScoreModel {
   final double penampilan;
   final double tebakSurah; // TAMBAHAN: Kategori ke-7
 
-  TasmiScoreModel({
+  SertifikasiScoreModel({
     this.itqon = 0,
     this.makhraj = 0,
     this.tajwid = 0,

@@ -1,7 +1,7 @@
-// Lokasi: lib/features/mutabaah/screens/components/tasmi_status_banner.dart
+// Lokasi: lib/features/mutabaah/screens/components/Sertifikasi_status_banner.dart
 
 import 'package:flutter/material.dart';
-import '../../../akademik/kurikulum/models/kurikulum_model.dart';
+import '../../kurikulum/models/kurikulum_model.dart';
 import 'package:go_router/go_router.dart'; // Menggunakan go_router untuk navigasi jembatan formal
 
 class TasmiStatusBanner extends StatelessWidget {
@@ -77,7 +77,7 @@ class TasmiStatusBanner extends StatelessWidget {
                     'siswaId': siswaId,
                     'namaSiswa': namaSiswa,
                     'modul': modul,
-                    'tipeEvaluasi': isTasmiMode ? 'TASMI' : (modul.examType ?? 'TASMI'),
+                    'tipeEvaluasi': isTasmiMode ? 'TASMI' : (modul.evaluationType ?? 'TASMI'),
                   },
                 );
               },
